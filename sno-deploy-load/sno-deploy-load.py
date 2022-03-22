@@ -14,19 +14,90 @@
 #  limitations under the License.
 
 import argparse
-from datetime import datetime
+from collections import OrderedDict
+# from datetime import datetime
 import glob
+from jinja2 import Template
 import logging
+import math
 import os
 import pathlib
-import subprocess
+import shutil
+# import subprocess
 import sys
 import time
+
+
+kustomization_template = """---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+generators:
+{%- for sno in snos %}
+- ./{{ sno }}-siteconfig.yml
+{%- endfor %}
+
+resources:
+{%- for sno in snos %}
+- ./{{ sno }}-resources.yml
+{%- endfor %}
+
+"""
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(message)s")
 logger = logging.getLogger("sno-deploy-load")
 logging.Formatter.converter = time.gmtime
 
+
+def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app, sno_siteconfigs, argocd_dir):
+  git_files = []
+  siteconfig_dir = "{}/siteconfigs".format(sno_siteconfigs)
+  last_ztp_app_index = math.floor((start_index) / snos_per_app)
+  for idx, sno in enumerate(snos[start_index:end_index]):
+    ztp_app_index = math.floor((start_index + idx) / snos_per_app)
+
+    # If number of snos batched rolls into the next application, render the kustomization file
+    if last_ztp_app_index < ztp_app_index:
+      logger.info("Rendering {}/kustomization.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"]))
+      t = Template(kustomization_template)
+      kustomization_rendered = t.render(
+          snos=ztp_deploy_apps[last_ztp_app_index]["snos"])
+      with open("{}/kustomization.yaml".format(ztp_deploy_apps[last_ztp_app_index]["location"]), "w") as file1:
+        file1.writelines(kustomization_rendered)
+      git_files.append("{}/kustomization.yaml".format(ztp_deploy_apps[last_ztp_app_index]["location"]))
+      last_ztp_app_index = ztp_app_index
+
+    siteconfig_name = os.path.basename(sno)
+    sno_name = siteconfig_name.replace("-siteconfig.yml", "")
+    ztp_deploy_apps[ztp_app_index]["snos"].append(sno_name)
+    logger.debug("SNOs: {}".format(ztp_deploy_apps[ztp_app_index]["snos"]))
+
+    logger.debug("Copying {}-siteconfig.yml and {}-resources.yml from {} to {}".format(
+        sno_name, sno_name, siteconfig_dir, ztp_deploy_apps[last_ztp_app_index]["location"]))
+    shutil.copy2(
+        "{}/{}-siteconfig.yml".format(siteconfig_dir, sno_name),
+        "{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
+    shutil.copy2(
+        "{}/{}-resources.yml".format(siteconfig_dir, sno_name),
+        "{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
+    git_files.append("{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
+    git_files.append("{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
+
+  # Always render a kustomization.yaml file at conclusion of the enumeration
+  logger.info("Rendering {}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]))
+  t = Template(kustomization_template)
+  kustomization_rendered = t.render(
+      snos=ztp_deploy_apps[ztp_app_index]["snos"])
+  with open("{}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]), "w") as file1:
+    file1.writelines(kustomization_rendered)
+  git_files.append("{}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]))
+
+  # Git Process:
+  for file in git_files:
+    logger.debug("git add {}".format(file))
+  logger.info("Added {} files in git".format(len(git_files)))
+  logger.info("git commit -m 'Deploying SNOs {} to {}'".format(start_index, end_index))
+  logger.info("git push")
 
 def phase_break():
   logger.info("###############################################################################")
@@ -43,7 +114,7 @@ def main():
   parser.add_argument("-m", "--sno-manifests-siteconfigs", type=str, default="/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/hv-sno",
                       help="The location of the SNO manifests, siteconfigs and resource files")
   parser.add_argument("-a", "--argocd-base-directory", type=str,
-                      default="/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/argocd/",
+                      default="/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/argocd",
                       help="The location of the ArgoCD SNO cluster and cluster applications directories")
   # parser.add_argument("-m", "--sno-manifests-siteconfigs", type=str, default="/root/hv-sno",
   #                     help="The location of the SNO manifests, siteconfigs and resource files")
@@ -143,9 +214,11 @@ def main():
   logger.info(" * Start Index: {}, End Index: {}".format(cliargs.start, cliargs.end))
   phase_break()
 
-  # Get list of available manifests and/or siteconfigs
+  # Get list of available manifests or siteconfigs and cluster applications
   available_snos = 0
   sno_list = []
+  available_ztp_apps = 0
+  ztp_deploy_apps = OrderedDict()
   if cliargs.method == "manifests":
     sno_list = glob.glob("{}/manifests/sno*".format(cliargs.sno_manifests_siteconfigs))
     sno_list.sort()
@@ -167,23 +240,42 @@ def main():
       else:
         logger.error("Directory appears to be missing {} file: {}".format(resources_name, siteconfig_dir))
         sys.exit(1)
+    ztp_apps = glob.glob("{}/cluster/ztp-*".format(cliargs.argocd_base_directory))
+    ztp_apps.sort()
+    for idx, ztp_app in enumerate(ztp_apps):
+      ztp_deploy_apps[idx] = {"location": ztp_app, "snos": []}
 
   available_snos = len(sno_list)
+  available_ztp_apps = len(ztp_deploy_apps)
   logger.info("Discovered {} available SNOs for deployment".format(available_snos))
 
+  if cliargs.method == "ztp":
+    max_ztp_snos = available_ztp_apps * cliargs.snos_per_app
+    logger.info("Discovered {} ztp cluster apps with capacity for {} * {} = {} SNOs".format(
+        available_ztp_apps, available_ztp_apps, cliargs.snos_per_app, max_ztp_snos))
+    if max_ztp_snos < available_snos:
+      logger.error("There are more SNOs than expected capacity of SNOs per ZTP cluster application")
+      sys.exit(1)
+
   total_deployed_snos = 0
+  total_intervals = 0
   rate_start_time = time.time()
   if cliargs.rate == "interval":
+    phase_break()
     logger.info("Starting interval based SNO deployment rate")
+    phase_break()
 
     start_sno_index = cliargs.start
     while True:
+      total_intervals += 1
       start_interval_time = time.time()
       end_sno_index = start_sno_index + cliargs.batch
       if cliargs.end > 0:
         if end_sno_index > cliargs.end:
           end_sno_index = cliargs.end
-      logger.debug("start_sno_index: {} end_sno_index: {} available_snos: {}".format(start_sno_index, end_sno_index, available_snos))
+      logger.info("Deploying interval {} with {} SNO(s) - {}".format(
+          total_intervals, end_sno_index - start_sno_index, int(start_interval_time * 1000)))
+
       # Apply the snos
       if cliargs.method == "manifests":
         for sno in sno_list[start_sno_index:end_sno_index]:
@@ -191,17 +283,20 @@ def main():
           logger.info("oc apply -f {}".format(sno))
       elif cliargs.method == "ztp":
         total_deployed_snos += len(sno_list[start_sno_index:end_sno_index])
-        logger.info("Copy \n {} \n into a ztp clusters application and modify the kustomization file".format("\n".join(sno_list[start_sno_index:end_sno_index])))
+        deploy_ztp_snos(
+            sno_list, ztp_deploy_apps, start_sno_index, end_sno_index, cliargs.snos_per_app,
+            cliargs.sno_manifests_siteconfigs, cliargs.argocd_base_directory)
 
       start_sno_index += cliargs.batch
       if start_sno_index >= available_snos or end_sno_index == cliargs.end:
-        logger.info("Finished deploying SNOs")
+        logger.info("Finished deploying SNOs - {}".format(int(time.time() * 1000)))
         break
 
+      # Interval wait logic
       expected_interval_end_time = start_interval_time + cliargs.interval
       current_time = time.time()
       wait_logger = 0
-      logger.info("Sleep for {}".format(cliargs.interval))
+      logger.info("Sleep for {}s with {}s remaining".format(cliargs.interval, round(expected_interval_end_time - current_time, 1)))
       while current_time < expected_interval_end_time:
         time.sleep(.1)
         wait_logger += 1
@@ -209,6 +304,7 @@ def main():
           logger.info("Remaining interval time: {}".format(round(expected_interval_end_time - current_time, 1)))
           wait_logger = 0
         current_time = time.time()
+
   elif cliargs.rate == "status":
     logger.error("Status rate Not implemented yet")
     sys.exit(1)
@@ -227,6 +323,8 @@ def main():
   logger.info("sno-deploy-load Stats")
   logger.info("Total available SNOs: {}".format(available_snos))
   logger.info("Total deployed SNOs: {}".format(total_deployed_snos))
+  if cliargs.rate == "interval":
+    logger.info("Total intervals: {}".format(total_intervals))
   logger.info("Time spent during rate deploying SNOs: {}".format(total_rate_time))
   # logger.info("Time spent waiting for du profile:")
   logger.info("Total time: {}".format(total_time))
