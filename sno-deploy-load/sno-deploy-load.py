@@ -135,9 +135,12 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
   # Git Process:
   for file in git_files:
     logger.debug("git add {}".format(file))
+    git_add = ["git", "add", file]
+    rc, output = command(git_add, dry_run, cmd_directory=argocd_dir)
   logger.info("Added {} files in git".format(len(git_files)))
-  logger.info("git commit -m 'Deploying SNOs {} to {}'".format(start_index, end_index))
-  logger.info("git push")
+  git_commit = ["git", "commit", "-m", "'Deploying SNOs {} to {}'".format(start_index, end_index)]
+  rc, output = command(git_commit, dry_run, cmd_directory=argocd_dir)
+  rc, output = command(["git", "push"], dry_run, cmd_directory=argocd_dir)
 
 def phase_break():
   logger.info("###############################################################################")
