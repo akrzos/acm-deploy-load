@@ -23,7 +23,7 @@ import math
 import os
 import pathlib
 import shutil
-# import subprocess
+import subprocess
 import sys
 import time
 
@@ -49,7 +49,44 @@ logger = logging.getLogger("sno-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 
-def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app, sno_siteconfigs, argocd_dir):
+def command(cmd, dry_run, cmd_directory="", no_log=False):
+  if cmd_directory != "":
+    logger.debug("Command Directory: {}".format(cmd_directory))
+    working_directory = os.getcwd()
+    os.chdir(cmd_directory)
+  if dry_run:
+    cmd.insert(0, "echo")
+  logger.info("Command: {}".format(" ".join(cmd)))
+  process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+
+  output = ""
+  while True:
+    output_line = process.stdout.readline()
+    if output_line.strip() != "":
+      if not no_log:
+        logger.info("Output : {}".format(output_line.strip()))
+      if output == "":
+        output = output_line.strip()
+      else:
+        output = "{}\n{}".format(output, output_line.strip())
+    return_code = process.poll()
+    if return_code is not None:
+      for output_line in process.stdout.readlines():
+        if output_line.strip() != "":
+          if not no_log:
+            logger.info("Output : {}".format(output_line.strip()))
+          if output == "":
+            output = output_line
+          else:
+            output = "{}\n{}".format(output, output_line.strip())
+      logger.debug("Return Code: {}".format(return_code))
+      break
+  if cmd_directory != "":
+    os.chdir(working_directory)
+  return return_code, output
+
+
+def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app, sno_siteconfigs, argocd_dir, dry_run):
   git_files = []
   siteconfig_dir = "{}/siteconfigs".format(sno_siteconfigs)
   last_ztp_app_index = math.floor((start_index) / snos_per_app)
@@ -62,8 +99,9 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
       t = Template(kustomization_template)
       kustomization_rendered = t.render(
           snos=ztp_deploy_apps[last_ztp_app_index]["snos"])
-      with open("{}/kustomization.yaml".format(ztp_deploy_apps[last_ztp_app_index]["location"]), "w") as file1:
-        file1.writelines(kustomization_rendered)
+      if not dry_run:
+        with open("{}/kustomization.yaml".format(ztp_deploy_apps[last_ztp_app_index]["location"]), "w") as file1:
+          file1.writelines(kustomization_rendered)
       git_files.append("{}/kustomization.yaml".format(ztp_deploy_apps[last_ztp_app_index]["location"]))
       last_ztp_app_index = ztp_app_index
 
@@ -74,12 +112,13 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
 
     logger.debug("Copying {}-siteconfig.yml and {}-resources.yml from {} to {}".format(
         sno_name, sno_name, siteconfig_dir, ztp_deploy_apps[last_ztp_app_index]["location"]))
-    shutil.copy2(
-        "{}/{}-siteconfig.yml".format(siteconfig_dir, sno_name),
-        "{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
-    shutil.copy2(
-        "{}/{}-resources.yml".format(siteconfig_dir, sno_name),
-        "{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
+    if not dry_run:
+      shutil.copy2(
+          "{}/{}-siteconfig.yml".format(siteconfig_dir, sno_name),
+          "{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
+      shutil.copy2(
+          "{}/{}-resources.yml".format(siteconfig_dir, sno_name),
+          "{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
     git_files.append("{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
     git_files.append("{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
 
@@ -88,8 +127,9 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
   t = Template(kustomization_template)
   kustomization_rendered = t.render(
       snos=ztp_deploy_apps[ztp_app_index]["snos"])
-  with open("{}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]), "w") as file1:
-    file1.writelines(kustomization_rendered)
+  if not dry_run:
+    with open("{}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]), "w") as file1:
+      file1.writelines(kustomization_rendered)
   git_files.append("{}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]))
 
   # Git Process:
@@ -280,12 +320,14 @@ def main():
       if cliargs.method == "manifests":
         for sno in sno_list[start_sno_index:end_sno_index]:
           total_deployed_snos += 1
-          logger.info("oc apply -f {}".format(sno))
+          oc_apply = ["oc", "apply", "-f", sno]
+          logger.info("oc apply -f {}".format(oc_apply))
+          rc, output = command(oc_apply, cliargs.dry_run)
       elif cliargs.method == "ztp":
         total_deployed_snos += len(sno_list[start_sno_index:end_sno_index])
         deploy_ztp_snos(
             sno_list, ztp_deploy_apps, start_sno_index, end_sno_index, cliargs.snos_per_app,
-            cliargs.sno_manifests_siteconfigs, cliargs.argocd_base_directory)
+            cliargs.sno_manifests_siteconfigs, cliargs.argocd_base_directory, cliargs.dry_run)
 
       start_sno_index += cliargs.batch
       if start_sno_index >= available_snos or end_sno_index == cliargs.end:
