@@ -15,18 +15,23 @@
 
 import argparse
 from collections import OrderedDict
-# from datetime import datetime
 import glob
 from jinja2 import Template
 import json
+from utils.command import command
+from utils.sno_monitor import SnoMonitor
 import logging
 import math
 import os
 import pathlib
 import shutil
-import subprocess
 import sys
 import time
+
+
+# TODO:
+# * Wait for du profile to complete
+# * Dump a "report card" + Graphs
 
 
 kustomization_template = """---
@@ -45,54 +50,9 @@ resources:
 """
 
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
 logger = logging.getLogger("sno-deploy-load")
 logging.Formatter.converter = time.gmtime
-
-
-def command(cmd, dry_run, cmd_directory="", retries=1, retry_backoff=True, no_log=False):
-  if cmd_directory != "":
-    logger.debug("Command Directory: {}".format(cmd_directory))
-    working_directory = os.getcwd()
-    os.chdir(cmd_directory)
-  if dry_run:
-    cmd.insert(0, "echo")
-
-  tries = 1
-  while tries <= retries:
-    if tries > 1 and retry_backoff:
-      time.sleep(1 * (tries - 1))
-    logger.info("Command({}): {}".format(tries, " ".join(cmd)))
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-    output = ""
-    while True:
-      output_line = process.stdout.readline()
-      if output_line.strip() != "":
-        if not no_log:
-          logger.info("Output : {}".format(output_line.strip()))
-        if output == "":
-          output = output_line.strip()
-        else:
-          output = "{}\n{}".format(output, output_line.strip())
-      return_code = process.poll()
-      if return_code is not None:
-        for output_line in process.stdout.readlines():
-          if output_line.strip() != "":
-            if not no_log:
-              logger.info("Output : {}".format(output_line.strip()))
-            if output == "":
-              output = output_line
-            else:
-              output = "{}\n{}".format(output, output_line.strip())
-        logger.debug("Return Code: {}".format(return_code))
-        break
-    tries += 1
-    # Break from retry loop if successful
-    if retries > 1 and return_code == 0:
-      break;
-  if cmd_directory != "":
-    os.chdir(working_directory)
-  return return_code, output
 
 
 def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app, sno_siteconfigs, argocd_dir, dry_run):
@@ -181,12 +141,20 @@ def main():
                       help="Maximum number of SNO siteconfigs per cluster application")
   parser.add_argument("-w", "--wait-du-profile", action="store_true", default=False,
                       help="Waits for du profile to complete after all expected SNOs deployed")
+
+  # Monitor Thread Options
+  parser.add_argument("-i", "--monitor-interval", type=int, default=60, help="Interval to collect monitoring data")
+  parser.add_argument("-c", "--csv-file", type=str, default="sno-deploy-load.csv",
+                      help="CSV file to write monitoring data")
+
+  # Debug and dry-run options
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
   parser.add_argument("--dry-run", action="store_true", default=False, help="Echos commands instead of executing them")
 
   subparsers = parser.add_subparsers(dest="rate")
 
-  parser_interval = subparsers.add_parser("interval")
+  parser_interval = subparsers.add_parser("interval", help="Interval rate method of deploying SNOs",
+                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser_interval.add_argument("-b", "--batch", type=int, default=100, help="Number of SNOs to apply per interval")
   parser_interval.add_argument("-i", "--interval", type=int, default=7200,
                                help="Time in seconds between deploying SNOs")
@@ -196,14 +164,16 @@ def main():
   subparsers_interval.add_parser("manifests")
   subparsers_interval.add_parser("ztp")
 
-  parser_status = subparsers.add_parser("status")
+  parser_status = subparsers.add_parser("status", help="Status rate method of deploying SNOs",
+                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser_status.add_argument("-b", "--batch", type=int, default=100,
                              help="Number of SNOs to apply until all either complete/fail")
   subparsers_status = parser_status.add_subparsers(dest="method")
   subparsers_status.add_parser("manifests")
   subparsers_status.add_parser("ztp")
 
-  parser_concurrent = subparsers.add_parser("concurrent")
+  parser_concurrent = subparsers.add_parser("concurrent", help="Concurrent rate method of deploying SNOs",
+                                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser_concurrent.add_argument("-c", "--concurrency", type=int, default=100,
                                  help="Number of SNOs to maintain deploying/installing")
   parser_concurrent.add_argument("-z", "--skip-wait-sno", action="store_true", default=False,
@@ -241,6 +211,9 @@ def main():
   if (cliargs.end > 0 and (cliargs.start >= cliargs.end)):
     logger.error("SNO start index must be greater than the end index, when end index is not 0")
     sys.exit(1)
+  if (cliargs.monitor_interval < 10):
+    logger.error("Monitor interval must be equal to or greater than 10")
+    sys.exit(1)
   if cliargs.rate == "interval":
     if not (cliargs.batch >= 1):
       logger.error("Batch size must be equal to or greater than 1")
@@ -267,7 +240,11 @@ def main():
       logger.info(" * Skip waiting for SNOs to complete deployment at conclusion")
     else:
       logger.info(" * Wait for all SNOs to complete deployment at conclusion")
+  if cliargs.wait_du_profile:
+    logger.info(" * Wait for all deployed SNOs to apply du profile")
   logger.info(" * Start Index: {}, End Index: {}".format(cliargs.start, cliargs.end))
+  logger.info("Monitoring data captured to: {}".format(cliargs.csv_file))
+  logger.info(" * Monitoring interval: {}".format(cliargs.monitor_interval))
   phase_break()
 
   # Get starting data and list directories for manifests/siteconfigs/cluster applications
@@ -303,6 +280,9 @@ def main():
 
   available_snos = len(sno_list)
   available_ztp_apps = len(ztp_deploy_apps)
+  if available_snos == 0:
+    logger.error("Zero SNOs discovered.")
+    sys.exit(1)
   logger.info("Discovered {} available SNOs for deployment".format(available_snos))
 
   if cliargs.method == "ztp":
@@ -317,10 +297,27 @@ def main():
   total_deployed_snos = 0
   total_intervals = 0
   rate_start_time = time.time()
+
+  monitor_data = {
+    "initialized": 0,
+    "notstarted": 0,
+    "booted": 0,
+    "discovered": 0,
+    "installing": 0,
+    "install_failed": 0,
+    "install_completed": 0,
+    "managed": 0,
+    "policy_applying": 0,
+    "policy_timeout": 0,
+    "policy_compliant": 0
+  }
+
   if cliargs.rate == "interval":
     phase_break()
     logger.info("Starting interval based SNO deployment rate")
     phase_break()
+    monitor_thread = SnoMonitor(monitor_data, cliargs.csv_file, cliargs.dry_run, cliargs.monitor_interval)
+    monitor_thread.start()
 
     start_sno_index = cliargs.start
     while True:
@@ -351,6 +348,7 @@ def main():
 
       start_sno_index += cliargs.batch
       if start_sno_index >= available_snos or end_sno_index == cliargs.end:
+        phase_break()
         logger.info("Finished deploying SNOs - {}".format(int(time.time() * 1000)))
         break
 
@@ -377,65 +375,74 @@ def main():
   phase_break()
 
   # Logic to wait for all SNOs to complete or fail provisioning
-  # TODO: Check with how many snos we asked to be provsioned as ztp may not show initialized SNO provisions until
-  # argocd syncs with the repo
   if cliargs.rate == "interval" or cliargs.rate == "concurrent":
     if not cliargs.skip_wait_sno:
       wait_sno_start_time = time.time()
-      logger.info("Wait for all SNOs to complete deployment at conclusion")
+      logger.info("Waiting for all SNOs to complete deployment at conclusion")
+
+      # First check that all expected SNOs to be initialized are initialized
+      wait_logger = 0
+      if cliargs.dry_run:
+        total_deployed_snos = 0
+      while True:
+        time.sleep(30)
+        wait_logger += 1
+        if wait_logger >= 4:
+          logger.info("Expected {} SNOs but only {} are initialized".format(
+              total_deployed_snos, monitor_data["initialized"]))
+          wait_logger = 0
+        if monitor_data["initialized"] >= total_deployed_snos:
+          logger.info("Deployed SNOs have been initialized")
+          break;
+      phase_break()
+
+      # Now wait for completed/failed to match initialized
       wait_logger = 4
       while True:
-        oc_cmd = ["oc", "get", "agentclusterinstall", "-A", "-o", "json"]
-        rc, output = command(oc_cmd, cliargs.dry_run, no_log=True)
-        if rc != 0:
-          logger.error("sno-deploy-load, oc get agentclusterinstall rc: {}".format(rc))
-          sys.exit(1)
-        if not cliargs.dry_run:
-          json_data = json.loads(output)
-        else:
-          json_data = {"items": []}
-        sno_initialized = len(json_data["items"])
-        sno_notstarted = 0
-        sno_in_progress = 0
-        sno_install_failed = 0
-        sno_install_completed = 0
-        for item in json_data["items"]:
-          for condition in item["status"]["conditions"]:
-            if condition["type"] == "Completed":
-              logger.debug("SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
-              if condition["reason"] == "InstallationNotStarted":
-                sno_notstarted += 1
-              elif condition["reason"] == "InstallationInProgress":
-                sno_in_progress += 1
-              elif condition["reason"] == "InstallationFailed":
-                sno_install_failed += 1
-              elif condition["reason"] == "InstallationCompleted":
-                sno_install_completed += 1
-              else:
-                logger.info("{}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
-              break
+        if (monitor_data["install_failed"] + monitor_data["install_completed"]) == monitor_data["initialized"]:
+          logger.info("All SNOs completed/failed")
+          logger.info("Initialized SNOs: {}".format(monitor_data["initialized"]))
+          logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
+          logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
+          logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
+          logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
+          logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
+          logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
+          logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
+          logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
+          logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
+          logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+          break
+
+        time.sleep(30)
         wait_logger += 1
         if wait_logger >= 5:
-          logger.info("Initialized SNOs: {}".format(sno_initialized))
-          logger.info("Not Started SNOs: {}".format(sno_notstarted))
-          logger.info("In Progress SNOs: {}".format(sno_in_progress))
-          logger.info("Failed SNOs: {}".format(sno_install_failed))
-          logger.info("Completed SNOs: {}".format(sno_install_completed))
+          logger.info("Initialized SNOs: {}".format(monitor_data["initialized"]))
+          logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
+          logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
+          logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
+          logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
+          logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
+          logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
+          logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
+          logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
+          logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
+          logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
           wait_logger = 0
-        if (sno_install_failed + sno_install_completed) == sno_initialized:
-          logger.info("All SNOs completed/failed")
-          logger.info("Initialized SNOs: {}".format(sno_initialized))
-          logger.info("Not Started SNOs: {}".format(sno_notstarted))
-          logger.info("In Progress SNOs: {}".format(sno_in_progress))
-          logger.info("Failed SNOs: {}".format(sno_install_failed))
-          logger.info("Completed SNOs: {}".format(sno_install_completed))
-          break
-        else:
-          time.sleep(30)
       wait_sno_end_time = time.time()
-  # Potentially wait for du profile to apply to all clusters (All rates)
+
+  # TODO: Wait for du profile complete here
+  if cliargs.wait_du_profile:
+    phase_break()
+    logger.info("Waiting for all SNOs to complete du profile at conclusion")
+    # TODO: implement this
 
   end_time = time.time()
+
+  # Stop monitoring thread
+  monitor_thread.signal = False
+  monitor_thread.join()
+
   total_rate_time = round(rate_end_time - rate_start_time, 1)
   total_time = round(end_time - start_time, 1)
   phase_break()
@@ -445,11 +452,11 @@ def main():
   logger.info("Total deployed SNOs: {}".format(total_deployed_snos))
   if cliargs.rate == "interval":
     logger.info("Total intervals: {}".format(total_intervals))
-  logger.info("Time spent during rate deploying SNOs: {}".format(total_rate_time))
+  logger.info("SNO deploying duration: {}".format(total_rate_time))
   if not cliargs.skip_wait_sno:
-    logger.info("Time spent waiting for SNO(s) to complete: {}".format(round(wait_sno_end_time - wait_sno_start_time, 1)))
+    logger.info("SNO(s) waiting to complete duration: {}".format(round(wait_sno_end_time - wait_sno_start_time, 1)))
   # logger.info("Time spent waiting for du profile:")
-  logger.info("Total time: {}".format(total_time))
+  logger.info("Total duration: {}".format(total_time))
 
 if __name__ == "__main__":
   sys.exit(main())
