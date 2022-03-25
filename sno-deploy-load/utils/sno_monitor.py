@@ -40,7 +40,7 @@ class SnoMonitor(Thread):
     logger.info("Starting SNO Monitor")
 
     with open(self.csv_file, "w") as csv_file:
-      csv_file.write("date,initialized,notstarted,booted,discovered,installing,install_failed,install_completed,managed,policy_applying,policy_timedout,policy_compliant\n")
+      csv_file.write("date,sno_init,notstarted,booted,discovered,installing,install_failed,install_completed,managed,policy_init,policy_applying,policy_timedout,policy_compliant\n")
 
     wait_logger = 4
     while self.signal:
@@ -101,7 +101,7 @@ class SnoMonitor(Thread):
       else:
         mc_data = {"items": []}
 
-      sno_initialized = len(aci_data["items"])
+      sno_init = len(aci_data["items"])
       sno_notstarted = 0
       sno_booted = 0
       sno_discovered = len(agent_data["items"])
@@ -109,6 +109,7 @@ class SnoMonitor(Thread):
       sno_install_failed = 0
       sno_install_completed = 0
       sno_managed = 0
+      sno_policy_init = len(cgu_data["items"])
       sno_policy_applying = 0
       sno_policy_timeout = 0
       sno_policy_compliant = 0
@@ -191,7 +192,7 @@ class SnoMonitor(Thread):
         else:
           logger.warn("status or conditions not found in managedcluster object: {}".format(item))
 
-      self.monitor_data["initialized"] = sno_initialized
+      self.monitor_data["sno_init"] = sno_init
       self.monitor_data["notstarted"] = sno_notstarted
       self.monitor_data["booted"] = sno_booted
       self.monitor_data["discovered"] = sno_discovered
@@ -199,6 +200,7 @@ class SnoMonitor(Thread):
       self.monitor_data["install_failed"] = sno_install_failed
       self.monitor_data["install_completed"] = sno_install_completed
       self.monitor_data["managed"] = sno_managed
+      self.monitor_data["policy_init"] = sno_policy_init
       self.monitor_data["policy_applying"] = sno_policy_applying
       self.monitor_data["policy_timeout"] = sno_policy_timeout
       self.monitor_data["policy_compliant"] = sno_policy_compliant
@@ -206,12 +208,12 @@ class SnoMonitor(Thread):
       # Write csv data
       with open(self.csv_file, "a") as csv_file:
         csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
-            datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'), sno_initialized,
+            datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'), sno_init,
             sno_notstarted, sno_booted, sno_discovered, sno_installing, sno_install_failed, sno_install_completed,
-            sno_managed, sno_policy_applying, sno_policy_timeout, sno_policy_compliant
+            sno_managed, sno_policy_init, sno_policy_applying, sno_policy_timeout, sno_policy_compliant
         ))
 
-      logger.debug("Initialized SNOs: {}".format(self.monitor_data["initialized"]))
+      logger.debug("Initialized SNOs: {}".format(self.monitor_data["sno_init"]))
       logger.debug("Not Started SNOs: {}".format(self.monitor_data["notstarted"]))
       logger.debug("Booted SNOs: {}".format(self.monitor_data["booted"]))
       logger.debug("Discovered SNOs: {}".format(self.monitor_data["discovered"]))
@@ -219,6 +221,7 @@ class SnoMonitor(Thread):
       logger.debug("Failed SNOs: {}".format(self.monitor_data["install_failed"]))
       logger.debug("Completed SNOs: {}".format(self.monitor_data["install_completed"]))
       logger.debug("Managed SNOs: {}".format(self.monitor_data["managed"]))
+      logger.debug("Initialized Policy SNOs: {}".format(self.monitor_data["policy_init"]))
       logger.debug("Policy Applying SNOs: {}".format(self.monitor_data["policy_applying"]))
       logger.debug("Policy Timeout SNOs: {}".format(self.monitor_data["policy_timeout"]))
       logger.debug("Policy Compliant SNOs: {}".format(self.monitor_data["policy_compliant"]))

@@ -15,6 +15,7 @@
 
 import argparse
 from collections import OrderedDict
+from datetime import datetime
 import glob
 from jinja2 import Template
 import json
@@ -30,8 +31,10 @@ import time
 
 
 # TODO:
-# * Wait for du profile to complete
-# * Dump a "report card" + Graphs
+# * Write a report card
+# * Graph method that takes a csv from monitoring data
+# * Status and Concurrent rate methods
+# * Prom queries for System metric data
 
 
 kustomization_template = """---
@@ -107,7 +110,7 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
     git_add = ["git", "add", file]
     rc, output = command(git_add, dry_run, cmd_directory=argocd_dir)
   logger.info("Added {} files in git".format(len(git_files)))
-  git_commit = ["git", "commit", "-m", "'Deploying SNOs {} to {}'".format(start_index, end_index)]
+  git_commit = ["git", "commit", "-m", "Deploying SNOs {} to {}".format(start_index, end_index)]
   rc, output = command(git_commit, dry_run, cmd_directory=argocd_dir)
   rc, output = command(["git", "push"], dry_run, cmd_directory=argocd_dir)
 
@@ -296,10 +299,8 @@ def main():
   # Manifest application / gitops "phase"
   total_deployed_snos = 0
   total_intervals = 0
-  rate_start_time = time.time()
-
   monitor_data = {
-    "initialized": 0,
+    "sno_init": 0,
     "notstarted": 0,
     "booted": 0,
     "discovered": 0,
@@ -307,14 +308,16 @@ def main():
     "install_failed": 0,
     "install_completed": 0,
     "managed": 0,
+    "policy_init": 0,
     "policy_applying": 0,
     "policy_timeout": 0,
     "policy_compliant": 0
   }
 
+  deploy_start_time = time.time()
   if cliargs.rate == "interval":
     phase_break()
-    logger.info("Starting interval based SNO deployment rate")
+    logger.info("Starting interval based SNO deployment rate - {}".format(int(time.time() * 1000)))
     phase_break()
     monitor_thread = SnoMonitor(monitor_data, cliargs.csv_file, cliargs.dry_run, cliargs.monitor_interval)
     monitor_thread.start()
@@ -371,92 +374,147 @@ def main():
   elif cliargs.rate == "concurrent":
     logger.error("Concurrent rate Not implemented yet")
     sys.exit(1)
-  rate_end_time = time.time()
-  phase_break()
+  deploy_end_time = time.time()
 
-  # Logic to wait for all SNOs to complete or fail provisioning
-  if cliargs.rate == "interval" or cliargs.rate == "concurrent":
-    if not cliargs.skip_wait_sno:
-      wait_sno_start_time = time.time()
-      logger.info("Waiting for all SNOs to complete deployment at conclusion")
+  # Logic to wait for all SNOs to complete or fail installing
+  wait_sno_start_time = time.time()
+  if (cliargs.rate == "interval" or cliargs.rate == "concurrent") and (not cliargs.skip_wait_sno):
+    phase_break()
+    logger.info("Waiting for SNOs install complete/fail completion - {}".format(int(time.time() * 1000)))
+    phase_break()
+    if cliargs.dry_run:
+      total_deployed_snos = 0
 
-      # First check that all expected SNOs to be initialized are initialized
-      wait_logger = 0
-      if cliargs.dry_run:
-        total_deployed_snos = 0
-      while True:
-        time.sleep(30)
-        wait_logger += 1
-        if wait_logger >= 4:
-          logger.info("Expected {} SNOs but only {} are initialized".format(
-              total_deployed_snos, monitor_data["initialized"]))
-          wait_logger = 0
-        if monitor_data["initialized"] >= total_deployed_snos:
-          logger.info("Deployed SNOs have been initialized")
-          break;
-      phase_break()
+    wait_logger = 4
+    while True:
+      time.sleep(30)
+      if ((monitor_data["sno_init"] >= total_deployed_snos) and
+          ((monitor_data["install_failed"] + monitor_data["install_completed"]) == monitor_data["sno_init"])):
+        logger.info("SNOs install complete/fail completion")
+        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
+        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
+        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
+        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
+        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
+        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
+        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
+        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
+        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
+        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
+        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
+        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        break
 
-      # Now wait for completed/failed to match initialized
-      wait_logger = 4
-      while True:
-        if (monitor_data["install_failed"] + monitor_data["install_completed"]) == monitor_data["initialized"]:
-          logger.info("All SNOs completed/failed")
-          logger.info("Initialized SNOs: {}".format(monitor_data["initialized"]))
-          logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
-          logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
-          logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
-          logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
-          logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
-          logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
-          logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
-          logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
-          logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
-          logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
-          break
+      wait_logger += 1
+      if wait_logger >= 5:
+        logger.info("Deployed SNOs: {}".format(total_deployed_snos))
+        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
+        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
+        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
+        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
+        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
+        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
+        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
+        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
+        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
+        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
+        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
+        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        wait_logger = 0
+  wait_sno_end_time = time.time()
 
-        time.sleep(30)
-        wait_logger += 1
-        if wait_logger >= 5:
-          logger.info("Initialized SNOs: {}".format(monitor_data["initialized"]))
-          logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
-          logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
-          logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
-          logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
-          logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
-          logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
-          logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
-          logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
-          logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
-          logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
-          wait_logger = 0
-      wait_sno_end_time = time.time()
-
-  # TODO: Wait for du profile complete here
+  # Logic to wait for du profile completion
+  wait_du_profile_start_time = time.time()
   if cliargs.wait_du_profile:
     phase_break()
-    logger.info("Waiting for all SNOs to complete du profile at conclusion")
-    # TODO: implement this
+    logger.info("Waiting for DU Profile Apply/Timeout completion - {}".format(int(time.time() * 1000)))
+    phase_break()
+    if cliargs.dry_run:
+      total_deployed_snos = 0
+
+    wait_logger = 4
+    while True:
+      # logger.info((monitor_data["policy_init"] >= monitor_data["install_completed"]))
+      # logger.info(((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"]))
+      time.sleep(30)
+      if ((monitor_data["policy_init"] >= monitor_data["install_completed"]) and
+          ((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
+        logger.info("DU Profile Apply/Timeout completion")
+        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
+        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
+        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
+        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
+        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
+        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
+        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
+        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
+        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
+        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
+        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
+        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        break
+
+      wait_logger += 1
+      if wait_logger >= 5:
+        logger.info("Deployed SNOs: {}".format(total_deployed_snos))
+        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
+        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
+        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
+        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
+        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
+        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
+        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
+        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
+        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
+        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
+        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
+        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        wait_logger = 0
+  wait_du_profile_end_time = time.time()
+
+  # Possible Post-complete delay option here?
 
   end_time = time.time()
 
   # Stop monitoring thread
+  logger.info("Stopping monitoring thread may take up to: {}".format(cliargs.monitor_interval))
   monitor_thread.signal = False
   monitor_thread.join()
 
-  total_rate_time = round(rate_end_time - rate_start_time, 1)
+  # Write Report Card here and graph results
+  total_deploy_time = round(deploy_end_time - deploy_start_time, 1)
+  total_sno_install_time = round(wait_sno_end_time - wait_sno_start_time, 1)
+  total_duprofile_time = round(wait_du_profile_end_time - wait_du_profile_start_time, 1)
   total_time = round(end_time - start_time, 1)
   phase_break()
-  logger.info("sno-deploy-load Stats")
+  logger.info("sno-deploy-load Report Card")
   phase_break()
-  logger.info("Total available SNOs: {}".format(available_snos))
-  logger.info("Total deployed SNOs: {}".format(total_deployed_snos))
+  logger.info("SNO Results")
+  logger.info(" * Available SNOs: {}".format(available_snos))
+  logger.info(" * Deployed SNOs: {}".format(total_deployed_snos))
+  logger.info(" * Installed SNOs: {}".format(monitor_data["install_completed"]))
+  logger.info(" * Failed SNOs: {}".format(monitor_data["install_failed"]))
+  logger.info("DU Profile Results")
+  logger.info(" * DU Profile Initialized: {}".format(monitor_data["policy_init"]))
+  logger.info(" * DU Profile Compliant: {}".format(monitor_data["policy_compliant"]))
+  logger.info(" * DU Profile Timeout: {}".format(monitor_data["policy_timeout"]))
+  logger.info("SNO Orchestration")
+  logger.info(" * Method: {}".format(cliargs.rate))
+  logger.info(" * SNO Start: {} End: {}".format(cliargs.start, cliargs.end))
   if cliargs.rate == "interval":
-    logger.info("Total intervals: {}".format(total_intervals))
-  logger.info("SNO deploying duration: {}".format(total_rate_time))
+    logger.info(" * {} SNO(s) per {}s interval".format(cliargs.batch, cliargs.interval))
+    logger.info(" * Actual Intervals: {}".format(total_intervals))
+  logger.info("Workload Duration Results")
+  logger.info(" * Start Time: {} {}".format(
+      datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ'), int(start_time * 1000)))
+  logger.info(" * End Time: {} {}".format(
+      datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ'), int(end_time * 1000)))
+  logger.info(" * SNO Deploying duration: {}".format(total_deploy_time))
   if not cliargs.skip_wait_sno:
-    logger.info("SNO(s) waiting to complete duration: {}".format(round(wait_sno_end_time - wait_sno_start_time, 1)))
-  # logger.info("Time spent waiting for du profile:")
-  logger.info("Total duration: {}".format(total_time))
+    logger.info(" * SNO Install wait duration: {}".format(total_sno_install_time))
+  if cliargs.wait_du_profile:
+    logger.info(" * DU Profile wait duration: {}".format(total_duprofile_time))
+  logger.info(" * Total duration: {}".format(total_time))
 
 if __name__ == "__main__":
   sys.exit(main())
