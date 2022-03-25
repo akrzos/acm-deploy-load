@@ -132,7 +132,7 @@ def main():
   parser.add_argument("-m", "--sno-manifests-siteconfigs", type=str, default="/root/hv-sno",
                       help="The location of the SNO manifests, siteconfigs and resource files")
   parser.add_argument("-a", "--argocd-base-directory", type=str,
-                      default="/root/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/",
+                      default="/root/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd",
                       help="The location of the ArgoCD SNO cluster and cluster applications directories")
   parser.add_argument("-s", "--start", type=int, default=0,
                       help="SNO start index, follows array logic starting at 0 for 'sno00001'")
