@@ -207,7 +207,7 @@ class SnoMonitor(Thread):
 
       # Write csv data
       with open(self.csv_file, "a") as csv_file:
-        csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+        csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
             datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'), sno_init,
             sno_notstarted, sno_booted, sno_discovered, sno_installing, sno_install_failed, sno_install_completed,
             sno_managed, sno_policy_init, sno_policy_applying, sno_policy_timeout, sno_policy_compliant
