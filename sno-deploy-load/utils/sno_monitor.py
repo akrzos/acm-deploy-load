@@ -49,57 +49,52 @@ class SnoMonitor(Thread):
       # Get agentclusterinstall data
       oc_cmd = ["oc", "get", "agentclusterinstall", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
+      aci_data = {"items": []}
       if rc != 0:
         logger.error("sno-deploy-load, oc get agentclusterinstall rc: {}".format(rc))
-        aci_data = {"items": []}
-      if not self.dry_run:
-        aci_data = json.loads(output)
       else:
-        aci_data = {"items": []}
+        if not self.dry_run:
+          aci_data = json.loads(output)
 
       # Get clustergroupupgrades data
       oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", "ztp-install", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
+      cgu_data = {"items": []}
       if rc != 0:
         logger.error("sno-deploy-load, oc get clustergroupupgrades rc: {}".format(rc))
-        cgu_data = {"items": []}
-      if not self.dry_run:
-        cgu_data = json.loads(output)
       else:
-        cgu_data = {"items": []}
+        if not self.dry_run:
+          cgu_data = json.loads(output)
 
       # Get baremetalhost data
       oc_cmd = ["oc", "get", "baremetalhost", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
+      bmh_data = {"items": []}
       if rc != 0:
         logger.error("sno-deploy-load, oc get baremetalhost rc: {}".format(rc))
-        bmh_data = {"items": []}
-      if not self.dry_run:
-        bmh_data = json.loads(output)
       else:
-        bmh_data = {"items": []}
+        if not self.dry_run:
+          bmh_data = json.loads(output)
 
       # Get agent data
       oc_cmd = ["oc", "get", "agent", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
+      agent_data = {"items": []}
       if rc != 0:
         logger.error("sno-deploy-load, oc get agent rc: {}".format(rc))
-        agent_data = {"items": []}
-      if not self.dry_run:
-        agent_data = json.loads(output)
       else:
-        agent_data = {"items": []}
+        if not self.dry_run:
+          agent_data = json.loads(output)
 
       # Get managedcluster data
       oc_cmd = ["oc", "get", "managedcluster", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
+      mc_data = {"items": []}
       if rc != 0:
         logger.error("sno-deploy-load, oc get managedcluster rc: {}".format(rc))
-        mc_data = {"items": []}
-      if not self.dry_run:
-        mc_data = json.loads(output)
       else:
-        mc_data = {"items": []}
+        if not self.dry_run:
+          mc_data = json.loads(output)
 
       sno_init = len(aci_data["items"])
       sno_notstarted = 0
