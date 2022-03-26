@@ -29,8 +29,14 @@ import shutil
 import sys
 import time
 
-
+# Phases:
+# 1. Deploy Phase
+# 2. Wait for SNO Install Completion Phase
+# 3. Wait for DU Profile Completion Phase
+# 4. Report Card / Graphs Phase
+#
 # TODO:
+# * Print SNO status during deploy phase
 # * Write a report card
 # * Graph method that takes a csv from monitoring data
 # * Status and Concurrent rate methods
@@ -113,6 +119,22 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
   git_commit = ["git", "commit", "-m", "Deploying SNOs {} to {}".format(start_index, end_index)]
   rc, output = command(git_commit, dry_run, cmd_directory=argocd_dir)
   rc, output = command(["git", "push"], dry_run, cmd_directory=argocd_dir)
+
+
+def log_monitor_data(data):
+  logger.info("Initialized SNOs: {}".format(data["sno_init"]))
+  logger.info("Not Started SNOs: {}".format(data["sno_notstarted"]))
+  logger.info("Booted SNOs: {}".format(data["sno_booted"]))
+  logger.info("Discovered SNOs: {}".format(data["sno_discovered"]))
+  logger.info("Installing SNOs: {}".format(data["sno_installing"]))
+  logger.info("Failed SNOs: {}".format(data["sno_install_failed"]))
+  logger.info("Completed SNOs: {}".format(data["sno_install_completed"]))
+  logger.info("Managed SNOs: {}".format(data["managed"]))
+  logger.info("Initialized Policy SNOs: {}".format(data["policy_init"]))
+  logger.info("Policy Not Started SNOs: {}".format(data["policy_notstarted"]))
+  logger.info("Policy Applying SNOs: {}".format(data["policy_applying"]))
+  logger.info("Policy Timeout SNOs: {}".format(data["policy_timeout"]))
+  logger.info("Policy Compliant SNOs: {}".format(data["policy_compliant"]))
 
 
 def phase_break():
@@ -301,14 +323,15 @@ def main():
   total_intervals = 0
   monitor_data = {
     "sno_init": 0,
-    "notstarted": 0,
-    "booted": 0,
-    "discovered": 0,
-    "installing": 0,
-    "install_failed": 0,
-    "install_completed": 0,
+    "sno_notstarted": 0,
+    "sno_booted": 0,
+    "sno_discovered": 0,
+    "sno_installing": 0,
+    "sno_install_failed": 0,
+    "sno_install_completed": 0,
     "managed": 0,
     "policy_init": 0,
+    "policy_notstarted": 0,
     "policy_applying": 0,
     "policy_timeout": 0,
     "policy_compliant": 0
@@ -389,37 +412,15 @@ def main():
     while True:
       time.sleep(30)
       if ((monitor_data["sno_init"] >= total_deployed_snos) and
-          ((monitor_data["install_failed"] + monitor_data["install_completed"]) == monitor_data["sno_init"])):
+          ((monitor_data["sno_install_failed"] + monitor_data["sno_install_completed"]) == monitor_data["sno_init"])):
         logger.info("SNOs install complete/fail completion")
-        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
-        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
-        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
-        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
-        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
-        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
-        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
-        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
-        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
-        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
-        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
-        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        log_monitor_data(monitor_data)
         break
 
       wait_logger += 1
       if wait_logger >= 5:
         logger.info("Deployed SNOs: {}".format(total_deployed_snos))
-        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
-        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
-        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
-        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
-        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
-        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
-        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
-        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
-        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
-        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
-        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
-        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        log_monitor_data(monitor_data)
         wait_logger = 0
   wait_sno_end_time = time.time()
 
@@ -434,41 +435,19 @@ def main():
 
     wait_logger = 4
     while True:
-      # logger.info((monitor_data["policy_init"] >= monitor_data["install_completed"]))
+      # logger.info((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]))
       # logger.info(((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"]))
       time.sleep(30)
-      if ((monitor_data["policy_init"] >= monitor_data["install_completed"]) and
+      if ((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]) and
           ((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
         logger.info("DU Profile Apply/Timeout completion")
-        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
-        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
-        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
-        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
-        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
-        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
-        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
-        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
-        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
-        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
-        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
-        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        log_monitor_data(monitor_data)
         break
 
       wait_logger += 1
       if wait_logger >= 5:
         logger.info("Deployed SNOs: {}".format(total_deployed_snos))
-        logger.info("Initialized SNOs: {}".format(monitor_data["sno_init"]))
-        logger.info("Not Started SNOs: {}".format(monitor_data["notstarted"]))
-        logger.info("Booted SNOs: {}".format(monitor_data["booted"]))
-        logger.info("Discovered SNOs: {}".format(monitor_data["discovered"]))
-        logger.info("Installing SNOs: {}".format(monitor_data["installing"]))
-        logger.info("Failed SNOs: {}".format(monitor_data["install_failed"]))
-        logger.info("Completed SNOs: {}".format(monitor_data["install_completed"]))
-        logger.info("Managed SNOs: {}".format(monitor_data["managed"]))
-        logger.info("Initialized Policy SNOs: {}".format(monitor_data["policy_init"]))
-        logger.info("Policy Applying SNOs: {}".format(monitor_data["policy_applying"]))
-        logger.info("Policy Timeout SNOs: {}".format(monitor_data["policy_timeout"]))
-        logger.info("Policy Compliant SNOs: {}".format(monitor_data["policy_compliant"]))
+        log_monitor_data(monitor_data)
         wait_logger = 0
   wait_du_profile_end_time = time.time()
 
@@ -492,8 +471,8 @@ def main():
   logger.info("SNO Results")
   logger.info(" * Available SNOs: {}".format(available_snos))
   logger.info(" * Deployed SNOs: {}".format(total_deployed_snos))
-  logger.info(" * Installed SNOs: {}".format(monitor_data["install_completed"]))
-  logger.info(" * Failed SNOs: {}".format(monitor_data["install_failed"]))
+  logger.info(" * Installed SNOs: {}".format(monitor_data["sno_install_completed"]))
+  logger.info(" * Failed SNOs: {}".format(monitor_data["sno_install_failed"]))
   logger.info("DU Profile Results")
   logger.info(" * DU Profile Initialized: {}".format(monitor_data["policy_init"]))
   logger.info(" * DU Profile Compliant: {}".format(monitor_data["policy_compliant"]))
