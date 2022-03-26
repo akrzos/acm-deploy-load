@@ -15,6 +15,7 @@
 
 import argparse
 from collections import OrderedDict
+from datetime import timedelta
 from datetime import datetime
 import glob
 from jinja2 import Template
@@ -121,7 +122,8 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
   rc, output = command(["git", "push"], dry_run, cmd_directory=argocd_dir)
 
 
-def log_monitor_data(data):
+def log_monitor_data(data, elapsed_seconds):
+  logger.info("Elapsed total time: {}s :: {}".format(elapsed_seconds, str(timedelta(seconds=elapsed_seconds))))
   logger.info("Initialized SNOs: {}".format(data["sno_init"]))
   logger.info("Not Started SNOs: {}".format(data["sno_notstarted"]))
   logger.info("Booted SNOs: {}".format(data["sno_booted"]))
@@ -149,11 +151,6 @@ def main():
       prog="sno-deploy-load.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # "Global" args
-  # parser.add_argument("-m", "--sno-manifests-siteconfigs", type=str, default="/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/hv-sno",
-  #                     help="The location of the SNO manifests, siteconfigs and resource files")
-  # parser.add_argument("-a", "--argocd-base-directory", type=str,
-  #                     default="/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/argocd",
-  #                     help="The location of the ArgoCD SNO cluster and cluster applications directories")
   parser.add_argument("-m", "--sno-manifests-siteconfigs", type=str, default="/root/hv-sno",
                       help="The location of the SNO manifests, siteconfigs and resource files")
   parser.add_argument("-a", "--argocd-base-directory", type=str,
@@ -213,6 +210,11 @@ def main():
   parser.set_defaults(rate="interval", method="ztp", batch=100, interval=7200, start=0, end=0, skip_wait_sno=False)
   cliargs = parser.parse_args()
 
+  # # From laptop for debugging, should be commented out before commit
+  # logger.info("Replacing directories for testing purposes#############################################################")
+  # cliargs.sno_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/hv-sno"
+  # cliargs.argocd_base_directory = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/argocd"
+
   if cliargs.debug:
     logger.setLevel(logging.DEBUG)
 
@@ -248,9 +250,9 @@ def main():
       sys.exit(1)
     logger.info(" * {} SNO(s) per {}s interval".format(cliargs.batch, cliargs.interval))
     if cliargs.skip_wait_sno:
-      logger.info(" * Skip waiting for SNOs to complete deployment at conclusion")
+      logger.info(" * Skip waiting for SNOs install complete/fail completion")
     else:
-      logger.info(" * Wait for all SNOs to complete deployment at conclusion")
+      logger.info(" * Wait for SNOs install complete/fail completion")
   elif cliargs.rate == "status":
     if not (cliargs.batch >= 1):
       logger.error("Batch size must be equal to or greater than 1")
@@ -262,11 +264,11 @@ def main():
       sys.exit(1)
     logger.info(" * {}  SNO(s) deploying concurrently".format(cliargs.batch))
     if cliargs.skip_wait_sno:
-      logger.info(" * Skip waiting for SNOs to complete deployment at conclusion")
+      logger.info(" * Skip waiting for SNOs install complete/fail completion")
     else:
-      logger.info(" * Wait for all SNOs to complete deployment at conclusion")
+      logger.info(" * Wait for SNOs install complete/fail completion")
   if cliargs.wait_du_profile:
-    logger.info(" * Wait for all deployed SNOs to apply du profile")
+    logger.info(" * Wait for DU Profile Apply/Timeout completion")
   logger.info(" * Start Index: {}, End Index: {}".format(cliargs.start, cliargs.end))
   logger.info("Monitoring data captured to: {}".format(cliargs.csv_file))
   logger.info(" * Monitoring interval: {}".format(cliargs.monitor_interval))
@@ -382,12 +384,14 @@ def main():
       expected_interval_end_time = start_interval_time + cliargs.interval
       current_time = time.time()
       wait_logger = 0
-      logger.info("Sleep for {}s with {}s remaining".format(cliargs.interval, round(expected_interval_end_time - current_time, 1)))
+      logger.info("Sleep for {}s with {}s remaining".format(cliargs.interval, round(expected_interval_end_time - current_time)))
       while current_time < expected_interval_end_time:
         time.sleep(.1)
         wait_logger += 1
-        if wait_logger >= 1000:
-          logger.info("Remaining interval time: {}".format(round(expected_interval_end_time - current_time, 1)))
+        # Approximately display this every 300s
+        if wait_logger >= 3000:
+          logger.info("Remaining interval time: {}s".format(round(expected_interval_end_time - current_time)))
+          log_monitor_data(monitor_data, round(time.time() - start_time))
           wait_logger = 0
         current_time = time.time()
 
@@ -414,13 +418,13 @@ def main():
       if ((monitor_data["sno_init"] >= total_deployed_snos) and
           ((monitor_data["sno_install_failed"] + monitor_data["sno_install_completed"]) == monitor_data["sno_init"])):
         logger.info("SNOs install complete/fail completion")
-        log_monitor_data(monitor_data)
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         break
 
       wait_logger += 1
       if wait_logger >= 5:
         logger.info("Deployed SNOs: {}".format(total_deployed_snos))
-        log_monitor_data(monitor_data)
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         wait_logger = 0
   wait_sno_end_time = time.time()
 
@@ -441,13 +445,13 @@ def main():
       if ((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]) and
           ((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
         logger.info("DU Profile Apply/Timeout completion")
-        log_monitor_data(monitor_data)
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         break
 
       wait_logger += 1
       if wait_logger >= 5:
         logger.info("Deployed SNOs: {}".format(total_deployed_snos))
-        log_monitor_data(monitor_data)
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         wait_logger = 0
   wait_du_profile_end_time = time.time()
 
@@ -460,11 +464,11 @@ def main():
   monitor_thread.signal = False
   monitor_thread.join()
 
-  # Write Report Card here and graph results
-  total_deploy_time = round(deploy_end_time - deploy_start_time, 1)
-  total_sno_install_time = round(wait_sno_end_time - wait_sno_start_time, 1)
-  total_duprofile_time = round(wait_du_profile_end_time - wait_du_profile_start_time, 1)
-  total_time = round(end_time - start_time, 1)
+  # Write Report Card here and graph results`
+  total_deploy_time = round(deploy_end_time - deploy_start_time)
+  total_sno_install_time = round(wait_sno_end_time - wait_sno_start_time)
+  total_duprofile_time = round(wait_du_profile_end_time - wait_du_profile_start_time)
+  total_time = round(end_time - start_time)
   phase_break()
   logger.info("sno-deploy-load Report Card")
   phase_break()
@@ -488,12 +492,12 @@ def main():
       datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ'), int(start_time * 1000)))
   logger.info(" * End Time: {} {}".format(
       datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ'), int(end_time * 1000)))
-  logger.info(" * SNO Deploying duration: {}".format(total_deploy_time))
+  logger.info(" * SNO Deploying duration: {}s :: {}".format(total_deploy_time, str(timedelta(seconds=total_deploy_time))))
   if not cliargs.skip_wait_sno:
-    logger.info(" * SNO Install wait duration: {}".format(total_sno_install_time))
+    logger.info(" * SNO Install wait duration: {}s :: {}".format(total_sno_install_time, str(timedelta(seconds=total_sno_install_time))))
   if cliargs.wait_du_profile:
-    logger.info(" * DU Profile wait duration: {}".format(total_duprofile_time))
-  logger.info(" * Total duration: {}".format(total_time))
+    logger.info(" * DU Profile wait duration: {}s :: {}".format(total_duprofile_time, str(timedelta(seconds=total_duprofile_time))))
+  logger.info(" * Total duration: {}s :: {}".format(total_time, str(timedelta(seconds=total_time))))
 
 if __name__ == "__main__":
   sys.exit(main())
