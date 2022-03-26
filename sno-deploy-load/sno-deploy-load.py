@@ -159,6 +159,10 @@ def main():
   parser.add_argument("-s", "--start", type=int, default=0,
                       help="SNO start index, follows array logic starting at 0 for 'sno00001'")
   parser.add_argument("-e", "--end", type=int, default=0, help="SNO end index (0 = total manifest count)")
+  parser.add_argument("--start-delay", type=int, default=15,
+                      help="Delay to starting deploys, allowing monitor thread to gather data")
+  parser.add_argument("--end-delay", type=int, default=120,
+                      help="Delay on end, allows monitor thread to gather additional data points")
   parser.add_argument("--snos-per-app", type=int, default=100,
                       help="Maximum number of SNO siteconfigs per cluster application")
   parser.add_argument("-w", "--wait-du-profile", action="store_true", default=False,
@@ -214,6 +218,8 @@ def main():
   # logger.info("Replacing directories for testing purposes#############################################################")
   # cliargs.sno_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/hv-sno"
   # cliargs.argocd_base_directory = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/argocd"
+  # cliargs.start_delay = 1
+  # cliargs.end_delay = 1
 
   if cliargs.debug:
     logger.setLevel(logging.DEBUG)
@@ -339,13 +345,17 @@ def main():
     "policy_compliant": 0
   }
 
+  monitor_thread = SnoMonitor(monitor_data, cliargs.csv_file, cliargs.dry_run, cliargs.monitor_interval)
+  monitor_thread.start()
+  if cliargs.start_delay > 0:
+    phase_break()
+    logger.info("Sleeping {}s for start delay".format(cliargs.start_delay))
+    time.sleep(cliargs.start_delay)
   deploy_start_time = time.time()
   if cliargs.rate == "interval":
     phase_break()
     logger.info("Starting interval based SNO deployment rate - {}".format(int(time.time() * 1000)))
     phase_break()
-    monitor_thread = SnoMonitor(monitor_data, cliargs.csv_file, cliargs.dry_run, cliargs.monitor_interval)
-    monitor_thread.start()
 
     start_sno_index = cliargs.start
     while True:
@@ -439,8 +449,6 @@ def main():
 
     wait_logger = 4
     while True:
-      # logger.info((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]))
-      # logger.info(((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"]))
       time.sleep(30)
       if ((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]) and
           ((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
@@ -455,9 +463,12 @@ def main():
         wait_logger = 0
   wait_du_profile_end_time = time.time()
 
-  # Possible Post-complete delay option here?
-
   end_time = time.time()
+
+  if cliargs.end_delay > 0:
+    phase_break()
+    logger.info("Sleeping {}s for end delay".format(cliargs.end_delay))
+    time.sleep(cliargs.end_delay)
 
   # Stop monitoring thread
   logger.info("Stopping monitoring thread may take up to: {}".format(cliargs.monitor_interval))
