@@ -127,7 +127,7 @@ class SnoMonitor(Thread):
                   elif condition["reason"] == "InstallationCompleted":
                     sno_install_completed += 1
                   else:
-                    logger.info("{}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
+                    logger.info("aci: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
                   break
                 else:
                   logger.warn("reason missing from condition: {}".format(condition))
@@ -147,14 +147,14 @@ class SnoMonitor(Thread):
                   logger.debug("SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
                   if condition["reason"] == "UpgradeNotStarted":
                     sno_policy_notstarted += 1
-                  if condition["reason"] == "UpgradeNotCompleted":
+                  elif condition["reason"] == "UpgradeNotCompleted":
                     sno_policy_applying += 1
                   elif condition["reason"] == "UpgradeTimedOut":
                     sno_policy_timeout += 1
                   elif condition["reason"] == "UpgradeCompleted":
                     sno_policy_compliant += 1
                   else:
-                    logger.info("{}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
+                    logger.info("cgu: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
                   break
                 else:
                   logger.warn("reason missing from condition: {}".format(condition))
