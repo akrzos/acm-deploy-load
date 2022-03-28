@@ -5,4 +5,4 @@ set -o pipefail
 
 log_file="dr-$(date -u +%Y%m%d-%H%M%S).log"
 
-./sno-deploy-load/sno-deploy-load.py --dry-run -w -i 10 -t dry-run interval -b 100 -i 1 ztp 2>&1 | tee ${log_file}
+time ./sno-deploy-load/sno-deploy-load.py --dry-run --start-delay 1 --end-delay 1 -w -i 10 -t dry-run interval -b 100 -i 1 ztp 2>&1 | tee ${log_file}
