@@ -15,12 +15,14 @@
 
 import argparse
 from collections import OrderedDict
-from datetime import timedelta
 from datetime import datetime
+from datetime import timedelta
 import glob
 from jinja2 import Template
 import json
 from utils.command import command
+from utils.output import generate_report
+from utils.output import phase_break
 from utils.sno_monitor import SnoMonitor
 import logging
 import math
@@ -31,7 +33,6 @@ import sys
 import time
 
 # TODO:
-# * Write a report card to a results file
 # * Graph method that takes a csv from monitoring data
 # * Status and Concurrent rate methods
 # * Prom queries for System metric data
@@ -133,10 +134,6 @@ def log_monitor_data(data, total_deployed_snos, elapsed_seconds):
   logger.info("Policy Compliant SNOs: {}".format(data["policy_compliant"]))
 
 
-def phase_break():
-  logger.info("###############################################################################")
-
-
 def main():
   start_time = time.time()
 
@@ -169,8 +166,10 @@ def main():
   # Monitor Thread Options
   parser.add_argument("-i", "--monitor-interval", type=int, default=60,
                       help="Interval to collect monitoring data (seconds)")
-  parser.add_argument("-c", "--csv-file", type=str, default="sno-deploy-load.csv",
-                      help="CSV file to write monitoring data")
+
+  # Report and graphing options
+  parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-ztp-0",
+                      help="Suffix to be appended to results directory name")
 
   # Debug and dry-run options
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
@@ -288,7 +287,18 @@ def main():
       logger.info(" * Wait for DU Profile completion (Max {}s)".format(cliargs.wait_du_profile_max))
     else:
       logger.info(" * Wait for DU Profile completion (Infinite wait)")
-  logger.info("Monitoring data captured to: {}".format(cliargs.csv_file))
+
+  # Determine where the report directory will be located
+  base_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+  base_dir_down = os.path.dirname(base_dir)
+  base_dir_results = os.path.join(base_dir_down, "results")
+  report_dir_name = "{}-{}".format(datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S"), cliargs.results_dir_suffix)
+  report_dir = os.path.join(base_dir_results, report_dir_name)
+  logger.info("Results data captured in: {}".format("/".join(report_dir.split("/")[-2:])))
+
+  monitor_data_csv_file = "{}/monitor_data.csv".format(report_dir)
+
+  logger.info("Monitoring data captured to: {}".format("/".join(monitor_data_csv_file.split("/")[-3:])))
   logger.info(" * Monitoring interval: {}".format(cliargs.monitor_interval))
   phase_break()
 
@@ -338,6 +348,10 @@ def main():
       logger.error("There are more SNOs than expected capacity of SNOs per ZTP cluster application")
       sys.exit(1)
 
+  # Create the results directory to store data into
+  logger.debug("Creating report directory: {}".format(report_dir))
+  os.mkdir(report_dir)
+
   #############################################################################
   # Manifest application / gitops "phase"
   #############################################################################
@@ -359,7 +373,7 @@ def main():
     "policy_compliant": 0
   }
 
-  monitor_thread = SnoMonitor(monitor_data, cliargs.csv_file, cliargs.dry_run, cliargs.monitor_interval)
+  monitor_thread = SnoMonitor(monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
   monitor_thread.start()
   if cliargs.start_delay > 0:
     phase_break()
@@ -512,39 +526,9 @@ def main():
   #############################################################################
   # Report Card / Graph Phase
   #############################################################################
-  total_deploy_time = round(deploy_end_time - deploy_start_time)
-  total_sno_install_time = round(wait_sno_end_time - wait_sno_start_time)
-  total_duprofile_time = round(wait_du_profile_end_time - wait_du_profile_start_time)
-  total_time = round(end_time - start_time)
-  phase_break()
-  logger.info("sno-deploy-load Report Card")
-  phase_break()
-  logger.info("SNO Results")
-  logger.info(" * Available SNOs: {}".format(available_snos))
-  logger.info(" * Deployed SNOs: {}".format(total_deployed_snos))
-  logger.info(" * Installed SNOs: {}".format(monitor_data["sno_install_completed"]))
-  logger.info(" * Failed SNOs: {}".format(monitor_data["sno_install_failed"]))
-  logger.info("DU Profile Results")
-  logger.info(" * DU Profile Initialized: {}".format(monitor_data["policy_init"]))
-  logger.info(" * DU Profile Compliant: {}".format(monitor_data["policy_compliant"]))
-  logger.info(" * DU Profile Timeout: {}".format(monitor_data["policy_timeout"]))
-  logger.info("SNO Orchestration")
-  logger.info(" * Method: {}".format(cliargs.rate))
-  logger.info(" * SNO Start: {} End: {}".format(cliargs.start, cliargs.end))
-  if cliargs.rate == "interval":
-    logger.info(" * {} SNO(s) per {}s interval".format(cliargs.batch, cliargs.interval))
-    logger.info(" * Actual Intervals: {}".format(total_intervals))
-  logger.info("Workload Duration Results")
-  logger.info(" * Start Time: {} {}".format(
-      datetime.utcfromtimestamp(start_time).strftime('%Y-%m-%dT%H:%M:%SZ'), int(start_time * 1000)))
-  logger.info(" * End Time: {} {}".format(
-      datetime.utcfromtimestamp(end_time).strftime('%Y-%m-%dT%H:%M:%SZ'), int(end_time * 1000)))
-  logger.info(" * SNO Deploying duration: {}s :: {}".format(total_deploy_time, str(timedelta(seconds=total_deploy_time))))
-  if not cliargs.skip_wait_sno:
-    logger.info(" * SNO Install wait duration: {}s :: {}".format(total_sno_install_time, str(timedelta(seconds=total_sno_install_time))))
-  if cliargs.wait_du_profile:
-    logger.info(" * DU Profile wait duration: {}s :: {}".format(total_duprofile_time, str(timedelta(seconds=total_duprofile_time))))
-  logger.info(" * Total duration: {}s :: {}".format(total_time, str(timedelta(seconds=total_time))))
+  generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wait_sno_start_time, wait_sno_end_time,
+      wait_du_profile_start_time, wait_du_profile_end_time, available_snos, total_deployed_snos, monitor_data, cliargs,
+      total_intervals, report_dir)
 
 if __name__ == "__main__":
   sys.exit(main())
