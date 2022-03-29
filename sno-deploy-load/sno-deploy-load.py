@@ -33,7 +33,6 @@ import sys
 import time
 
 # TODO:
-# * Graph method that takes a csv from monitoring data
 # * Status and Concurrent rate methods
 # * Prom queries for System metric data
 
@@ -471,6 +470,9 @@ def main():
       wait_logger += 1
       if wait_logger >= 5:
         logger.info("Waiting for SNOs install completion")
+        e_time = round(time.time() - wait_sno_start_time)
+        logger.info("Elapsed SNO install completion time: {}s :: {} / {}s :: {}".format(
+            e_time, str(timedelta(seconds=e_time)), cliargs.wait_sno_max, str(timedelta(seconds=cliargs.wait_sno_max))))
         log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
         wait_logger = 0
 
@@ -506,6 +508,10 @@ def main():
       wait_logger += 1
       if wait_logger >= 5:
         logger.info("Waiting for DU Profile completion")
+        e_time = round(time.time() - wait_du_profile_start_time)
+        logger.info("Elapsed DU Profile completion time: {}s :: {} / {}s :: {}".format(
+            e_time, str(timedelta(seconds=e_time)), cliargs.wait_du_profile_max,
+            str(timedelta(seconds=cliargs.wait_du_profile_max))))
         log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
         wait_logger = 0
   wait_du_profile_end_time = time.time()
