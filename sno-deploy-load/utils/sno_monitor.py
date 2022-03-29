@@ -107,7 +107,7 @@ class SnoMonitor(Thread):
       sno_policy_init = len(cgu_data["items"])
       sno_policy_notstarted = 0
       sno_policy_applying = 0
-      sno_policy_timeout = 0
+      sno_policy_timedout = 0
       sno_policy_compliant = 0
 
       # Parse agentclusterinstall data
@@ -150,7 +150,7 @@ class SnoMonitor(Thread):
                   elif condition["reason"] == "UpgradeNotCompleted":
                     sno_policy_applying += 1
                   elif condition["reason"] == "UpgradeTimedOut":
-                    sno_policy_timeout += 1
+                    sno_policy_timedout += 1
                   elif condition["reason"] == "UpgradeCompleted":
                     sno_policy_compliant += 1
                   else:
@@ -201,7 +201,7 @@ class SnoMonitor(Thread):
       self.monitor_data["policy_init"] = sno_policy_init
       self.monitor_data["policy_notstarted"] = sno_policy_notstarted
       self.monitor_data["policy_applying"] = sno_policy_applying
-      self.monitor_data["policy_timeout"] = sno_policy_timeout
+      self.monitor_data["policy_timedout"] = sno_policy_timedout
       self.monitor_data["policy_compliant"] = sno_policy_compliant
 
       # Write csv data
@@ -209,7 +209,7 @@ class SnoMonitor(Thread):
         csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
             datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'), sno_init,
             sno_notstarted, sno_booted, sno_discovered, sno_installing, sno_install_failed, sno_install_completed,
-            sno_managed, sno_policy_init, sno_policy_notstarted, sno_policy_applying, sno_policy_timeout,
+            sno_managed, sno_policy_init, sno_policy_notstarted, sno_policy_applying, sno_policy_timedout,
             sno_policy_compliant
         ))
 
@@ -224,7 +224,7 @@ class SnoMonitor(Thread):
       logger.debug("Initialized Policy SNOs: {}".format(self.monitor_data["policy_init"]))
       logger.debug("Policy Not Started SNOs: {}".format(self.monitor_data["policy_notstarted"]))
       logger.debug("Policy Applying SNOs: {}".format(self.monitor_data["policy_applying"]))
-      logger.debug("Policy Timeout SNOs: {}".format(self.monitor_data["policy_timeout"]))
+      logger.debug("Policy Timedout SNOs: {}".format(self.monitor_data["policy_timedout"]))
       logger.debug("Policy Compliant SNOs: {}".format(self.monitor_data["policy_compliant"]))
 
       end_sample_time = time.time()

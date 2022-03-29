@@ -1,3 +1,6 @@
 jinja2
+kaleido
 numpy
+pandas
+plotly
 python-dateutil

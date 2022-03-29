@@ -6,3 +6,7 @@ set -o pipefail
 log_file="dr-$(date -u +%Y%m%d-%H%M%S).log"
 
 time ./sno-deploy-load/sno-deploy-load.py --dry-run --start-delay 1 --end-delay 1 -w -i 10 -t dry-run interval -b 100 -i 1 ztp 2>&1 | tee ${log_file}
+
+results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
+
+time ./sno-deploy-load/sno-deploy-graph.py ${results_dir}

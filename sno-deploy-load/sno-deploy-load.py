@@ -130,7 +130,7 @@ def log_monitor_data(data, total_deployed_snos, elapsed_seconds):
   logger.info("Initialized Policy SNOs: {}".format(data["policy_init"]))
   logger.info("Policy Not Started SNOs: {}".format(data["policy_notstarted"]))
   logger.info("Policy Applying SNOs: {}".format(data["policy_applying"]))
-  logger.info("Policy Timeout SNOs: {}".format(data["policy_timeout"]))
+  logger.info("Policy Timedout SNOs: {}".format(data["policy_timedout"]))
   logger.info("Policy Compliant SNOs: {}".format(data["policy_compliant"]))
 
 
@@ -167,7 +167,7 @@ def main():
   parser.add_argument("-i", "--monitor-interval", type=int, default=60,
                       help="Interval to collect monitoring data (seconds)")
 
-  # Report and graphing options
+  # Report options
   parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-ztp-0",
                       help="Suffix to be appended to results directory name")
 
@@ -369,7 +369,7 @@ def main():
     "policy_init": 0,
     "policy_notstarted": 0,
     "policy_applying": 0,
-    "policy_timeout": 0,
+    "policy_timedout": 0,
     "policy_compliant": 0
   }
 
@@ -492,7 +492,7 @@ def main():
       time.sleep(30)
       # Break from phase if inited policy equal completed SNOs and timeout+compliant policy = inited policy
       if ((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]) and
-          ((monitor_data["policy_timeout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
+          ((monitor_data["policy_timedout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
         logger.info("DU Profile completion")
         log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
         break

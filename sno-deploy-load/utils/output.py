@@ -55,7 +55,7 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, "DU Profile Results")
     log_write(report, " * DU Profile Initialized: {}".format(monitor_data["policy_init"]))
     log_write(report, " * DU Profile Compliant: {}".format(monitor_data["policy_compliant"]))
-    log_write(report, " * DU Profile Timeout: {}".format(monitor_data["policy_timeout"]))
+    log_write(report, " * DU Profile Timeout: {}".format(monitor_data["policy_timedout"]))
     log_write(report, " * DU Profile Successful Percent: {}%".format(sucess_du_percent))
     log_write(report, " * DU Profile Failed Percent: {}%".format(failed_du_percent))
     log_write(report, "SNO Orchestration")
