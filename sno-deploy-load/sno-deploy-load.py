@@ -33,6 +33,7 @@ import sys
 import time
 
 # TODO:
+# * Determine source of monitor latency - Theory json loading and loops
 # * Status and Concurrent rate methods
 # * Prom queries for System metric data
 
@@ -169,6 +170,9 @@ def main():
   # Report options
   parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-ztp-0",
                       help="Suffix to be appended to results directory name")
+  parser.add_argument("--acm-version", type=str, default="2.5.0", help="Sets ACM version for report")
+  parser.add_argument("--hub-version", type=str, default="4.10.6", help="Sets OCP Hub version for report")
+  parser.add_argument("--sno-version", type=str, default="4.10.6", help="Sets OCP SNO version for report+")
 
   # Debug and dry-run options
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
