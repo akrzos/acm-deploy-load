@@ -42,7 +42,6 @@ class SnoMonitor(Thread):
     with open(self.csv_file, "w") as csv_file:
       csv_file.write("date,sno_init,sno_notstarted,sno_booted,sno_discovered,sno_installing,sno_install_failed,sno_install_completed,managed,policy_init,policy_notstarted,policy_applying,policy_timedout,policy_compliant\n")
 
-    wait_logger = 4
     while self.signal:
       start_sample_time = time.time()
 

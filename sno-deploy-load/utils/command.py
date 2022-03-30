@@ -21,7 +21,7 @@ import time
 logger = logging.getLogger("sno-deploy-load")
 
 
-def command(cmd, dry_run, cmd_directory="", retries=1, retry_backoff=True, no_log=False):
+def command(cmd, dry_run, cmd_directory="", retries=1, retry_backoff=True, no_log=False, readlines=False):
   if cmd_directory != "":
     logger.debug("Command Directory: {}".format(cmd_directory))
     working_directory = os.getcwd()
@@ -35,28 +35,32 @@ def command(cmd, dry_run, cmd_directory="", retries=1, retry_backoff=True, no_lo
       time.sleep(1 * (tries - 1))
     logger.info("Command({}): {}".format(tries, " ".join(cmd)))
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
-    output = ""
-    while True:
-      output_line = process.stdout.readline()
-      if output_line.strip() != "":
-        if not no_log:
-          logger.info("Output : {}".format(output_line.strip()))
-        if output == "":
-          output = output_line.strip()
-        else:
-          output = "{}\n{}".format(output, output_line.strip())
-      return_code = process.poll()
-      if return_code is not None:
-        for output_line in process.stdout.readlines():
-          if output_line.strip() != "":
-            if not no_log:
-              logger.info("Output : {}".format(output_line.strip()))
-            if output == "":
-              output = output_line
-            else:
-              output = "{}\n{}".format(output, output_line.strip())
-        logger.debug("Return Code: {}".format(return_code))
-        break
+    if readlines:
+      output = ""
+      while True:
+        output_line = process.stdout.readline()
+        if output_line.strip() != "":
+          if not no_log:
+            logger.info("Output : {}".format(output_line.strip()))
+          if output == "":
+            output = output_line.strip()
+          else:
+            output = "{}\n{}".format(output, output_line.strip())
+        return_code = process.poll()
+        if return_code is not None:
+          for output_line in process.stdout.readlines():
+            if output_line.strip() != "":
+              if not no_log:
+                logger.info("Output : {}".format(output_line.strip()))
+              if output == "":
+                output = output_line
+              else:
+                output = "{}\n{}".format(output, output_line.strip())
+          logger.debug("Return Code: {}".format(return_code))
+          break
+    else:
+      output = process.communicate()[0]
+      return_code = process.returncode
     tries += 1
     # Break from retry loop if successful
     if retries > 1 and return_code == 0:

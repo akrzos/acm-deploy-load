@@ -33,7 +33,6 @@ import sys
 import time
 
 # TODO:
-# * Determine source of monitor latency - Theory json loading and loops
 # * Status and Concurrent rate methods
 # * Prom queries for System metric data
 
