@@ -36,13 +36,13 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
   success_du_percent = 0
   failed_du_percent = 0
   if total_deployed_snos > 0:
-    success_sno_percent = round(monitor_data["sno_install_completed"] / total_deployed_snos, 3) * 100
+    success_sno_percent = round((monitor_data["sno_install_completed"] / total_deployed_snos) * 100, 1)
     failed_sno_percent = round(100 - success_sno_percent, 1)
   if monitor_data["sno_install_completed"] > 0:
-    success_managed_percent = round( monitor_data["managed"] / monitor_data["sno_install_completed"], 3) * 100
+    success_managed_percent = round((monitor_data["managed"] / monitor_data["sno_install_completed"]) * 100, 1)
     failed_managed_percent = round(100 - success_managed_percent, 1)
   if monitor_data["policy_init"] > 0:
-    success_du_percent = round(monitor_data["policy_compliant"] / monitor_data["policy_init"], 3) * 100
+    success_du_percent = round((monitor_data["policy_compliant"] / monitor_data["policy_init"]) * 100, 1)
     failed_du_percent = round(100 - success_du_percent, 1)
 
   # Log the report and output to report.txt in results directory
@@ -59,6 +59,8 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, " * Deployed SNOs: {}".format(total_deployed_snos))
     log_write(report, " * Installed SNOs: {}".format(monitor_data["sno_install_completed"]))
     log_write(report, " * Failed SNOs: {}".format(monitor_data["sno_install_failed"]))
+    if monitor_data["sno_notstarted"] > 0:
+      log_write(report, " * NotStarted SNOs: {}".format(monitor_data["sno_notstarted"]))
     log_write(report, " * SNO Successful Percent: {}%".format(success_sno_percent))
     log_write(report, " * SNO Failed Percent: {}%".format(failed_sno_percent))
     log_write(report, "Managed SNO Results")
