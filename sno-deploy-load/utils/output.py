@@ -80,6 +80,7 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     if cliargs.rate == "interval":
       log_write(report, " * {} SNO(s) per {}s interval".format(cliargs.batch, cliargs.interval))
       log_write(report, " * Actual Intervals: {}".format(total_intervals))
+    log_write(report, " * Wan Emulation: {}".format(cliargs.wan_emulation))
     log_write(report, "Workload Duration Results")
     log_write(report, " * Start Time: {} {}".format(
         datetime.utcfromtimestamp(start_time).strftime("%Y-%m-%dT%H:%M:%SZ"), int(start_time * 1000)))
