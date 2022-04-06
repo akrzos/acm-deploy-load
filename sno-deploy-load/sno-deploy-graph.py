@@ -39,8 +39,8 @@ def main():
 
   parser.add_argument("--acm-version", type=str, default="2.5.0", help="Sets ACM version for graph title")
   parser.add_argument("--test-version", type=str, default="ZTP Scale Run 1", help="Sets test version for graph title")
-  parser.add_argument("--hub-version", type=str, default="4.10.7", help="Sets OCP Hub version for graph title")
-  parser.add_argument("--sno-version", type=str, default="4.10.7", help="Sets OCP SNO version for graph title")
+  parser.add_argument("--hub-version", type=str, default="4.10.8", help="Sets OCP Hub version for graph title")
+  parser.add_argument("--sno-version", type=str, default="4.10.8", help="Sets OCP SNO version for graph title")
   parser.add_argument("--wan-emulation", type=str, default="(50ms/0.02)", help="Sets WAN emulation for graph title")
 
   parser.add_argument("--monitor-data-file-name", type=str, default="monitor_data.csv",
