@@ -35,6 +35,8 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
   failed_managed_percent = 0
   success_du_percent = 0
   failed_du_percent = 0
+  success_overall_percent = 0
+  failed_overall_percent = 0
   if total_deployed_snos > 0:
     success_sno_percent = round((monitor_data["sno_install_completed"] / total_deployed_snos) * 100, 1)
     failed_sno_percent = round(100 - success_sno_percent, 1)
@@ -44,6 +46,8 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
   if monitor_data["policy_init"] > 0:
     success_du_percent = round((monitor_data["policy_compliant"] / monitor_data["policy_init"]) * 100, 1)
     failed_du_percent = round(100 - success_du_percent, 1)
+    success_overall_percent = round((monitor_data["policy_compliant"] / total_deployed_snos) * 100, 1)
+    failed_overall_percent = round(100 - success_overall_percent, 1)
 
   # Log the report and output to report.txt in results directory
   with open("{}/report.txt".format(report_dir), "w") as report:
@@ -75,6 +79,9 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, " * DU Profile Timeout: {}".format(monitor_data["policy_timedout"]))
     log_write(report, " * DU Profile Successful Percent: {}%".format(success_du_percent))
     log_write(report, " * DU Profile Failed Percent: {}%".format(failed_du_percent))
+    log_write(report, "Overall Results")
+    log_write(report, " * Overall Success Percent: {}%".format(success_overall_percent))
+    log_write(report, " * Overall Failed Percent: {}%".format(failed_overall_percent))
     log_write(report, "SNO Orchestration")
     log_write(report, " * Method: {}".format(cliargs.rate))
     log_write(report, " * SNO Start: {} End: {}".format(cliargs.start, cliargs.end))
