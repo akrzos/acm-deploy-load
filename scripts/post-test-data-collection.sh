@@ -11,6 +11,13 @@ if [ "$1" == "-k" ]; then
   ls /root/hv-sno/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-sno/manifests/%/kubeconfig"
 fi
 
+echo "$(date -u) :: Collecting namespaces and pod data"
+
+oc get ns > ${output_dir}/namespaces
+oc get ns -o yaml > ${output_dir}/namespaces.yaml
+oc get pods -A > ${output_dir}/pods
+oc get pods -A -o yaml > ${output_dir}/pods.yaml
+
 echo "$(date -u) :: Collecting agentclusterinstall data"
 
 oc get agentclusterinstall -A --no-headers -o custom-columns=NAME:'.metadata.name',COMPLETED:'.status.conditions[?(@.type=="Completed")].reason' > ${output_dir}/aci.status

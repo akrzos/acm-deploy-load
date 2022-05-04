@@ -25,4 +25,6 @@ results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 
 time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" ${results_dir}
 
+time ./scripts/post-test-data-collection.sh
+
 mv ${log_file} ${results_dir}
