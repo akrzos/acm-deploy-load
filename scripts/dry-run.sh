@@ -27,4 +27,8 @@ time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --test-ver
 
 time ./scripts/post-test-data-collection.sh -k
 
+time ./sno-deploy-load/analyze-agentclusterinstalls.py ${results_dir}
+
+time ./sno-deploy-load/analyze-clustergroupupgrades.py ${results_dir}
+
 mv ${log_file} ${results_dir}

@@ -3,7 +3,7 @@ set -e
 set -o pipefail
 
 iteration=1
-interval_period=7200
+interval_period=1800
 
 log_file="iz-all-$(date -u +%Y%m%d-%H%M%S).log"
 acm_ver=$(cat /root/rhacm-deploy/deploy/snapshot.ver)
@@ -18,5 +18,9 @@ results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --test-version "ZTP Scale Run ${iteration}" ${results_dir}
 
 time ./scripts/post-test-data-collection.sh -k
+
+time ./sno-deploy-load/analyze-agentclusterinstalls.py ${results_dir}
+
+time ./sno-deploy-load/analyze-clustergroupupgrades.py ${results_dir}
 
 mv ${log_file} ${results_dir}

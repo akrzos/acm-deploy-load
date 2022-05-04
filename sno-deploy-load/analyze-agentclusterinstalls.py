@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import argparse
 from datetime import datetime
 import json
 from utils.command import command
@@ -29,8 +30,16 @@ logging.Formatter.converter = time.gmtime
 
 def main():
   start_time = time.time()
+
+  parser = argparse.ArgumentParser(
+      description="Analyze AgentClusterInstall data",
+      prog="analyze-agentclusterinstalls.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
+  cliargs = parser.parse_args()
+
   logger.info("Analyze agentclusterinstalls")
-  aci_csv_file = "agentclusterinstalls.csv"
+  aci_csv_file = "{}/agentclusterinstalls.csv".format(cliargs.results_directory)
+  aci_stats_file = "{}/agentclusterinstalls.stats".format(cliargs.results_directory)
 
   oc_cmd = ["oc", "get", "agentclusterinstalls", "-A", "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
@@ -75,6 +84,16 @@ def main():
   logger.info("95 percentile: {}".format(round(np.percentile(aci_installcompleted_values, 95), 1)))
   logger.info("99 percentile: {}".format(round(np.percentile(aci_installcompleted_values, 99), 1)))
   logger.info("Max: {}".format(np.max(aci_installcompleted_values)))
+
+  with open(aci_stats_file, "w") as stats_file:
+    stats_file.write("Stats only on AgentClusterInstall CRs in InstallationCompleted\n")
+    stats_file.write("Count: {}\n".format(len(aci_installcompleted_values)))
+    stats_file.write("Min: {}\n".format(np.min(aci_installcompleted_values)))
+    stats_file.write("Average: {}\n".format(round(np.mean(aci_installcompleted_values), 1)))
+    stats_file.write("50 percentile: {}\n".format(round(np.percentile(aci_installcompleted_values, 50), 1)))
+    stats_file.write("95 percentile: {}\n".format(round(np.percentile(aci_installcompleted_values, 95), 1)))
+    stats_file.write("99 percentile: {}\n".format(round(np.percentile(aci_installcompleted_values, 99), 1)))
+    stats_file.write("Max: {}\n".format(np.max(aci_installcompleted_values)))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))

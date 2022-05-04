@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import argparse
 from datetime import datetime
 import json
 from utils.command import command
@@ -29,8 +30,16 @@ logging.Formatter.converter = time.gmtime
 
 def main():
   start_time = time.time()
+
+  parser = argparse.ArgumentParser(
+      description="Analyze ClusterGroupUpgrades data",
+      prog="analyze-clustergroupupgrades.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
+  cliargs = parser.parse_args()
+
   logger.info("Analyze clustergroupupgrades")
-  cgu_csv_file = "clustergroupupgrades.csv"
+  cgu_csv_file = "{}/clustergroupupgrades.csv".format(cliargs.results_directory)
+  cgu_stats_file = "{}/clustergroupupgrades.stats".format(cliargs.results_directory)
 
   oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", "ztp-install", "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
@@ -73,6 +82,16 @@ def main():
   logger.info("95 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 95), 1)))
   logger.info("99 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 99), 1)))
   logger.info("Max: {}".format(np.max(cgu_upgradecompleted_values)))
+
+  with open(cgu_stats_file, "w") as stats_file:
+    stats_file.write("Stats only on clustergroupupgrades CRs in UpgradeCompleted\n")
+    stats_file.write("Count: {}\n".format(len(cgu_upgradecompleted_values)))
+    stats_file.write("Min: {}\n".format(np.min(cgu_upgradecompleted_values)))
+    stats_file.write("Average: {}\n".format(round(np.mean(cgu_upgradecompleted_values), 1)))
+    stats_file.write("50 percentile: {}\n".format(round(np.percentile(cgu_upgradecompleted_values, 50), 1)))
+    stats_file.write("95 percentile: {}\n".format(round(np.percentile(cgu_upgradecompleted_values, 95), 1)))
+    stats_file.write("99 percentile: {}\n".format(round(np.percentile(cgu_upgradecompleted_values, 99), 1)))
+    stats_file.write("Max: {}\n".format(np.max(cgu_upgradecompleted_values)))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
