@@ -31,8 +31,6 @@ logging.Formatter.converter = time.gmtime
 
 
 def main():
-  start_time = time.time()
-
   parser = argparse.ArgumentParser(
       description="Produce graphs from sno-deploy-load monitor data",
       prog="sno-deploy-graph.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
