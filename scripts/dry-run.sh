@@ -23,12 +23,20 @@ time ./sno-deploy-load/sno-deploy-load.py --dry-run --start-delay 1 --end-delay 
 
 results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 
-time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" ${results_dir}
+echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./scripts/post-test-data-collection.sh -k
+time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" ${results_dir} 2>&1 | tee -a ${log_file}
 
-time ./sno-deploy-load/analyze-agentclusterinstalls.py ${results_dir}
+echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./sno-deploy-load/analyze-clustergroupupgrades.py ${results_dir}
+time ./scripts/post-test-data-collection.sh -k 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+time ./sno-deploy-load/analyze-agentclusterinstalls.py ${results_dir} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+time ./sno-deploy-load/analyze-clustergroupupgrades.py ${results_dir} 2>&1 | tee -a ${log_file}
 
 mv ${log_file} ${results_dir}
