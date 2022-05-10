@@ -44,7 +44,7 @@ def main():
   oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", "ztp-install", "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
-    logger.error("analyze-clustergroupupgrades, oc get clusterdeployment rc: {}".format(rc))
+    logger.error("analyze-clustergroupupgrades, oc get clustergroupupgrades rc: {}".format(rc))
     sys.exit(1)
   cgu_data = json.loads(output)
 
