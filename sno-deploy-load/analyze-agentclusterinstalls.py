@@ -46,13 +46,13 @@ def main():
   if rc != 0:
     logger.error("analyze-agentclusterinstalls, oc get agentclusterinstalls rc: {}".format(rc))
     sys.exit(1)
-  cd_data = json.loads(output)
+  aci_data = json.loads(output)
 
   with open(aci_csv_file, "w") as csv_file:
     csv_file.write("name,status,creationTimestamp,completed.lastTransitionTime,duration\n")
 
   aci_installcompleted_values = []
-  for item in cd_data["items"]:
+  for item in aci_data["items"]:
     aci_name = item["metadata"]["name"]
     aci_status = "unknown"
     aci_creationTimestamp = item["metadata"]["creationTimestamp"]

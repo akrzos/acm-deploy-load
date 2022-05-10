@@ -46,13 +46,13 @@ def main():
   if rc != 0:
     logger.error("analyze-clustergroupupgrades, oc get clusterdeployment rc: {}".format(rc))
     sys.exit(1)
-  cd_data = json.loads(output)
+  cgu_data = json.loads(output)
 
   with open(cgu_csv_file, "w") as csv_file:
     csv_file.write("name,status,startedAt,completedAt,duration\n")
 
   cgu_upgradecompleted_values = []
-  for item in cd_data["items"]:
+  for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
     cgu_status = "unknown"
     cgu_startedAt = item["status"]["status"]["startedAt"]
