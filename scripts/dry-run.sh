@@ -19,7 +19,7 @@ hub_ocp="Hub Dry Run"
 sno_ocp="SNO Dry Run"
 interval_period=1
 
-time ./sno-deploy-load/sno-deploy-load.py --dry-run --start-delay 1 --end-delay 1 --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" -w -i 10 -t dry-run interval -b 100 -i ${interval_period} ztp 2>&1 | tee ${log_file}
+time ./sno-deploy-load/sno-deploy-load.py --dry-run --start-delay 1 --end-delay 1 --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" -w --ztp-client-templates -i 10 -t dry-run interval -b 100 -i ${interval_period} ztp 2>&1 | tee ${log_file}
 
 results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 

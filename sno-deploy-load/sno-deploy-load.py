@@ -52,13 +52,34 @@ resources:
 
 """
 
+ns_file = """---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-config
+"""
+
+test_cm_template = """---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-cm
+  namespace: test-config
+data:
+  key1: "true"
+  network-1-vlan: "123"
+  pfname1: "ens1f1"
+  network-1-ns: {{ clusterName }}-sriov-ns
+
+"""
+
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
 logger = logging.getLogger("sno-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 
-def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app, sno_siteconfigs, argocd_dir, dry_run):
+def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app, sno_siteconfigs, argocd_dir, dry_run, ztp_client_templates):
   git_files = []
   siteconfig_dir = "{}/siteconfigs".format(sno_siteconfigs)
   last_ztp_app_index = math.floor((start_index) / snos_per_app)
@@ -93,6 +114,22 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
           "{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
     git_files.append("{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
     git_files.append("{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name))
+
+    if ztp_client_templates:
+      extra_manifests_dir = "{}/extra-manifests/{}".format(ztp_deploy_apps[last_ztp_app_index]["location"], sno_name)
+      logger.debug("Creating directory: {}".format(extra_manifests_dir))
+      logger.info("Writing {}/01-ns.yaml".format(extra_manifests_dir))
+      logger.info("Rendering {}/test-cm.yaml".format(extra_manifests_dir))
+      t = Template(test_cm_template)
+      test_cm_rendered = t.render(clusterName=sno_name)
+      if not dry_run:
+        os.makedirs(extra_manifests_dir)
+        with open("{}/01-ns.yaml".format(extra_manifests_dir), "w") as file1:
+          file1.writelines(ns_file)
+        with open("{}/test-cm.yaml".format(extra_manifests_dir), "w") as file1:
+          file1.writelines(test_cm_rendered)
+      git_files.append("{}/01-ns.yaml".format(extra_manifests_dir))
+      git_files.append("{}/test-cm.yaml".format(extra_manifests_dir))
 
   # Always render a kustomization.yaml file at conclusion of the enumeration
   logger.info("Rendering {}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]))
@@ -161,6 +198,8 @@ def main():
                       help="Maximum amount of time to wait for DU Profile completion (seconds)")
   parser.add_argument("-w", "--wait-du-profile", action="store_true", default=False,
                       help="Waits for du profile to complete after all expected SNOs deployed")
+  parser.add_argument("--ztp-client-templates", action="store_true", default=False,
+                      help="If ztp method, include client templates")
 
   # Monitor Thread Options
   parser.add_argument("-i", "--monitor-interval", type=int, default=60,
@@ -414,7 +453,8 @@ def main():
         total_deployed_snos += len(sno_list[start_sno_index:end_sno_index])
         deploy_ztp_snos(
             sno_list, ztp_deploy_apps, start_sno_index, end_sno_index, cliargs.snos_per_app,
-            cliargs.sno_manifests_siteconfigs, cliargs.argocd_base_directory, cliargs.dry_run)
+            cliargs.sno_manifests_siteconfigs, cliargs.argocd_base_directory, cliargs.dry_run,
+            cliargs.ztp_client_templates)
 
       start_sno_index += cliargs.batch
       if start_sno_index >= available_snos or end_sno_index == cliargs.end:
