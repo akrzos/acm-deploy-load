@@ -52,7 +52,9 @@ def main():
   aci_data = json.loads(output)
 
   snos = []
-  sno_ver_data = OrderedDict()
+  snos_total = 0
+  snos_unreachable = []
+  snos_ver_data = OrderedDict()
 
   for item in aci_data["items"]:
     aci_name = item["metadata"]["name"]
@@ -63,7 +65,8 @@ def main():
             snos.append(aci_name)
         break;
 
-  logger.info("Number of SNO clusterversions to examine: {}".format(len(snos)))
+  snos_total = len(snos)
+  logger.info("Number of SNO clusterversions to examine: {}".format(snos_total))
 
   with open(cv_csv_file, "w") as csv_file:
     csv_file.write("name,version,state,startedTime,completionTime,duration\n")
@@ -73,7 +76,10 @@ def main():
     oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "clusterversion", "version", "-o", "json"]
     rc, output = command(oc_cmd, False, retries=2, no_log=True)
     if rc != 0:
-      logger.error("analyze-sno-clusterversion, oc get clusterdeployment rc: {}".format(rc))
+      logger.error("analyze-sno-clusterversion, oc get clusterversion rc: {}".format(rc))
+      snos_unreachable.append(sno)
+      with open(cv_csv_file, "a") as csv_file:
+        csv_file.write("{},NA,NA,,,\n".format(sno))
       continue
     cv_data = json.loads(output)
 
@@ -83,40 +89,55 @@ def main():
       sno_cv_startedtime = ver_hist_entry["startedTime"]
       sno_cv_completiontime = ""
       sno_cv_duration = ""
+      if sno_cv_version not in snos_ver_data:
+        snos_ver_data[sno_cv_version] = {}
+        snos_ver_data[sno_cv_version]["completed_durations"] = []
+        snos_ver_data[sno_cv_version]["state"] = {}
+      if sno_cv_state not in snos_ver_data[sno_cv_version]["state"]:
+        snos_ver_data[sno_cv_version]["state"][sno_cv_state] = []
+      snos_ver_data[sno_cv_version]["state"][sno_cv_state].append(sno)
       if sno_cv_state == "Completed":
         sno_cv_completiontime = ver_hist_entry["completionTime"]
         start = datetime.strptime(sno_cv_startedtime, "%Y-%m-%dT%H:%M:%SZ")
         end = datetime.strptime(sno_cv_completiontime, "%Y-%m-%dT%H:%M:%SZ")
         sno_cv_duration = (end - start).total_seconds()
-        if sno_cv_version not in sno_ver_data:
-          sno_ver_data[sno_cv_version] = []
-        sno_ver_data[sno_cv_version].append(sno_cv_duration)
+        snos_ver_data[sno_cv_version]["completed_durations"].append(sno_cv_duration)
       with open(cv_csv_file, "a") as csv_file:
         csv_file.write("{},{},{},{},{},{}\n".format(sno, sno_cv_version, sno_cv_state, sno_cv_startedtime, sno_cv_completiontime, sno_cv_duration))
 
   logger.info("Stats only on clusterversion in Completed state")
+  logger.info("Total SNOs: {}".format(snos_total))
+  logger.info("Unreachable SNOs Count: {}".format(len(snos_unreachable)))
+  logger.info("Unreachable SNOs: {}".format(snos_unreachable))
   with open(cv_stats_file, "w") as stats_file:
     stats_file.write("Stats only on clusterversion in Completed state\n")
+    stats_file.write("Total SNOs: {}\n".format(snos_total))
+    stats_file.write("Unreachable SNOs Count: {}\n".format(len(snos_unreachable)))
+    stats_file.write("Unreachable SNOs: {}\n".format(snos_unreachable))
 
-  for version in sno_ver_data:
+  for version in snos_ver_data:
     logger.info("Analyzing Version: {}".format(version))
-    logger.info("Count: {}".format(len(sno_ver_data[version])))
-    logger.info("Min: {}".format(np.min(sno_ver_data[version])))
-    logger.info("Average: {}".format(round(np.mean(sno_ver_data[version]), 1)))
-    logger.info("50 percentile: {}".format(round(np.percentile(sno_ver_data[version], 50), 1)))
-    logger.info("95 percentile: {}".format(round(np.percentile(sno_ver_data[version], 95), 1)))
-    logger.info("99 percentile: {}".format(round(np.percentile(sno_ver_data[version], 99), 1)))
-    logger.info("Max: {}".format(np.max(sno_ver_data[version])))
+    logger.info("Count: {}".format(len(snos_ver_data[version]["completed_durations"])))
+    for state in snos_ver_data[version]["state"]:
+      logger.info("State: {}, Count: {}".format(state, len(snos_ver_data[version]["state"][state])))
+    logger.info("Min: {}".format(np.min(snos_ver_data[version]["completed_durations"])))
+    logger.info("Average: {}".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
+    logger.info("50 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
+    logger.info("95 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 95), 1)))
+    logger.info("99 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 99), 1)))
+    logger.info("Max: {}".format(np.max(snos_ver_data[version]["completed_durations"])))
 
     with open(cv_stats_file, "a") as stats_file:
       stats_file.write("Analyzing Version: {}\n".format(version))
-      stats_file.write("Count: {}\n".format(len(sno_ver_data[version])))
-      stats_file.write("Min: {}\n".format(np.min(sno_ver_data[version])))
-      stats_file.write("Average: {}\n".format(round(np.mean(sno_ver_data[version]), 1)))
-      stats_file.write("50 percentile: {}\n".format(round(np.percentile(sno_ver_data[version], 50), 1)))
-      stats_file.write("95 percentile: {}\n".format(round(np.percentile(sno_ver_data[version], 95), 1)))
-      stats_file.write("99 percentile: {}\n".format(round(np.percentile(sno_ver_data[version], 99), 1)))
-      stats_file.write("Max: {}\n".format(np.max(sno_ver_data[version])))
+      stats_file.write("Count: {}\n".format(len(snos_ver_data[version]["completed_durations"])))
+      for state in snos_ver_data[version]["state"]:
+        stats_file.write("State: {}, Count: {}\n".format(state, len(snos_ver_data[version]["state"][state])))
+      stats_file.write("Min: {}\n".format(np.min(snos_ver_data[version]["completed_durations"])))
+      stats_file.write("Average: {}\n".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
+      stats_file.write("50 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
+      stats_file.write("95 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 95), 1)))
+      stats_file.write("99 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 99), 1)))
+      stats_file.write("Max: {}\n".format(np.max(snos_ver_data[version]["completed_durations"])))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
