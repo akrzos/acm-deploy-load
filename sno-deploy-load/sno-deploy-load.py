@@ -123,7 +123,7 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
       t = Template(test_cm_template)
       test_cm_rendered = t.render(clusterName=sno_name)
       if not dry_run:
-        os.makedirs(extra_manifests_dir)
+        os.makedirs(extra_manifests_dir, exist_ok=True)
         with open("{}/01-ns.yaml".format(extra_manifests_dir), "w") as file1:
           file1.writelines(ns_file)
         with open("{}/test-cm.yaml".format(extra_manifests_dir), "w") as file1:
