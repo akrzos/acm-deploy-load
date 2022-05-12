@@ -97,7 +97,8 @@ def main():
         snos_ver_data[sno_cv_version]["state"] = {}
       if sno_cv_state not in snos_ver_data[sno_cv_version]["state"]:
         snos_ver_data[sno_cv_version]["state"][sno_cv_state] = []
-      snos_ver_data[sno_cv_version]["state"][sno_cv_state].append(sno)
+      if sno not in snos_ver_data[sno_cv_version]["state"][sno_cv_state]:
+        snos_ver_data[sno_cv_version]["state"][sno_cv_state].append(sno)
       if sno_cv_state == "Completed":
         sno_cv_completiontime = ver_hist_entry["completionTime"]
         start = datetime.strptime(sno_cv_startedtime, "%Y-%m-%dT%H:%M:%SZ")
