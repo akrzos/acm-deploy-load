@@ -38,8 +38,9 @@ def main():
   cliargs = parser.parse_args()
 
   logger.info("Analyze agentclusterinstalls")
-  aci_csv_file = "{}/agentclusterinstalls.csv".format(cliargs.results_directory)
-  aci_stats_file = "{}/agentclusterinstalls.stats".format(cliargs.results_directory)
+  ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+  aci_csv_file = "{}/agentclusterinstalls-{}.csv".format(cliargs.results_directory, ts)
+  aci_stats_file = "{}/agentclusterinstalls-{}.stats".format(cliargs.results_directory, ts)
 
   oc_cmd = ["oc", "get", "agentclusterinstalls", "-A", "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
@@ -48,6 +49,7 @@ def main():
     sys.exit(1)
   aci_data = json.loads(output)
 
+  logger.info("Writing CSV: {}".format(aci_csv_file))
   with open(aci_csv_file, "w") as csv_file:
     csv_file.write("name,status,creationTimestamp,completed.lastTransitionTime,duration\n")
 
@@ -76,28 +78,43 @@ def main():
     with open(aci_csv_file, "a") as csv_file:
       csv_file.write("{},{},{},{},{}\n".format(aci_name, aci_status, aci_creationTimestamp, aci_completed_ltt, aci_duration))
 
+  logger.info("Writing Stats: {}".format(aci_stats_file))
+  stats_count = len(aci_installcompleted_values)
+  stats_min = 0
+  stats_avg = 0
+  stats_50p = 0
+  stats_95p = 0
+  stats_99p = 0
+  stats_max = 0
+  if stats_count > 0:
+    stats_min = np.min(aci_installcompleted_values)
+    stats_avg = round(np.mean(aci_installcompleted_values), 1)
+    stats_50p = round(np.percentile(aci_installcompleted_values, 50), 1)
+    stats_95p = round(np.percentile(aci_installcompleted_values, 95), 1)
+    stats_99p = round(np.percentile(aci_installcompleted_values, 99), 1)
+    stats_max = np.max(aci_installcompleted_values)
+
   logger.info("Stats only on AgentClusterInstall CRs in InstallationCompleted")
-  logger.info("Count: {}".format(len(aci_installcompleted_values)))
-  logger.info("Min: {}".format(np.min(aci_installcompleted_values)))
-  logger.info("Average: {}".format(round(np.mean(aci_installcompleted_values), 1)))
-  logger.info("50 percentile: {}".format(round(np.percentile(aci_installcompleted_values, 50), 1)))
-  logger.info("95 percentile: {}".format(round(np.percentile(aci_installcompleted_values, 95), 1)))
-  logger.info("99 percentile: {}".format(round(np.percentile(aci_installcompleted_values, 99), 1)))
-  logger.info("Max: {}".format(np.max(aci_installcompleted_values)))
+  logger.info("Count: {}".format(stats_count))
+  logger.info("Min: {}".format(stats_min))
+  logger.info("Average: {}".format(stats_avg))
+  logger.info("50 percentile: {}".format(stats_50p))
+  logger.info("95 percentile: {}".format(stats_95p))
+  logger.info("99 percentile: {}".format(stats_99p))
+  logger.info("Max: {}".format(stats_max))
 
   with open(aci_stats_file, "w") as stats_file:
     stats_file.write("Stats only on AgentClusterInstall CRs in InstallationCompleted\n")
-    stats_file.write("Count: {}\n".format(len(aci_installcompleted_values)))
-    stats_file.write("Min: {}\n".format(np.min(aci_installcompleted_values)))
-    stats_file.write("Average: {}\n".format(round(np.mean(aci_installcompleted_values), 1)))
-    stats_file.write("50 percentile: {}\n".format(round(np.percentile(aci_installcompleted_values, 50), 1)))
-    stats_file.write("95 percentile: {}\n".format(round(np.percentile(aci_installcompleted_values, 95), 1)))
-    stats_file.write("99 percentile: {}\n".format(round(np.percentile(aci_installcompleted_values, 99), 1)))
-    stats_file.write("Max: {}\n".format(np.max(aci_installcompleted_values)))
+    stats_file.write("Count: {}\n".format(stats_count))
+    stats_file.write("Min: {}\n".format(stats_min))
+    stats_file.write("Average: {}\n".format(stats_avg))
+    stats_file.write("50 percentile: {}\n".format(stats_50p))
+    stats_file.write("95 percentile: {}\n".format(stats_95p))
+    stats_file.write("99 percentile: {}\n".format(stats_99p))
+    stats_file.write("Max: {}\n".format(stats_max))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
-
 
 if __name__ == "__main__":
   sys.exit(main())

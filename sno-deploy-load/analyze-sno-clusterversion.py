@@ -41,8 +41,9 @@ def main():
   cliargs = parser.parse_args()
 
   logger.info("Analyze sno-clusterversion")
-  cv_csv_file = "{}/sno-clusterversion.csv".format(cliargs.results_directory)
-  cv_stats_file = "{}/sno-clusterversion.stats".format(cliargs.results_directory)
+  ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+  cv_csv_file = "{}/sno-clusterversion-{}.csv".format(cliargs.results_directory, ts)
+  cv_stats_file = "{}/sno-clusterversion-{}.stats".format(cliargs.results_directory, ts)
 
   oc_cmd = ["oc", "get", "agentclusterinstalls", "-A", "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
@@ -68,6 +69,7 @@ def main():
   snos_total = len(snos)
   logger.info("Number of SNO clusterversions to examine: {}".format(snos_total))
 
+  logger.info("Writing CSV: {}".format(cv_csv_file))
   with open(cv_csv_file, "w") as csv_file:
     csv_file.write("name,version,state,startedTime,completionTime,duration\n")
 
@@ -105,6 +107,7 @@ def main():
       with open(cv_csv_file, "a") as csv_file:
         csv_file.write("{},{},{},{},{},{}\n".format(sno, sno_cv_version, sno_cv_state, sno_cv_startedtime, sno_cv_completiontime, sno_cv_duration))
 
+  logger.info("Writing Stats: {}".format(cv_stats_file))
   logger.info("Stats only on clusterversion in Completed state")
   logger.info("Total SNOs: {}".format(snos_total))
   logger.info("Unreachable SNOs Count: {}".format(len(snos_unreachable)))
@@ -119,7 +122,10 @@ def main():
     logger.info("Analyzing Version: {}".format(version))
     logger.info("Count: {}".format(len(snos_ver_data[version]["completed_durations"])))
     for state in snos_ver_data[version]["state"]:
-      logger.info("State: {}, Count: {}".format(state, len(snos_ver_data[version]["state"][state])))
+      if state != "Completed":
+        logger.info("State: {}, Count: {}, SNOs: {}".format(state, len(snos_ver_data[version]["state"][state]), snos_ver_data[version]["state"][state]))
+      else:
+        logger.info("State: {}, Count: {}".format(state, len(snos_ver_data[version]["state"][state])))
     logger.info("Min: {}".format(np.min(snos_ver_data[version]["completed_durations"])))
     logger.info("Average: {}".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
     logger.info("50 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
