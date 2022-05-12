@@ -137,7 +137,10 @@ def main():
       stats_file.write("Analyzing Version: {}\n".format(version))
       stats_file.write("Count: {}\n".format(len(snos_ver_data[version]["completed_durations"])))
       for state in snos_ver_data[version]["state"]:
-        stats_file.write("State: {}, Count: {}\n".format(state, len(snos_ver_data[version]["state"][state])))
+        if state != "Completed":
+          stats_file.write("State: {}, Count: {}, SNOs: {}\n".format(state, len(snos_ver_data[version]["state"][state]), snos_ver_data[version]["state"][state]))
+        else:
+          stats_file.write("State: {}, Count: {}\n".format(state, len(snos_ver_data[version]["state"][state])))
       stats_file.write("Min: {}\n".format(np.min(snos_ver_data[version]["completed_durations"])))
       stats_file.write("Average: {}\n".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
       stats_file.write("50 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
