@@ -65,7 +65,9 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, " * Installed SNOs: {}".format(monitor_data["sno_install_completed"]))
     log_write(report, " * Failed SNOs: {}".format(monitor_data["sno_install_failed"]))
     if monitor_data["sno_notstarted"] > 0:
-      log_write(report, " * NotStarted SNOs: {}".format(monitor_data["sno_notstarted"]))
+      log_write(report, " * InstallationNotStarted SNOs: {}".format(monitor_data["sno_notstarted"]))
+    if monitor_data["sno_installing"] > 0:
+      log_write(report, " * InstallationInProgress SNOs: {}".format(monitor_data["sno_installing"]))
     log_write(report, " * SNO Successful Percent: {}%".format(success_sno_percent))
     log_write(report, " * SNO Failed Percent: {}%".format(failed_sno_percent))
     log_write(report, "Managed SNO Results")
