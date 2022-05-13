@@ -57,7 +57,9 @@ def main():
   for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
     cgu_status = "unknown"
-    cgu_startedAt = item["status"]["status"]["startedAt"]
+    cgu_startedAt = ""
+    if "startedAt" in item["status"]["status"]:
+      cgu_startedAt = item["status"]["status"]["startedAt"]
     cgu_completedAt = ""
     cgu_duration = 0
     for condition in item["status"]["conditions"]:
@@ -68,7 +70,7 @@ def main():
           cgu_status = condition["reason"]
         break;
 
-    if cgu_status == "UpgradeCompleted" and cgu_completedAt != "":
+    if cgu_status == "UpgradeCompleted" and cgu_startedAt != "" and cgu_completedAt != "":
       start = datetime.strptime(cgu_startedAt, "%Y-%m-%dT%H:%M:%SZ")
       end = datetime.strptime(cgu_completedAt, "%Y-%m-%dT%H:%M:%SZ")
       cgu_duration = (end - start).total_seconds()
