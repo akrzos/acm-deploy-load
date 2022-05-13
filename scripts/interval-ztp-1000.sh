@@ -6,7 +6,8 @@ iteration=1
 interval_period=1800
 batch=100
 
-log_file="iz-1000-$(date -u +%Y%m%d-%H%M%S).log"
+ts="$(date -u +%Y%m%d-%H%M%S)"
+log_file="iz-1000-${ts}.log"
 acm_ver=$(cat /root/rhacm-deploy/deploy/snapshot.ver)
 test_ver="ZTP Scale Run ${iteration}"
 hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
@@ -31,5 +32,9 @@ time ./sno-deploy-load/analyze-agentclusterinstalls.py ${results_dir} 2>&1 | tee
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
 time ./sno-deploy-load/analyze-clustergroupupgrades.py ${results_dir} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+oc adm must-gather --dest-dir="${results_dir}/must-gather-${ts}"  2>&1 | tee -a ${log_file}
 
 mv ${log_file} ${results_dir}
