@@ -54,4 +54,8 @@ echo "##########################################################################
 
 echo "Finished" 2>&1 | tee -a ${log_file}
 
+cat ${log_file} | grep -v WARNING > ${results_dir}/${log_file}.nowarn
+
 mv ${log_file} ${results_dir}
+
+gzip ${results_dir}/${log_file}
