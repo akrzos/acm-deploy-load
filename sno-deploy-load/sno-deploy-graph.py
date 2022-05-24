@@ -44,6 +44,9 @@ def main():
   parser.add_argument("--monitor-data-file-name", type=str, default="monitor_data.csv",
       help="The name of the monitor data csv file.")
 
+  parser.add_argument("-w", "--width", type=int, default=1000, help="Sets width of all graphs")
+  parser.add_argument("-t", "--height", type=int, default=700, help="Sets height of all graphs")
+
   parser.add_argument("results_directory", type=str, help="The location of a sno-deploy-load results")
 
   cliargs = parser.parse_args()
@@ -80,22 +83,22 @@ def main():
   l = {"value" : "# clusters", "date" : ""}
 
   logger.info("Creating Graph - {}/sno.png".format(cliargs.results_directory))
-  fig_sno = px.line(df, x="date", y=y_sno, labels=l)
+  fig_sno = px.line(df, x="date", y=y_sno, labels=l, width=cliargs.width, height=cliargs.height)
   fig_sno.update_layout(title=title_sno, legend_orientation="v")
   fig_sno.write_image("{}/sno.png".format(cliargs.results_directory))
 
   logger.info("Creating Graph - {}/managed.png".format(cliargs.results_directory))
-  fig_managed = px.line(df, x="date", y=y_managed, labels=l)
+  fig_managed = px.line(df, x="date", y=y_managed, labels=l, width=cliargs.width, height=cliargs.height)
   fig_managed.update_layout(title=title_managed, legend_orientation="v")
   fig_managed.write_image("{}/managed.png".format(cliargs.results_directory))
 
   logger.info("Creating Graph - {}/policy.png".format(cliargs.results_directory))
-  fig_policy = px.line(df, x="date", y=y_policy, labels=l)
+  fig_policy = px.line(df, x="date", y=y_policy, labels=l, width=cliargs.width, height=cliargs.height)
   fig_policy.update_layout(title=title_policy, legend_orientation="v")
   fig_policy.write_image("{}/policy.png".format(cliargs.results_directory))
 
   logger.info("Creating Graph - {}/share.png".format(cliargs.results_directory))
-  fig_share = px.line(df, x="date", y=y_share, labels=l)
+  fig_share = px.line(df, x="date", y=y_share, labels=l, width=cliargs.width, height=cliargs.height)
   fig_share.update_layout(title=title_sno, legend_orientation="v")
   fig_share.write_image("{}/share.png".format(cliargs.results_directory))
 
