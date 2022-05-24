@@ -108,25 +108,30 @@ def main():
       with open(cv_csv_file, "a") as csv_file:
         csv_file.write("{},{},{},{},{},{}\n".format(sno, sno_cv_version, sno_cv_state, sno_cv_startedtime, sno_cv_completiontime, sno_cv_duration))
 
+  percent_unreachable = round((len(snos_unreachable) / snos_total) * 100, 1)
+
   logger.info("Writing Stats: {}".format(cv_stats_file))
   logger.info("Stats only on clusterversion in Completed state")
   logger.info("Total SNOs: {}".format(snos_total))
   logger.info("Unreachable SNOs Count: {}".format(len(snos_unreachable)))
+  logger.info("Unreachable SNOs Percent: {}%".format(percent_unreachable))
   logger.info("Unreachable SNOs: {}".format(snos_unreachable))
   with open(cv_stats_file, "w") as stats_file:
     stats_file.write("Stats only on clusterversion in Completed state\n")
     stats_file.write("Total SNOs: {}\n".format(snos_total))
     stats_file.write("Unreachable SNOs Count: {}\n".format(len(snos_unreachable)))
+    stats_file.write("Unreachable SNOs Percent: {}%\n".format(percent_unreachable))
     stats_file.write("Unreachable SNOs: {}\n".format(snos_unreachable))
 
   for version in snos_ver_data:
     logger.info("Analyzing Version: {}".format(version))
     logger.info("Count: {}".format(len(snos_ver_data[version]["completed_durations"])))
     for state in snos_ver_data[version]["state"]:
+      percent_of_total = round((len(snos_ver_data[version]["state"][state]) / snos_total) * 100, 1)
       if state != "Completed":
-        logger.info("State: {}, Count: {}, SNOs: {}".format(state, len(snos_ver_data[version]["state"][state]), snos_ver_data[version]["state"][state]))
+        logger.info("State: {}, Count: {}, Percent: {}%, SNOs: {}".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total, snos_ver_data[version]["state"][state]))
       else:
-        logger.info("State: {}, Count: {}".format(state, len(snos_ver_data[version]["state"][state])))
+        logger.info("State: {}, Count: {}, Percent: {}%".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total))
     logger.info("Min: {}".format(np.min(snos_ver_data[version]["completed_durations"])))
     logger.info("Average: {}".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
     logger.info("50 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
@@ -138,10 +143,11 @@ def main():
       stats_file.write("Analyzing Version: {}\n".format(version))
       stats_file.write("Count: {}\n".format(len(snos_ver_data[version]["completed_durations"])))
       for state in snos_ver_data[version]["state"]:
+        percent_of_total = round((len(snos_ver_data[version]["state"][state]) / snos_total) * 100, 1)
         if state != "Completed":
-          stats_file.write("State: {}, Count: {}, SNOs: {}\n".format(state, len(snos_ver_data[version]["state"][state]), snos_ver_data[version]["state"][state]))
+          stats_file.write("State: {}, Count: {}, Percent: {}%, SNOs: {}\n".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total, snos_ver_data[version]["state"][state]))
         else:
-          stats_file.write("State: {}, Count: {}\n".format(state, len(snos_ver_data[version]["state"][state])))
+          stats_file.write("State: {}, Count: {}, Percent: {}%\n".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total))
       stats_file.write("Min: {}\n".format(np.min(snos_ver_data[version]["completed_durations"])))
       stats_file.write("Average: {}\n".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
       stats_file.write("50 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
