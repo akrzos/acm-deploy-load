@@ -21,6 +21,8 @@ oc get ns -o yaml > ${output_dir}/namespaces.yaml
 oc get pods -A > ${output_dir}/pods
 oc get pods -A -o yaml > ${output_dir}/pods.yaml
 oc describe pods -A > ${output_dir}/pods.describe
+oc get ev -A > ${output_dir}/events
+oc get ev -A -o yaml > ${output_dir}/events.yaml
 
 echo "$(date -u) :: Collecting agentclusterinstall data"
 
