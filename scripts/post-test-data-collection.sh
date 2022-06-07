@@ -65,23 +65,31 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
     echo "Offline $cluster" >> ${output_dir}/sno-install-failures
     continue
   fi
-  if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver)' | grep -q Crash; then
-      echo "BadOVN $cluster" >> ${output_dir}/sno-install-failures
+  if oc get pods -n openshift-apiserver -oyaml | grep -q ContainerStatusUnknown; then
+      echo "ContainerStatusUnknown-bz2092940 $cluster" >> ${output_dir}/sno-install-failures
+      continue
+  fi
+  if oc get pods -n openshift-oauth-apiserver -oyaml | grep -q ContainerStatusUnknown; then
+      echo "ContainerStatusUnknown-bz2092940 $cluster" >> ${output_dir}/sno-install-failures
+      continue
+  fi
+  if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver|package-server-manager|cluster-storage-operator-)' | grep -q Crash; then
+      echo "BadOVN-Bz2092907 $cluster" >> ${output_dir}/sno-install-failures
       continue
   fi
   if oc get pods -A | grep openshift-authentication | grep -q Crash; then
-      echo "BadOVN $cluster" >> ${output_dir}/sno-install-failures
+      echo "BadOVN-Bz2092907 $cluster" >> ${output_dir}/sno-install-failures
       continue
   fi
   if oc get pods -n openshift-authentication 2>/dev/null | grep -q ContainerCreating; then
-      echo "AuthContainerCreating $cluster" >> ${output_dir}/sno-install-failures
+      echo "AuthContainerCreating-BZ2016115 $cluster" >> ${output_dir}/sno-install-failures
       continue
   fi
   if oc get co monitoring -ojson  | jq '.status.conditions[] | select(.type == "Degraded").message' -r | grep 'Grafana Deployment failed' -q; then
       echo "BadOVN $cluster" >> ${output_dir}/sno-install-failures
       continue
   fi
-  if oc get co machine-config  -ojson | jq '.status.conditions[] | select(.type=="Degraded").message' | grep -q "waitForControllerConfigToBeCompleted"; then
+  if oc get co machine-config  -ojson | jq '.status.conditions[]? | select(.type=="Degraded").message' | grep -q "waitForControllerConfigToBeCompleted"; then
       echo "WeirdMCO $cluster" >> ${output_dir}/sno-install-failures
       continue
   fi
@@ -98,7 +106,7 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
       continue
   fi
   if [[ $(oc get pods -A -ojson | jq '[.items[] | select(.status.phase == "Pending").metadata.name] | length') > 10 ]]; then
-      echo "LotsOfPending $cluster" >> ${output_dir}/sno-install-failures
+      echo LotsOfPending-bz2093013 $cluster
       continue
   fi
   if [[ $(oc get co -ojson | jq -r '[.items[] | select((.status.conditions[]? | select(.type == "Available").status) == "False").metadata.name] | length') == "0" ]]; then
