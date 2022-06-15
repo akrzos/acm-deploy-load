@@ -51,6 +51,7 @@ def main():
 
   found_start_ts = False
   start_ts = ""
+  peak_concurrency = 0
   data = []
   with open(md_csv_file, "r") as sno_cv_csv:
     csv_reader = reader(sno_cv_csv)
@@ -61,6 +62,9 @@ def main():
     if header != None:
       for row in csv_reader:
         row_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+        concurrency = int(row[5]) + int(row[11])
+        if concurrency > peak_concurrency:
+          peak_concurrency = concurrency
         if (start_ts == "") and (int(row[1]) > 0):
           start_ts = row_ts
         data.append(row)
@@ -84,7 +88,7 @@ def main():
   full_duration = int((last_ts - start_ts).total_seconds())
   logger.info("Full Duration: {}".format(full_duration))
   logger.info("Completed Duration: {}".format(completed_duration))
-
+  logger.info("Peak Concurrency (sno_installing + policy_applying): {}".format(peak_concurrency))
 
   logger.info("Complete")
 
