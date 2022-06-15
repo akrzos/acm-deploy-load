@@ -32,19 +32,16 @@ def main():
   parser = argparse.ArgumentParser(
       description="Determine total test time from monitor data",
       prog="sno-deploy-time.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
   # Name of csv file found in results directory
   parser.add_argument("--monitor-data-file-name", type=str, default="monitor_data.csv",
       help="The name of the monitor data csv file.")
-
-  # Directory to find the csv file for graphing
   parser.add_argument("results_directory", type=str, help="The location of a sno-deploy-load results")
-
   cliargs = parser.parse_args()
 
   logger.info("SNO Deploy Time")
-  # logger.info("CLI Args: {}".format(cliargs))
+  ts = datetime.now().strftime("%Y%m%d-%H%M%S")
   md_csv_file = "{}/{}".format(cliargs.results_directory, cliargs.monitor_data_file_name)
+  sno_time_file = "{}/deploy-time-{}".format(cliargs.results_directory, ts)
   if not pathlib.Path(md_csv_file).is_file():
     logger.error("File not found: {}".format(md_csv_file))
     sys.exit(1)
@@ -80,15 +77,23 @@ def main():
         break
       completed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
 
+  completed_duration = int((completed_ts - start_ts).total_seconds())
+  full_duration = int((last_ts - start_ts).total_seconds())
+
   logger.info("Start TS: {}".format(start_ts))
   logger.info("Last TS: {}".format(last_ts))
   logger.info("Completed TS: {}".format(completed_ts))
-
-  completed_duration = int((completed_ts - start_ts).total_seconds())
-  full_duration = int((last_ts - start_ts).total_seconds())
   logger.info("Full Duration: {}".format(full_duration))
   logger.info("Completed Duration: {}".format(completed_duration))
   logger.info("Peak Concurrency (sno_installing + policy_applying): {}".format(peak_concurrency))
+
+  with open(sno_time_file, "w") as time_file:
+    time_file.write("Start TS: {}\n".format(start_ts))
+    time_file.write("Last TS: {}\n".format(last_ts))
+    time_file.write("Completed TS: {}\n".format(completed_ts))
+    time_file.write("Full Duration: {}\n".format(full_duration))
+    time_file.write("Completed Duration: {}\n".format(completed_duration))
+    time_file.write("Peak Concurrency (sno_installing + policy_applying): {}\n".format(peak_concurrency))
 
   logger.info("Complete")
 
