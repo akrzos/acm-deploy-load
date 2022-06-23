@@ -58,9 +58,13 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
   echo "$(date -u) :: Checking cluster ${cluster}"
   export KUBECONFIG=/root/hv-sno/manifests/${cluster}/kubeconfig
   if ! oc get pods 2>/dev/null >/dev/null; then
-    if ssh core@$cluster sudo crictl logs $(ssh core@$cluster sudo crictl ps -a --name '^kube-apiserver$' -q 2>/dev/null | head -1) 2>&1 | grep "ca-bundle.crt: no such file or directory" -q; then
-      echo "Bz2017860 $cluster" >> ${output_dir}/sno-install-failures
-      continue
+    if ssh core@${cluster} sudo crictl logs $(ssh core@$cluster sudo crictl ps -a --name '^kube-apiserver$' -q 2>/dev/null | head -1) 2>&1 | grep "ca-bundle.crt: no such file or directory" -q; then
+        echo "CaBundleCrt-Bz2017860 $cluster" >> ${output_dir}/sno-install-failures
+        continue
+    fi
+    if ssh core@${cluster} sudo journalctl -u kubelet 2>&1 | grep "unable to destroy cgroup paths"  -q; then
+        echo "SystemdTimeout-Bz2094952 $cluster" >> ${output_dir}/sno-install-failures
+        continue
     fi
     echo "Offline $cluster" >> ${output_dir}/sno-install-failures
     continue
@@ -106,7 +110,7 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
       continue
   fi
   if [[ $(oc get pods -A -ojson | jq '[.items[] | select(.status.phase == "Pending").metadata.name] | length') > 10 ]]; then
-      echo LotsOfPending-bz2093013 $cluster
+      echo "LotsOfPending-bz2093013 $cluster" >> ${output_dir}/sno-install-failures
       continue
   fi
   if [[ $(oc get co -ojson | jq -r '[.items[] | select((.status.conditions[]? | select(.type == "Available").status) == "False").metadata.name] | length') == "0" ]]; then
