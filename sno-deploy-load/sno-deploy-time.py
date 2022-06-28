@@ -16,6 +16,7 @@
 import argparse
 from csv import reader
 from datetime import datetime
+from datetime import timedelta
 import logging
 import pandas as pd
 import pathlib
@@ -48,6 +49,8 @@ def main():
 
   found_start_ts = False
   start_ts = ""
+  peak_sno_installing = 0
+  peak_du_applying = 0
   peak_concurrency = 0
   data = []
   with open(md_csv_file, "r") as sno_cv_csv:
@@ -60,42 +63,75 @@ def main():
       for row in csv_reader:
         row_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
         concurrency = int(row[5]) + int(row[11])
+        if int(row[5]) > peak_sno_installing:
+          peak_sno_installing = int(row[5])
+        if int(row[11]) > peak_du_applying:
+          peak_du_applying = int(row[11])
         if concurrency > peak_concurrency:
           peak_concurrency = concurrency
         if (start_ts == "") and (int(row[1]) > 0):
           start_ts = row_ts
         data.append(row)
 
+    sno_installed = int(data[-1][7])
+    deployment_completed = int(data[-1][13])
     sno_completed = int(data[-1][12]) + int(data[-1][13])
+
     last_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
+    sno_installed_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
+    deployment_completed_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
     completed_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
 
-    # Find when test was completed by first time that all compliant/timed out du profile snos first appeared
-    for row in reversed(data):
-      if (int(row[12]) + int(row[13])) < sno_completed:
-        completed_ts = completed_ts
-        break
-      completed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+  # Find when test was completed with max du compliant+du_timeout reached
+  for row in reversed(data):
+    if (int(row[12]) + int(row[13])) < sno_completed:
+      completed_ts = completed_ts
+      break
+    completed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
 
+  # Find when test is considered deployment completed by first time we reach max du compliant
+  for row in reversed(data):
+    if int(row[13]) < deployment_completed:
+      deployment_completed_ts = deployment_completed_ts
+      break
+    deployment_completed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+
+  # Find when test is considered sno install completed by first time we reach max snos installed
+  for row in reversed(data):
+    if int(row[7]) < sno_installed:
+      sno_installed_ts = sno_installed_ts
+      break
+    sno_installed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+
+  sno_install_duration = int((sno_installed_ts - start_ts).total_seconds())
+  deployed_complete_duration = int((deployment_completed_ts - start_ts).total_seconds())
   completed_duration = int((completed_ts - start_ts).total_seconds())
   full_duration = int((last_ts - start_ts).total_seconds())
 
-  logger.info("Start TS: {}".format(start_ts))
-  logger.info("Last TS: {}".format(last_ts))
-  logger.info("Completed TS: {}".format(completed_ts))
-  logger.info("Full Duration: {}".format(full_duration))
-  logger.info("Completed Duration: {}".format(completed_duration))
-  logger.info("Peak Concurrency (sno_installing + policy_applying): {}".format(peak_concurrency))
-
   with open(sno_time_file, "w") as time_file:
-    time_file.write("Start TS: {}\n".format(start_ts))
-    time_file.write("Last TS: {}\n".format(last_ts))
-    time_file.write("Completed TS: {}\n".format(completed_ts))
-    time_file.write("Full Duration: {}\n".format(full_duration))
-    time_file.write("Completed Duration: {}\n".format(completed_duration))
-    time_file.write("Peak Concurrency (sno_installing + policy_applying): {}\n".format(peak_concurrency))
+    log_write(time_file, "Start TS: {}".format(start_ts))
+    log_write(time_file, "SNO Install TS: {}".format(sno_installed_ts))
+    log_write(time_file, "Deployment Complete TS: {}".format(deployment_completed_ts))
+    log_write(time_file, "Completed TS: {}".format(completed_ts))
+    log_write(time_file, "Last TS: {}".format(last_ts))
+    log_write(time_file, "################################################################")
+    log_write(time_file, "SNO Install Duration (SNO Install Completed): {}s :: {}".format(sno_install_duration, str(timedelta(seconds=sno_install_duration))))
+    log_write(time_file, "Deployment Complete Duration (DU Compliant): {}s :: {}".format(deployed_complete_duration, str(timedelta(seconds=deployed_complete_duration))))
+    log_write(time_file, "Completed Duration (DU Timeout+Compliant): {}s :: {}".format(completed_duration, str(timedelta(seconds=completed_duration))))
+    log_write(time_file, "Full Duration: {}, :: {}".format(full_duration, str(timedelta(seconds=full_duration))))
+    log_write(time_file, "################################################################")
+    deployed_installed_time_diff = deployed_complete_duration - sno_install_duration
+    log_write(time_file, "Deployment Complete - SNO Install Completed: {}s :: {}".format(deployed_installed_time_diff, str(timedelta(seconds=deployed_installed_time_diff))))
+    log_write(time_file, "################################################################")
+    log_write(time_file, "Peak SNO Installing: {}".format(peak_sno_installing))
+    log_write(time_file, "Peak DU Applying: {}".format(peak_du_applying))
+    log_write(time_file, "Peak Concurrency (sno_installing + policy_applying): {}".format(peak_concurrency))
 
   logger.info("Complete")
+
+def log_write(file, message):
+  logger.info(message)
+  file.write(message + "\n")
 
 if __name__ == "__main__":
   sys.exit(main())
