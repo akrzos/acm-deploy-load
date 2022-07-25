@@ -42,6 +42,7 @@ logging.Formatter.converter = time.gmtime
 # * Check critical ocp pods (Ex kube-apiserver) for restarts in last hour (or timeframe)
 # * Abstract the prometheus query logic such that more queries can be completed easily
 # * Create a test namespace, deployment, pod, service, route and check route for http 200, then tear down
+# * Check MCP if they are upgraded/ready
 
 
 def check_clusterversion(kubeconfig):
