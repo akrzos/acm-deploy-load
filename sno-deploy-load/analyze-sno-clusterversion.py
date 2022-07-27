@@ -35,7 +35,7 @@ def main():
   parser = argparse.ArgumentParser(
       description="Analyze Each SNOs clusterversion data",
       prog="analyze-sno-clusterversion.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("-m", "--sno-manifests", type=str, default="/root/hv-sno/manifests",
+  parser.add_argument("-m", "--sno-manifests", type=str, default="/root/hv-vm/sno/manifests",
                       help="The location of the SNO manifests, where kubeconfig is nested under each SNO directory")
   parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
   cliargs = parser.parse_args()

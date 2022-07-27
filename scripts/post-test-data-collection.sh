@@ -8,7 +8,7 @@ mkdir -p ${output_dir}
 
 if [ "$1" == "-k" ]; then
   echo "$(date -u) :: Getting SNO kubeconfigs"
-  ls /root/hv-sno/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-sno/manifests/%/kubeconfig"
+  ls /root/hv-vm/sno/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/sno/manifests/%/kubeconfig"
 fi
 
 echo "$(date -u) :: Collecting namespaces, nodes and pod data"
@@ -56,7 +56,7 @@ truncate -s 0 ${output_dir}/sno-install-failures
 
 for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
   echo "$(date -u) :: Checking cluster ${cluster}"
-  export KUBECONFIG=/root/hv-sno/manifests/${cluster}/kubeconfig
+  export KUBECONFIG=/root/hv-vm/sno/manifests/${cluster}/kubeconfig
   if ! oc get pods 2>/dev/null >/dev/null; then
     if ssh core@${cluster} sudo crictl logs $(ssh core@$cluster sudo crictl ps -a --name '^kube-apiserver$' -q 2>/dev/null | head -1) 2>&1 | grep "ca-bundle.crt: no such file or directory" -q; then
         echo "CaBundleCrt-Bz2017860 $cluster" >> ${output_dir}/sno-install-failures

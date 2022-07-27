@@ -257,7 +257,7 @@ def main():
 
   # # From laptop for debugging, should be commented out before commit
   # logger.info("Replacing directories for testing purposes#############################################################")
-  # cliargs.sno_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/hv-sno"
+  # cliargs.sno_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/hv-vm/sno"
   # cliargs.argocd_base_directory = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/argocd"
   # cliargs.start_delay = 1
   # cliargs.end_delay = 1

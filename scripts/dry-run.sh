@@ -12,7 +12,7 @@ log_file="dr-${ts}.log"
 # acm_ver=$(cat /root/rhacm-deploy/deploy/snapshot.ver)
 # test_ver="ZTP Scale Run ${iteration}"
 # hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
-# sno_ocp=$(grep "imageSetRef:" /root/hv-sno/manifests/sno00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
+# sno_ocp=$(grep "imageSetRef:" /root/hv-vm/sno/manifests/sno00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
 
 # Dry run "overrides"
 acm_ver="ACM Version Dry Run"
