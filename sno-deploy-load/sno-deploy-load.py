@@ -178,7 +178,7 @@ def main():
       prog="sno-deploy-load.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # "Global" args
-  parser.add_argument("-m", "--sno-manifests-siteconfigs", type=str, default="/root/hv-sno",
+  parser.add_argument("-m", "--sno-manifests-siteconfigs", type=str, default="/root/hv-vm/sno",
                       help="The location of the SNO manifests, siteconfigs and resource files")
   parser.add_argument("-a", "--argocd-base-directory", type=str,
                       default="/root/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd",
