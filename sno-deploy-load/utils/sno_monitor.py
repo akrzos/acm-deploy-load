@@ -40,7 +40,7 @@ class SnoMonitor(Thread):
     logger.info("Starting SNO Monitor")
 
     with open(self.csv_file, "w") as csv_file:
-      csv_file.write("date,sno_init,sno_notstarted,sno_booted,sno_discovered,sno_installing,sno_install_failed,sno_install_completed,managed,policy_init,policy_notstarted,policy_applying,policy_timedout,policy_compliant\n")
+      csv_file.write("date,sno_applied,sno_init,sno_notstarted,sno_booted,sno_discovered,sno_installing,sno_install_failed,sno_install_completed,managed,policy_init,policy_notstarted,policy_applying,policy_timedout,policy_compliant\n")
 
     while self.signal:
       start_sample_time = time.time()
@@ -205,13 +205,14 @@ class SnoMonitor(Thread):
 
       # Write csv data
       with open(self.csv_file, "a") as csv_file:
-        csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
-            datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'), sno_init,
-            sno_notstarted, sno_booted, sno_discovered, sno_installing, sno_install_failed, sno_install_completed,
-            sno_managed, sno_policy_init, sno_policy_notstarted, sno_policy_applying, sno_policy_timedout,
-            sno_policy_compliant
+        csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+            datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            self.monitor_data["sno_applied_committed"], sno_init, sno_notstarted, sno_booted, sno_discovered,
+            sno_installing, sno_install_failed, sno_install_completed, sno_managed, sno_policy_init,
+            sno_policy_notstarted, sno_policy_applying, sno_policy_timedout, sno_policy_compliant
         ))
 
+      logger.debug("Applied/Committed SNOs: {}".format(self.monitor_data["sno_applied_committed"]))
       logger.debug("Initialized SNOs: {}".format(self.monitor_data["sno_init"]))
       logger.debug("Not Started SNOs: {}".format(self.monitor_data["sno_notstarted"]))
       logger.debug("Booted SNOs: {}".format(self.monitor_data["sno_booted"]))

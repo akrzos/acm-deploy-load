@@ -152,9 +152,9 @@ def deploy_ztp_snos(snos, ztp_deploy_apps, start_index, end_index, snos_per_app,
   rc, output = command(["git", "push"], dry_run, cmd_directory=argocd_dir)
 
 
-def log_monitor_data(data, total_deployed_snos, elapsed_seconds):
+def log_monitor_data(data, elapsed_seconds):
   logger.info("Elapsed total time: {}s :: {}".format(elapsed_seconds, str(timedelta(seconds=elapsed_seconds))))
-  logger.info("Deployed SNOs: {}".format(total_deployed_snos))
+  logger.info("Applied/Committed SNOs: {}".format(data["sno_applied_committed"]))
   logger.info("Initialized SNOs: {}".format(data["sno_init"]))
   logger.info("Not Started SNOs: {}".format(data["sno_notstarted"]))
   logger.info("Booted SNOs: {}".format(data["sno_booted"]))
@@ -197,7 +197,7 @@ def main():
   parser.add_argument("--wait-du-profile-max", type=int, default=18000,
                       help="Maximum amount of time to wait for DU Profile completion (seconds)")
   parser.add_argument("-w", "--wait-du-profile", action="store_true", default=False,
-                      help="Waits for du profile to complete after all expected SNOs deployed")
+                      help="Waits for du profile to complete after all expected SNOs installed")
   parser.add_argument("--ztp-client-templates", action="store_true", default=False,
                       help="If ztp method, include client templates")
 
@@ -257,8 +257,8 @@ def main():
 
   # # From laptop for debugging, should be commented out before commit
   # logger.info("Replacing directories for testing purposes#############################################################")
-  # cliargs.sno_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/hv-vm/sno"
-  # cliargs.argocd_base_directory = "/home/akrzos/akrh/project-things/20220117-cloud13-acm-2.5/argocd"
+  # cliargs.sno_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220725-cloud27-stage-acm-2.6/hv-vm/sno"
+  # cliargs.argocd_base_directory = "/home/akrzos/akrh/project-things/20220725-cloud27-stage-acm-2.6/argocd"
   # cliargs.start_delay = 1
   # cliargs.end_delay = 1
 
@@ -398,9 +398,9 @@ def main():
   #############################################################################
   # Manifest application / gitops "phase"
   #############################################################################
-  total_deployed_snos = 0
   total_intervals = 0
   monitor_data = {
+    "sno_applied_committed": 0,
     "sno_init": 0,
     "sno_notstarted": 0,
     "sno_booted": 0,
@@ -442,7 +442,7 @@ def main():
       # Apply the snos
       if cliargs.method == "manifests":
         for sno in sno_list[start_sno_index:end_sno_index]:
-          total_deployed_snos += 1
+          monitor_data["sno_applied_committed"] += 1
           oc_cmd = ["oc", "apply", "-f", sno]
           # Might need to add retries and have method to count retries
           rc, output = command(oc_cmd, cliargs.dry_run)
@@ -450,7 +450,7 @@ def main():
             logger.error("sno-deploy-load, oc apply rc: {}".format(rc))
             sys.exit(1)
       elif cliargs.method == "ztp":
-        total_deployed_snos += len(sno_list[start_sno_index:end_sno_index])
+        monitor_data["sno_applied_committed"] += len(sno_list[start_sno_index:end_sno_index])
         deploy_ztp_snos(
             sno_list, ztp_deploy_apps, start_sno_index, end_sno_index, cliargs.snos_per_app,
             cliargs.sno_manifests_siteconfigs, cliargs.argocd_base_directory, cliargs.dry_run,
@@ -473,7 +473,7 @@ def main():
         # Approximately display this every 300s
         if wait_logger >= 3000:
           logger.info("Remaining interval time: {}s".format(round(expected_interval_end_time - current_time)))
-          log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
+          log_monitor_data(monitor_data, round(time.time() - start_time))
           wait_logger = 0
         current_time = time.time()
 
@@ -494,22 +494,22 @@ def main():
     logger.info("Waiting for SNOs install completion - {}".format(int(time.time() * 1000)))
     phase_break()
     if cliargs.dry_run:
-      total_deployed_snos = 0
+      monitor_data["sno_applied_committed"] = 0
 
     wait_logger = 4
     while True:
       time.sleep(30)
-      # Break from phase if inited SNOs match deployed SNOs and failed+completed = inited SNOs
-      if ((monitor_data["sno_init"] >= total_deployed_snos) and
+      # Break from phase if inited SNOs match applied/committed SNOs and failed+completed = inited SNOs
+      if ((monitor_data["sno_init"] >= monitor_data["sno_applied_committed"]) and
           ((monitor_data["sno_install_failed"] + monitor_data["sno_install_completed"]) == monitor_data["sno_init"])):
         logger.info("SNOs install completion")
-        log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         break
 
       # Break from phase if we exceed the timeout
       if cliargs.wait_sno_max > 0 and ((time.time() - wait_sno_start_time) > cliargs.wait_sno_max):
         logger.info("SNOs install completion exceeded timeout: {}s".format(cliargs.wait_sno_max))
-        log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         break
 
       wait_logger += 1
@@ -518,7 +518,7 @@ def main():
         e_time = round(time.time() - wait_sno_start_time)
         logger.info("Elapsed SNO install completion time: {}s :: {} / {}s :: {}".format(
             e_time, str(timedelta(seconds=e_time)), cliargs.wait_sno_max, str(timedelta(seconds=cliargs.wait_sno_max))))
-        log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         wait_logger = 0
 
   wait_sno_end_time = time.time()
@@ -532,7 +532,7 @@ def main():
     logger.info("Waiting for DU Profile completion - {}".format(int(time.time() * 1000)))
     phase_break()
     if cliargs.dry_run:
-      total_deployed_snos = 0
+      monitor_data["sno_applied_committed"] = 0
 
     wait_logger = 4
     while True:
@@ -541,13 +541,13 @@ def main():
       if ((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]) and
           ((monitor_data["policy_timedout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
         logger.info("DU Profile completion")
-        log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         break
 
       # Break from phase if we exceed the timeout
       if cliargs.wait_du_profile_max > 0 and ((time.time() - wait_du_profile_start_time) > cliargs.wait_du_profile_max):
         logger.info("DU Profile completion exceeded timeout: {}s".format(cliargs.wait_du_profile_max))
-        log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         break
 
       wait_logger += 1
@@ -557,7 +557,7 @@ def main():
         logger.info("Elapsed DU Profile completion time: {}s :: {} / {}s :: {}".format(
             e_time, str(timedelta(seconds=e_time)), cliargs.wait_du_profile_max,
             str(timedelta(seconds=cliargs.wait_du_profile_max))))
-        log_monitor_data(monitor_data, total_deployed_snos, round(time.time() - start_time))
+        log_monitor_data(monitor_data, round(time.time() - start_time))
         wait_logger = 0
   wait_du_profile_end_time = time.time()
 
@@ -578,7 +578,7 @@ def main():
   # Report Card / Graph Phase
   #############################################################################
   generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wait_sno_start_time, wait_sno_end_time,
-      wait_du_profile_start_time, wait_du_profile_end_time, available_snos, total_deployed_snos, monitor_data, cliargs,
+      wait_du_profile_start_time, wait_du_profile_end_time, available_snos, monitor_data, cliargs,
       total_intervals, report_dir)
 
 if __name__ == "__main__":

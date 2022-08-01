@@ -82,6 +82,8 @@ def main():
       policy_compliant, policy_inited, cliargs.hub_version, cliargs.sno_version, cliargs.wan_emulation)
 
   y_sno = ["sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed", "sno_install_completed"]
+  y_sno2 = ["sno_applied", "sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed",
+      "sno_install_completed"]
   y_managed = ["sno_init", "sno_install_failed", "sno_install_completed", "managed"]
   y_policy = ["sno_init", "sno_install_completed", "managed", "policy_init", "policy_applying", "policy_timedout",
       "policy_compliant"]
@@ -96,6 +98,11 @@ def main():
   fig_sno = px.line(df, x="date", y=y_sno, labels=l, width=cliargs.width, height=cliargs.height)
   fig_sno.update_layout(title=title_sno, legend_orientation="v")
   fig_sno.write_image("{}/sno-{}.png".format(cliargs.results_directory, ts))
+
+  logger.info("Creating Graph - {}/sno2-{}.png".format(cliargs.results_directory, ts))
+  fig_sno = px.line(df, x="date", y=y_sno2, labels=l, width=cliargs.width, height=cliargs.height)
+  fig_sno.update_layout(title=title_sno, legend_orientation="v")
+  fig_sno.write_image("{}/sno2-{}.png".format(cliargs.results_directory, ts))
 
   logger.info("Creating Graph - {}/managed-{}.png".format(cliargs.results_directory, ts))
   fig_managed = px.line(df, x="date", y=y_managed, labels=l, width=cliargs.width, height=cliargs.height)
