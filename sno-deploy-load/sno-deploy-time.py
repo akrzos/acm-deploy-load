@@ -23,6 +23,30 @@ import pathlib
 import sys
 import time
 
+# monitor_data.csv
+# Index Column
+# 0  date
+# 1  sno_applied
+# 2  sno_init
+# 3  sno_notstarted
+# 4  sno_booted
+# 5  sno_discovered
+# 6  sno_installing
+# 7  sno_install_failed
+# 8  sno_install_completed
+# 9  managed
+# 10 policy_init
+# 11 policy_notstarted
+# 12 policy_applying
+# 13 policy_timedout
+# 14 policy_compliant
+INDEX_DATE = 0
+INDEX_SNO_APPLIED = 1
+INDEX_SNO_INSTALLING = 6
+INDEX_SNO_INSTALL_COMPLETED = 8
+INDEX_POLICY_APPLYING = 12
+INDEX_POLICY_TIMEDOUT = 13
+INDEX_POLICY_COMPLIANT = 14
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
 logger = logging.getLogger("sno-deploy-time")
@@ -56,52 +80,52 @@ def main():
   with open(md_csv_file, "r") as sno_cv_csv:
     csv_reader = reader(sno_cv_csv)
 
-    # Determine official "start time" and read entire file into list
+    # Determine official "start time", peak concurrencies and read entire file into list
     # Remove the csv header first
     header = next(csv_reader)
-    if header != None:
+    if header is not None:
       for row in csv_reader:
-        row_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
-        concurrency = int(row[5]) + int(row[11])
-        if int(row[5]) > peak_sno_installing:
-          peak_sno_installing = int(row[5])
-        if int(row[11]) > peak_du_applying:
-          peak_du_applying = int(row[11])
+        row_ts = datetime.strptime(row[INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
+        concurrency = int(row[INDEX_SNO_INSTALLING]) + int(row[INDEX_POLICY_APPLYING])
+        if int(row[INDEX_SNO_INSTALLING]) > peak_sno_installing:
+          peak_sno_installing = int(row[INDEX_SNO_INSTALLING])
+        if int(row[INDEX_POLICY_APPLYING]) > peak_du_applying:
+          peak_du_applying = int(row[INDEX_POLICY_APPLYING])
         if concurrency > peak_concurrency:
           peak_concurrency = concurrency
-        if (start_ts == "") and (int(row[1]) > 0):
+        if (start_ts == "") and (int(row[INDEX_SNO_APPLIED]) > 0):
           start_ts = row_ts
         data.append(row)
 
-    sno_installed = int(data[-1][7])
-    deployment_completed = int(data[-1][13])
-    sno_completed = int(data[-1][12]) + int(data[-1][13])
+    sno_installed = int(data[-1][INDEX_SNO_INSTALL_COMPLETED])
+    deployment_completed = int(data[-1][INDEX_POLICY_COMPLIANT])
+    sno_completed = int(data[-1][INDEX_POLICY_TIMEDOUT]) + int(data[-1][INDEX_POLICY_COMPLIANT])
 
-    last_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
-    sno_installed_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
-    deployment_completed_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
-    completed_ts = datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%SZ")
+    last_ts = datetime.strptime(data[-1][INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
+    sno_installed_ts = datetime.strptime(data[-1][INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
+    deployment_completed_ts = datetime.strptime(data[-1][INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
+    completed_ts = datetime.strptime(data[-1][INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
 
   # Find when test was completed with max du compliant+du_timeout reached
   for row in reversed(data):
-    if (int(row[12]) + int(row[13])) < sno_completed:
+    if (int(row[INDEX_POLICY_TIMEDOUT]) + int(row[INDEX_POLICY_COMPLIANT])) < sno_completed:
       completed_ts = completed_ts
       break
-    completed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+    completed_ts = datetime.strptime(row[INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
 
   # Find when test is considered deployment completed by first time we reach max du compliant
   for row in reversed(data):
-    if int(row[13]) < deployment_completed:
+    if int(row[INDEX_POLICY_COMPLIANT]) < deployment_completed:
       deployment_completed_ts = deployment_completed_ts
       break
-    deployment_completed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+    deployment_completed_ts = datetime.strptime(row[INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
 
   # Find when test is considered sno install completed by first time we reach max snos installed
   for row in reversed(data):
-    if int(row[7]) < sno_installed:
+    if int(row[INDEX_SNO_INSTALL_COMPLETED]) < sno_installed:
       sno_installed_ts = sno_installed_ts
       break
-    sno_installed_ts = datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%SZ")
+    sno_installed_ts = datetime.strptime(row[INDEX_DATE], "%Y-%m-%dT%H:%M:%SZ")
 
   sno_install_duration = int((sno_installed_ts - start_ts).total_seconds())
   deployed_complete_duration = int((deployment_completed_ts - start_ts).total_seconds())
@@ -129,9 +153,11 @@ def main():
 
   logger.info("Complete")
 
+
 def log_write(file, message):
   logger.info(message)
   file.write(message + "\n")
+
 
 if __name__ == "__main__":
   sys.exit(main())
