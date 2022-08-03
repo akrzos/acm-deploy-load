@@ -89,6 +89,8 @@ def main():
       "policy_compliant"]
   y_share = ["sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed",
       "sno_install_completed", "managed", "policy_applying", "policy_timedout", "policy_compliant"]
+  y_share2 = ["sno_applied", "sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed",
+      "sno_install_completed", "managed", "policy_applying", "policy_timedout", "policy_compliant"]
 
   l = {"value" : "# clusters", "date" : ""}
 
@@ -118,6 +120,11 @@ def main():
   fig_share = px.line(df, x="date", y=y_share, labels=l, width=cliargs.width, height=cliargs.height)
   fig_share.update_layout(title=title_sno, legend_orientation="v")
   fig_share.write_image("{}/share-{}.png".format(cliargs.results_directory, ts))
+
+  logger.info("Creating Graph - {}/share2-{}.png".format(cliargs.results_directory, ts))
+  fig_share = px.line(df, x="date", y=y_share2, labels=l, width=cliargs.width, height=cliargs.height)
+  fig_share.update_layout(title=title_sno, legend_orientation="v")
+  fig_share.write_image("{}/share2-{}.png".format(cliargs.results_directory, ts))
 
   logger.info("Complete")
 
