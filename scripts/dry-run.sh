@@ -19,15 +19,16 @@ acm_ver="ACM Version Dry Run"
 test_ver="ZTP Scale Run ${iteration}"
 hub_ocp="Hub Dry Run"
 sno_ocp="SNO Dry Run"
+wan_em="(50ms/0.02)"
 interval_period=1
 
-time ./sno-deploy-load/sno-deploy-load.py --dry-run --start-delay 1 --end-delay 1 --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" -w --ztp-client-templates -i 10 -t dry-run interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
+time ./sno-deploy-load/sno-deploy-load.py --dry-run --start-delay 1 --end-delay 1 --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" -w --ztp-client-templates -i 10 -t dry-run interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
 
 results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" ${results_dir} 2>&1 | tee -a ${log_file}
+time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
