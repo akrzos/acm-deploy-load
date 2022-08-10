@@ -36,17 +36,18 @@ logging.Formatter.converter = time.gmtime
 # * Check for etcd leader elections in the last hour
 
 # TODO: Future Enhancements:
-# * parameters to enable/disable specific checks
+# * check MCP if they are upgraded/ready
+# * fix etcd leader election check for ocp 4.11
 # * parameter to increase length of time to check for etcd leader elections
 # * Check if nodes flapped? (in last hour or larger period time)
 # * Check critical ocp pods (Ex kube-apiserver) for restarts in last hour (or timeframe)
 # * Abstract the prometheus query logic such that more queries can be completed easily
 # * Create a test namespace, deployment, pod, service, route and check route for http 200, then tear down
-# * Check MCP if they are upgraded/ready
 
 
-def check_clusterversion(kubeconfig):
+def check_clusterversion(kubeconfig, force):
   logger.info("Checking clusterversion")
+  success = True
   oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "clusterversion", "version", "-o", "json"]
   rc, output = command(oc_cmd, False, no_log=True)
   if rc != 0:
@@ -62,24 +63,31 @@ def check_clusterversion(kubeconfig):
     logger.debug("Clusterversion is Available")
   else:
     logger.error("Clusterversion is not Available")
-    sys.exit(1)
+    success = False
+    if not force:
+      sys.exit(1)
 
   if cv_failing == "True":
     logger.error("Clusterversion is Failing")
-    sys.exit(1)
+    success = False
+    if not force:
+      sys.exit(1)
   else:
     logger.debug("Clusterversion is not Failing")
 
   if cv_progressing == "True":
     logger.error("Clusterversion is Progressing")
-    sys.exit(1)
+    success = False
+    if not force:
+      sys.exit(1)
   else:
     logger.debug("Clusterversion is not Progressing")
-  return True
+  return success
 
 
-def check_clusteroperators(kubeconfig):
+def check_clusteroperators(kubeconfig, force):
   logger.info("Checking clusteroperators")
+  success = True
   oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "clusteroperators", "-o", "json"]
   rc, output = command(oc_cmd, False, no_log=True)
   if rc != 0:
@@ -96,20 +104,27 @@ def check_clusteroperators(kubeconfig):
         operator_name, co_available, co_progressing, co_degraded))
     if co_available != "True":
       logger.error("Clusteroperator {} is not Available".format(operator_name))
-      sys.exit(1)
+      success = False
+      if not force:
+        sys.exit(1)
 
     if co_degraded == "True":
       logger.error("Clusteroperator {} is Degraded".format(operator_name))
-      sys.exit(1)
+      success = False
+      if not force:
+        sys.exit(1)
 
     if co_progressing == "True":
       logger.error("Clusteroperator {} is Progressing".format(operator_name))
-      sys.exit(1)
-  return True
+      success = False
+      if not force:
+        sys.exit(1)
+  return success
 
 
-def check_nodes(kubeconfig):
+def check_nodes(kubeconfig, force):
   logger.info("Checking nodes")
+  success = True
   oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "nodes", "-o", "json"]
   rc, output = command(oc_cmd, False, no_log=True)
   if rc != 0:
@@ -127,23 +142,32 @@ def check_nodes(kubeconfig):
         node_name, no_ready, no_memory, no_disk, no_pid))
     if no_ready != "True":
       logger.error("Node {} is not Ready".format(node_name))
-      sys.exit(1)
+      success = False
+      if not force:
+        sys.exit(1)
 
     if no_memory == "True":
       logger.error("Node {} is has MemoryPressure".format(node_name))
-      sys.exit(1)
+      success = False
+      if not force:
+        sys.exit(1)
 
     if no_disk == "True":
       logger.error("Node {} is has DiskPressure".format(node_name))
-      sys.exit(1)
+      success = False
+      if not force:
+        sys.exit(1)
 
     if no_pid == "True":
       logger.error("Node {} is has PIDPressure".format(node_name))
-      sys.exit(1)
-  return True
+      success = False
+      if not force:
+        sys.exit(1)
+  return success
 
-def check_etcd_leader_elections(kubeconfig):
+def check_etcd_leader_elections(kubeconfig, force):
   logger.info("Checking for etcd leader elections")
+  success = True
   prom_route = ""
   prom_token_name = ""
   prom_token_data = ""
@@ -201,12 +225,15 @@ def check_etcd_leader_elections(kubeconfig):
     if float(result["value"][1]) > 0:
       logger.error("Pod: {}, Instance: {}, Result: {}".format(result["metric"]["pod"],result["metric"]["instance"], float(result["value"][1])))
       logger.error("etcd encountered leader election(s) in the last hour")
-      sys.exit(1)
-  return True
+      success = False
+      if not force:
+        sys.exit(1)
+  return success
 
 
 def main():
   start_time = time.time()
+  healthy = 0
 
   parser = argparse.ArgumentParser(
       description="Check that a cluster is healthy and stable",
@@ -214,6 +241,18 @@ def main():
 
   parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
+  parser.add_argument("--force", action="store_true", default=False,
+                      help="Do not exit on first failed check")
+
+  parser.add_argument("--skip-clusterversion", action="store_true", default=False,
+                      help="Skip checking clusterversion object")
+  parser.add_argument("--skip-clusteroperator", action="store_true", default=False,
+                      help="Skip checking clusteroperator objects")
+  parser.add_argument("--skip-node", action="store_true", default=False,
+                      help="Skip checking node objects")
+  parser.add_argument("--skip-etcd-election", action="store_true", default=False,
+                      help="Skip checking for etcd leader elections")
+
 
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
   cliargs = parser.parse_args()
@@ -224,18 +263,45 @@ def main():
   logger.info("Checking cluster")
   ts = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-  if check_clusterversion(cliargs.kubeconfig):
-    logger.info("Clusterversion is Available")
-  if check_clusteroperators(cliargs.kubeconfig):
-    logger.info("All clusteroperators are Available")
-  if check_nodes(cliargs.kubeconfig):
-    logger.info("All nodes are Ready")
-  if check_etcd_leader_elections(cliargs.kubeconfig):
-    logger.info("No detected etcd leader elections in the last hour")
+  if not cliargs.skip_clusterversion:
+    if check_clusterversion(cliargs.kubeconfig, cliargs.force):
+      logger.info("Clusterversion is Available and not failing")
+    else:
+      healthy += 1
+  else:
+    logger.info("Skip checking clusterversion")
 
-  logger.info("Cluster appears healthy!!!")
+  if not cliargs.skip_clusteroperator:
+    if check_clusteroperators(cliargs.kubeconfig, cliargs.force):
+      logger.info("All clusteroperators are Available")
+    else:
+      healthy += 1
+  else:
+    logger.info("Skip checking clusteroperators")
+
+  if not cliargs.skip_node:
+    if check_nodes(cliargs.kubeconfig, cliargs.force):
+      logger.info("All nodes are Ready")
+    else:
+      healthy += 1
+  else:
+    logger.info("Skip checking node readiness")
+
+  if not cliargs.skip_etcd_election:
+    if check_etcd_leader_elections(cliargs.kubeconfig, cliargs.force):
+      logger.info("No detected etcd leader elections in the last hour")
+    else:
+      healthy += 1
+  else:
+    logger.info("Skip checking for etcd leader elections")
+
+  if healthy > 0:
+    logger.warning("Cluster failed one or more checks")
+  else:
+    logger.info("Cluster appears healthy!!!")
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
+  return healthy
 
 if __name__ == "__main__":
   sys.exit(main())
