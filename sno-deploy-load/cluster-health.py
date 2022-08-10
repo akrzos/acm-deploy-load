@@ -30,13 +30,13 @@ logger = logging.getLogger("cluster-health")
 logging.Formatter.converter = time.gmtime
 
 # Check if cluster is healthy/stable
-# * Check if clusterversion is Available
-# * Check if all clusteroperators Available
+# * Check if clusterversion is available
+# * Check if all clusteroperators available
 # * Check if all nodes are ready
-# * Check for etcd leader elections in the last hour
+# * Check if all machineconfigpools updated
+# * Check for etcd leader elections in the last hour (4.10)
 
 # TODO: Future Enhancements:
-# * check MCP if they are upgraded/ready
 # * fix etcd leader election check for ocp 4.11
 # * parameter to increase length of time to check for etcd leader elections
 # * Check if nodes flapped? (in last hour or larger period time)
@@ -165,6 +165,54 @@ def check_nodes(kubeconfig, force):
         sys.exit(1)
   return success
 
+
+def check_machineconfigpools(kubeconfig, force):
+  logger.info("Checking machineconfigpools")
+  success = True
+  oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "machineconfigpools", "-o", "json"]
+  rc, output = command(oc_cmd, False, no_log=True)
+  if rc != 0:
+    logger.error("cluster-health, oc get machineconfigpools rc: {}".format(rc))
+    sys.exit(1)
+  mcp_data = json.loads(output)
+
+  for mcp in mcp_data['items']:
+    # logger.info("MCP: {}".format(mcp))
+    mcp_name = mcp["metadata"]["name"]
+    mcp_updated = [con for con in mcp["status"]["conditions"] if con["type"] == "Updated"][0]["status"]
+    mcp_updating = [con for con in mcp["status"]["conditions"] if con["type"] == "Updating"][0]["status"]
+    mcp_nodedegraded = [con for con in mcp["status"]["conditions"] if con["type"] == "NodeDegraded"][0]["status"]
+    mcp_degraded = [con for con in mcp["status"]["conditions"] if con["type"] == "Degraded"][0]["status"]
+    logger.debug("MCP: {}, Updated: {}, Updating: {}, NodeDegraded: {}, Degraded: {}".format(
+        mcp_name, mcp_updated, mcp_updating, mcp_nodedegraded, mcp_degraded))
+
+    if mcp_updated != "True":
+      logger.error("MCP {} is not Updated".format(mcp_name))
+      success = False
+      if not force:
+        sys.exit(1)
+
+    if mcp_updating == "True":
+      logger.error("MCP {} is Updating".format(mcp_name))
+      success = False
+      if not force:
+        sys.exit(1)
+
+    if mcp_nodedegraded == "True":
+      logger.error("MCP {} is NodeDegraded".format(mcp_name))
+      success = False
+      if not force:
+        sys.exit(1)
+
+    if mcp_degraded == "True":
+      logger.error("MCP {} is Degraded".format(mcp_name))
+      success = False
+      if not force:
+        sys.exit(1)
+
+  return success
+
+
 def check_etcd_leader_elections(kubeconfig, force):
   logger.info("Checking for etcd leader elections")
   success = True
@@ -241,7 +289,7 @@ def main():
 
   parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
-  parser.add_argument("--force", action="store_true", default=False,
+  parser.add_argument("-f", "--force", action="store_true", default=False,
                       help="Do not exit on first failed check")
 
   parser.add_argument("--skip-clusterversion", action="store_true", default=False,
@@ -250,6 +298,8 @@ def main():
                       help="Skip checking clusteroperator objects")
   parser.add_argument("--skip-node", action="store_true", default=False,
                       help="Skip checking node objects")
+  parser.add_argument("--skip-machineconfigpool", action="store_true", default=False,
+                      help="Skip checking machineconfigpool objects")
   parser.add_argument("--skip-etcd-election", action="store_true", default=False,
                       help="Skip checking for etcd leader elections")
 
@@ -286,6 +336,14 @@ def main():
       healthy += 1
   else:
     logger.info("Skip checking node readiness")
+
+  if not cliargs.skip_machineconfigpool:
+    if check_machineconfigpools(cliargs.kubeconfig, cliargs.force):
+      logger.info("All machineconfigpool are Updated")
+    else:
+      healthy += 1
+  else:
+    logger.info("Skip checking machineconfigpool")
 
   if not cliargs.skip_etcd_election:
     if check_etcd_leader_elections(cliargs.kubeconfig, cliargs.force):
