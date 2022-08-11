@@ -42,6 +42,22 @@ oc get managedcluster -A --no-headers -o custom-columns=NAME:'.metadata.name',AV
 
 cat ${output_dir}/managedcluster.available | grep "Unknown" > ${output_dir}/mc.Unknown
 
+echo "$(date -u) :: Collecting mch/mce data"
+
+oc get mch -A > ${output_dir}/mch
+oc get mch -A -o yaml > ${output_dir}/mch.yaml
+oc describe mch -A > ${output_dir}/mch.describe
+
+oc get mce > ${output_dir}/mce
+oc get mce -o yaml > ${output_dir}/mce.yaml
+oc describe mce > ${output_dir}/mce.describe
+
+echo "$(date -u) :: Collecting policy data"
+
+oc get policy -A > ${output_dir}/policy
+oc get policy -A -o yaml > ${output_dir}/policy.yaml
+oc describe policy -A > ${output_dir}/policy.describe
+
 echo "$(date -u) :: Collecting clustergroupupgrades data"
 
 oc get clustergroupupgrades -n ztp-install --no-headers -o custom-columns=NAME:'.metadata.name',READY:'.status.conditions[?(@.type=="Ready")].reason' > ${output_dir}/cgu.status
