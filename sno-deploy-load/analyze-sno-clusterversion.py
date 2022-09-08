@@ -56,6 +56,7 @@ def main():
   snos_total = 0
   snos_unreachable = []
   snos_ver_data = OrderedDict()
+  snos_duplicate_entries = []
 
   for item in aci_data["items"]:
     aci_name = item["metadata"]["name"]
@@ -99,14 +100,27 @@ def main():
       if sno_cv_state not in snos_ver_data[sno_cv_version]["state"]:
         snos_ver_data[sno_cv_version]["state"][sno_cv_state] = []
       if sno not in snos_ver_data[sno_cv_version]["state"][sno_cv_state]:
-        snos_ver_data[sno_cv_version]["state"][sno_cv_state].append(sno)
-        snos_ver_data[sno_cv_version]["count"] += 1
+        # Do not add duplicated entry if a Completed entry already exists
+        if "Completed" in snos_ver_data[sno_cv_version]["state"] and sno in snos_ver_data[sno_cv_version]["state"]["Completed"]:
+          logger.warn("Cluster {} has entry for Completed {} and a duplicate entry for {}".format(sno, sno_cv_version, sno_cv_state))
+          if sno not in snos_duplicate_entries:
+            snos_duplicate_entries.append(sno)
+        else:
+          snos_ver_data[sno_cv_version]["state"][sno_cv_state].append(sno)
+          snos_ver_data[sno_cv_version]["count"] += 1
       if sno_cv_state == "Completed":
         sno_cv_completiontime = ver_hist_entry["completionTime"]
         start = datetime.strptime(sno_cv_startedtime, "%Y-%m-%dT%H:%M:%SZ")
         end = datetime.strptime(sno_cv_completiontime, "%Y-%m-%dT%H:%M:%SZ")
         sno_cv_duration = (end - start).total_seconds()
         snos_ver_data[sno_cv_version]["completed_durations"].append(sno_cv_duration)
+        # Remove errornous partial upgrade history from stats
+        if "Partial" in snos_ver_data[sno_cv_version]["state"] and sno in snos_ver_data[sno_cv_version]["state"]["Partial"]:
+          logger.warn("Cluster {} has a duplicate Partial entry for version {}".format(sno, sno_cv_version))
+          snos_ver_data[sno_cv_version]["state"]["Partial"].remove(sno)
+          snos_ver_data[sno_cv_version]["count"] -= 1
+          if sno not in snos_duplicate_entries:
+            snos_duplicate_entries.append(sno)
       with open(cv_csv_file, "a") as csv_file:
         csv_file.write("{},{},{},{},{},{}\n".format(sno, sno_cv_version, sno_cv_state, sno_cv_startedtime, sno_cv_completiontime, sno_cv_duration))
 
@@ -118,12 +132,16 @@ def main():
   logger.info("Unreachable SNOs Count: {}".format(len(snos_unreachable)))
   logger.info("Unreachable SNOs Percent: {}%".format(percent_unreachable))
   logger.info("Unreachable SNOs: {}".format(snos_unreachable))
+  logger.info("Duplicated clusterversion history SNOs Count: {}".format(len(snos_duplicate_entries)))
+  logger.info("Duplicated clusterversion history SNOs: {}".format(snos_duplicate_entries))
   with open(cv_stats_file, "w") as stats_file:
     stats_file.write("Stats only on clusterversion in Completed state\n")
     stats_file.write("Total SNOs: {}\n".format(snos_total))
     stats_file.write("Unreachable SNOs Count: {}\n".format(len(snos_unreachable)))
     stats_file.write("Unreachable SNOs Percent: {}%\n".format(percent_unreachable))
     stats_file.write("Unreachable SNOs: {}\n".format(snos_unreachable))
+    stats_file.write("Duplicated clusterversion history SNOs Count: {}\n".format(len(snos_duplicate_entries)))
+    stats_file.write("Duplicated clusterversion history SNOs: {}\n".format(snos_duplicate_entries))
 
   for version in snos_ver_data:
     logger.info("#############################################")
