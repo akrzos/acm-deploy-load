@@ -34,15 +34,30 @@ logging.Formatter.converter = time.gmtime
 # * Check if all clusteroperators available
 # * Check if all nodes are ready
 # * Check if all machineconfigpools updated
-# * Check for etcd leader elections in the last hour (4.10)
+# * Check for etcd leader elections in the last hour
 
 # TODO: Future Enhancements:
-# * fix etcd leader election check for ocp 4.11
 # * parameter to increase length of time to check for etcd leader elections
 # * Check if nodes flapped? (in last hour or larger period time)
 # * Check critical ocp pods (Ex kube-apiserver) for restarts in last hour (or timeframe)
 # * Abstract the prometheus query logic such that more queries can be completed easily
 # * Create a test namespace, deployment, pod, service, route and check route for http 200, then tear down
+
+
+def get_version(kubeconfig):
+  logger.info("Getting version")
+  version = {}
+  oc_cmd = ["oc", "--kubeconfig", kubeconfig, "version", "-o", "json"]
+  rc, output = command(oc_cmd, False, no_log=True)
+  if rc != 0:
+    logger.error("cluster-health, oc version rc: {}".format(rc))
+    sys.exit(1)
+  version_data = json.loads(output)
+  logger.debug("Version is {}".format(version_data["openshiftVersion"]))
+  version["major"] = int(version_data["openshiftVersion"].split(".")[0])
+  version["minor"] = int(version_data["openshiftVersion"].split(".")[1])
+  version["patch"] = int(version_data["openshiftVersion"].split(".")[2])
+  return version
 
 
 def check_clusterversion(kubeconfig, force):
@@ -213,7 +228,7 @@ def check_machineconfigpools(kubeconfig, force):
   return success
 
 
-def check_etcd_leader_elections(kubeconfig, force):
+def check_etcd_leader_elections(kubeconfig, force, version):
   logger.info("Checking for etcd leader elections")
   success = True
   prom_route = ""
@@ -234,33 +249,44 @@ def check_etcd_leader_elections(kubeconfig, force):
 
   logger.info("Route to Query: {}".format(prom_route))
 
-  oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "serviceaccount", "prometheus-k8s", "-n", "openshift-monitoring", "-o", "json"]
-  rc, output = command(oc_cmd, False, no_log=True)
-  if rc != 0:
-    logger.error("cluster-health, oc get serviceaccount prometheus-k8s -n openshift-monitoring rc: {}".format(rc))
-    sys.exit(1)
-  prom_sa_data = json.loads(output)
+  prom_token_data = ""
+  if version["major"] == 4 and version["minor"] > 10:
+    # 4.11 requires us to create the token instead of find it in a secret
+    oc_cmd = ["oc", "--kubeconfig", kubeconfig, "create", "token", "prometheus-k8s", "-n", "openshift-monitoring"]
+    rc, output = command(oc_cmd, False, no_log=True)
+    if rc != 0:
+      logger.error("cluster-health, oc create token prometheus-k8s -n openshift-monitoring rc: {}".format(rc))
+      sys.exit(1)
+    prom_token_data = output
+  elif version["major"] == 4 and version["minor"] <= 10:
+    # 4.10 and below the token is located in a secret
+    oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "serviceaccount", "prometheus-k8s", "-n", "openshift-monitoring", "-o", "json"]
+    rc, output = command(oc_cmd, False, no_log=True)
+    if rc != 0:
+      logger.error("cluster-health, oc get serviceaccount prometheus-k8s -n openshift-monitoring rc: {}".format(rc))
+      sys.exit(1)
+    prom_sa_data = json.loads(output)
 
-  for secret_name in prom_sa_data["secrets"]:
-    if "token" in secret_name["name"]:
-      prom_token_name = secret_name["name"]
-      break
+    for secret_name in prom_sa_data["secrets"]:
+      if "token" in secret_name["name"]:
+        prom_token_name = secret_name["name"]
+        break
 
-  if prom_token_name == "":
-    logger.error("Unable to identify prometheus token name")
-    sys.exit(1)
+    if prom_token_name == "":
+      logger.error("Unable to identify prometheus token name")
+      sys.exit(1)
 
-  oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "secret", prom_token_name, "-n", "openshift-monitoring", "-o", "json"]
-  rc, output = command(oc_cmd, False, no_log=True)
-  if rc != 0:
-    logger.error("cluster-health, oc get secret {} -n openshift-monitoring rc: {}".format(prom_token_name, rc))
-    sys.exit(1)
-  prom_secret_data = json.loads(output)
+    oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "secret", prom_token_name, "-n", "openshift-monitoring", "-o", "json"]
+    rc, output = command(oc_cmd, False, no_log=True)
+    if rc != 0:
+      logger.error("cluster-health, oc get secret {} -n openshift-monitoring rc: {}".format(prom_token_name, rc))
+      sys.exit(1)
+    prom_secret_data = json.loads(output)
 
-  prom_token_data = (base64.b64decode(prom_secret_data["data"]["token"])).decode("utf-8")
-  if prom_token_data == "":
-    logger.error("Unable to identify prometheus token name")
-    sys.exit(1)
+    prom_token_data = (base64.b64decode(prom_secret_data["data"]["token"])).decode("utf-8")
+    if prom_token_data == "":
+      logger.error("Unable to identify prometheus token name")
+      sys.exit(1)
 
   query = "increase(etcd_server_leader_changes_seen_total[1h])"
   query_endpoint = "{}/api/v1/query?query={}".format(prom_route, query)
@@ -310,6 +336,9 @@ def main():
   if cliargs.debug:
     logger.setLevel(logging.DEBUG)
 
+  version = get_version(cliargs.kubeconfig)
+  logger.info("oc version reports cluster is {}.{}.{}".format(version["major"], version["minor"], version["patch"]))
+
   logger.info("Checking cluster")
   ts = datetime.now().strftime("%Y%m%d-%H%M%S")
 
@@ -346,7 +375,7 @@ def main():
     logger.info("Skip checking machineconfigpool")
 
   if not cliargs.skip_etcd_election:
-    if check_etcd_leader_elections(cliargs.kubeconfig, cliargs.force):
+    if check_etcd_leader_elections(cliargs.kubeconfig, cliargs.force, version):
       logger.info("No detected etcd leader elections in the last hour")
     else:
       healthy += 1
