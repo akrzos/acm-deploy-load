@@ -18,6 +18,7 @@ from datetime import datetime
 from datetime import timedelta
 import json
 from utils.command import command
+from utils.output import log_write
 import logging
 import numpy as np
 import sys
@@ -54,14 +55,16 @@ def main():
   cgus_total = len(cgu_data["items"])
   cgu_conditions = {}
   cgus_create_time = ""
+  cgus_precache_done = ""
   cgus_started_time = ""
   cgus_completed_time = ""
+  cgu_precachingdone_values = []
+  cgu_upgradecompleted_values = []
 
   logger.info("Writing CSV: {}".format(cgu_csv_file))
   with open(cgu_csv_file, "w") as csv_file:
     csv_file.write("name,status,startedAt,completedAt,duration\n")
 
-  cgu_upgradecompleted_values = []
   for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
     cgu_status = "unknown"
@@ -101,9 +104,16 @@ def main():
             elif cgus_completed_time < cgu_completedAt:
               logger.info("Replacing cgu completed time {} with later time {}".format(cgus_completed_time, cgu_completedAt))
               cgus_completed_time = cgu_completedAt
-
         cgu_status = condition["reason"]
-        break;
+      elif condition["type"] == "PrecachingDone":
+        precache_ltt = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
+        if cgus_precache_done == "":
+          cgus_precache_done = precache_ltt
+        elif cgus_precache_done < precache_ltt:
+          logger.info("Replacing cgu precache completed time {} with later time {}".format(cgus_precache_done, precache_ltt))
+          cgus_precache_done = precache_ltt
+        cgu_precache_duration = (cgus_precache_done - cgu_created).total_seconds()
+        cgu_precachingdone_values.append(cgu_precache_duration)
 
     if cgu_status == "UpgradeCompleted" and cgu_startedAt != "" and cgu_completedAt != "":
       cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
@@ -115,67 +125,48 @@ def main():
       csv_file.write("{},{},{},{},{}\n".format(cgu_name, cgu_status, cgu_startedAt, cgu_completedAt, cgu_duration))
 
   logger.info("Writing Stats: {}".format(cgu_stats_file))
-  stats_count = len(cgu_upgradecompleted_values)
-  stats_min = 0
-  stats_avg = 0
-  stats_50p = 0
-  stats_95p = 0
-  stats_99p = 0
-  stats_max = 0
-  if stats_count > 0:
-    stats_min = np.min(cgu_upgradecompleted_values)
-    stats_avg = round(np.mean(cgu_upgradecompleted_values), 1)
-    stats_50p = round(np.percentile(cgu_upgradecompleted_values, 50), 1)
-    stats_95p = round(np.percentile(cgu_upgradecompleted_values, 95), 1)
-    stats_99p = round(np.percentile(cgu_upgradecompleted_values, 99), 1)
-    stats_max = np.max(cgu_upgradecompleted_values)
 
   duration_create_start = (cgus_started_time - cgus_create_time).total_seconds()
+  if cgus_precache_done != "":
+    duration_create_precache = (cgus_precache_done - cgus_create_time).total_seconds()
   duration_start_completed = (cgus_completed_time - cgus_started_time).total_seconds()
   duration_create_completed = (cgus_completed_time - cgus_create_time).total_seconds()
 
-  logger.info("#############################################")
-  logger.info("Stats on clustergroupupgrades CRs in namespace {}".format(cliargs.namespace))
-  logger.info("Total CGUs - {}".format(cgus_total))
-  for condition in cgu_conditions:
-    logger.info("CGUs with {}: {} - {}%".format(condition, cgu_conditions[condition], round((cgu_conditions[condition] / cgus_total) * 100, 1)))
-  logger.info("Earliest CGU creationTimestamp: {}".format(cgus_create_time))
-  logger.info("Earliest CGU startedAt Timestamp: {}".format(cgus_started_time))
-  logger.info("Latest CGU completedAt Timestamp: {}".format(cgus_completed_time))
-  logger.info("Duration between creation and startedAt: {}s :: {}".format(duration_create_start, str(timedelta(seconds=duration_create_start))))
-  logger.info("Duration between startedAt and completedAt: {}s :: {}".format(duration_start_completed, str(timedelta(seconds=duration_start_completed))))
-  logger.info("Duration between creation and completedAt: {}s :: {}".format(duration_create_completed, str(timedelta(seconds=duration_create_completed))))
-  logger.info("#############################################")
-  logger.info("Stats only on clustergroupupgrades CRs in UpgradeCompleted")
-  logger.info("Count: {}".format(stats_count))
-  logger.info("Min: {}".format(stats_min))
-  logger.info("Average: {}".format(stats_avg))
-  logger.info("50 percentile: {}".format(stats_50p))
-  logger.info("95 percentile: {}".format(stats_95p))
-  logger.info("99 percentile: {}".format(stats_99p))
-  logger.info("Max: {}".format(stats_max))
-
   with open(cgu_stats_file, "w") as stats_file:
-    stats_file.write("#############################################\n")
-    stats_file.write("Stats on clustergroupupgrades CRs in namespace {}\n".format(cliargs.namespace))
-    stats_file.write("Total CGUs - {}\n".format(cgus_total))
+    log_write(stats_file, "#############################################")
+    log_write(stats_file, "Stats on clustergroupupgrades CRs in namespace {}".format(cliargs.namespace))
+    log_write(stats_file, "Total CGUs - {}".format(cgus_total))
     for condition in cgu_conditions:
-      stats_file.write("CGUs with {}: {} - {}%\n".format(condition, cgu_conditions[condition], round((cgu_conditions[condition] / cgus_total) * 100, 1)))
-    stats_file.write("Earliest CGU creationTimestamp: {}\n".format(cgus_create_time))
-    stats_file.write("Earliest CGU startedAt Timestamp: {}\n".format(cgus_started_time))
-    stats_file.write("Latest CGU completedAt Timestamp: {}\n".format(cgus_completed_time))
-    stats_file.write("Duration between creation and startedAt: {}s :: {}\n".format(duration_create_start, str(timedelta(seconds=duration_create_start))))
-    stats_file.write("Duration between startedAt and completedAt: {}s :: {}\n".format(duration_start_completed, str(timedelta(seconds=duration_start_completed))))
-    stats_file.write("Duration between creation and completedAt: {}s :: {}\n".format(duration_create_completed, str(timedelta(seconds=duration_create_completed))))
-    stats_file.write("#############################################\n")
-    stats_file.write("Stats only on clustergroupupgrades CRs in UpgradeCompleted\n")
-    stats_file.write("Count: {}\n".format(stats_count))
-    stats_file.write("Min: {}\n".format(stats_min))
-    stats_file.write("Average: {}\n".format(stats_avg))
-    stats_file.write("50 percentile: {}\n".format(stats_50p))
-    stats_file.write("95 percentile: {}\n".format(stats_95p))
-    stats_file.write("99 percentile: {}\n".format(stats_99p))
-    stats_file.write("Max: {}\n".format(stats_max))
+      log_write(stats_file, "CGUs with {}: {} - {}%".format(condition, cgu_conditions[condition], round((cgu_conditions[condition] / cgus_total) * 100, 1)))
+    log_write(stats_file, "Earliest CGU creationTimestamp: {}".format(cgus_create_time))
+    if cgus_precache_done != "":
+      log_write(stats_file, "Latest PrecachingDone lastTransitionTime: {}".format(cgus_precache_done))
+    log_write(stats_file, "Earliest CGU startedAt Timestamp: {}".format(cgus_started_time))
+    log_write(stats_file, "Latest CGU completedAt Timestamp: {}".format(cgus_completed_time))
+    log_write(stats_file, "Duration between creation and startedAt: {}s :: {}".format(duration_create_start, str(timedelta(seconds=duration_create_start))))
+    if cgus_precache_done != "":
+      log_write(stats_file, "Duration between creation and precachingdone: {}s :: {}".format(duration_create_precache, str(timedelta(seconds=duration_create_precache))))
+    log_write(stats_file, "Duration between startedAt and completedAt: {}s :: {}".format(duration_start_completed, str(timedelta(seconds=duration_start_completed))))
+    log_write(stats_file, "Duration between creation and completedAt: {}s :: {}".format(duration_create_completed, str(timedelta(seconds=duration_create_completed))))
+    if cgus_precache_done != "":
+      log_write(stats_file, "#############################################")
+      log_write(stats_file, "Stats on clustergroupupgrades CRs with PrecachingDone")
+      log_write(stats_file, "Count: {}".format(len(cgu_precachingdone_values)))
+      log_write(stats_file, "Min: {}".format(np.min(cgu_precachingdone_values)))
+      log_write(stats_file, "Average: {}".format(round(np.mean(cgu_precachingdone_values), 1)))
+      log_write(stats_file, "50 percentile: {}".format(round(np.percentile(cgu_precachingdone_values, 50), 1)))
+      log_write(stats_file, "95 percentile: {}".format(round(np.percentile(cgu_precachingdone_values, 95), 1)))
+      log_write(stats_file, "99 percentile: {}".format(round(np.percentile(cgu_precachingdone_values, 99), 1)))
+      log_write(stats_file, "Max: {}".format(np.max(cgu_precachingdone_values)))
+    log_write(stats_file, "#############################################")
+    log_write(stats_file, "Stats only on clustergroupupgrades CRs in UpgradeCompleted")
+    log_write(stats_file, "Count: {}".format(len(cgu_upgradecompleted_values)))
+    log_write(stats_file, "Min: {}".format(np.min(cgu_upgradecompleted_values)))
+    log_write(stats_file, "Average: {}".format(round(np.mean(cgu_upgradecompleted_values), 1)))
+    log_write(stats_file, "50 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 50), 1)))
+    log_write(stats_file, "95 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 95), 1)))
+    log_write(stats_file, "99 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 99), 1)))
+    log_write(stats_file, "Max: {}".format(np.max(cgu_upgradecompleted_values)))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
