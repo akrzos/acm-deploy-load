@@ -15,6 +15,7 @@
 
 import argparse
 from datetime import datetime
+from datetime import timedelta
 import json
 from utils.command import command
 import logging
@@ -35,19 +36,26 @@ def main():
       description="Analyze ClusterGroupUpgrades data",
       prog="analyze-clustergroupupgrades.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
+  parser.add_argument("-n", "--namespace", type=str, default="ztp-install", help="Namespace of the CGUs to analyze")
   cliargs = parser.parse_args()
 
   logger.info("Analyze clustergroupupgrades")
   ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-  cgu_csv_file = "{}/clustergroupupgrades-{}.csv".format(cliargs.results_directory, ts)
-  cgu_stats_file = "{}/clustergroupupgrades-{}.stats".format(cliargs.results_directory, ts)
+  cgu_csv_file = "{}/clustergroupupgrades-{}-{}.csv".format(cliargs.results_directory, cliargs.namespace, ts)
+  cgu_stats_file = "{}/clustergroupupgrades-{}-{}.stats".format(cliargs.results_directory, cliargs.namespace, ts)
 
-  oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", "ztp-install", "-o", "json"]
+  oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", cliargs.namespace, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
-    logger.error("analyze-clustergroupupgrades, oc get clustergroupupgrades rc: {}".format(rc))
+    logger.error("analyze-clustergroupupgrades, oc get clustergroupupgrades -n {} rc: {}".format(cliargs.namespace, rc))
     sys.exit(1)
   cgu_data = json.loads(output)
+
+  cgus_total = len(cgu_data["items"])
+  cgu_conditions = {}
+  cgus_create_time = ""
+  cgus_started_time = ""
+  cgus_completed_time = ""
 
   logger.info("Writing CSV: {}".format(cgu_csv_file))
   with open(cgu_csv_file, "w") as csv_file:
@@ -57,23 +65,48 @@ def main():
   for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
     cgu_status = "unknown"
+
+    # Determine earliest creationTimestamp for the cgus in this namespace
+    cgu_created = datetime.strptime(item["metadata"]["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ")
+    if cgus_create_time == "":
+      cgus_create_time = cgu_created
+    elif cgus_create_time > cgu_created:
+      logger.info("Replacing cgu created time {} with earlier time {}".format(cgus_create_time, cgu_created))
+      cgus_create_time = cgu_created
+
     cgu_startedAt = ""
     if "startedAt" in item["status"]["status"]:
-      cgu_startedAt = item["status"]["status"]["startedAt"]
+      # Determine earliest startedAt time for the cgus in this namespace
+      cgu_startedAt = datetime.strptime(item["status"]["status"]["startedAt"], "%Y-%m-%dT%H:%M:%SZ")
+      if cgus_started_time == "":
+        cgus_started_time = cgu_startedAt
+      elif cgus_started_time > cgu_startedAt:
+        logger.info("Replacing cgu started time {} with earlier time {}".format(cgus_started_time, cgu_startedAt))
+        cgus_started_time = cgu_startedAt
+
     cgu_completedAt = ""
     cgu_duration = 0
     for condition in item["status"]["conditions"]:
+      if condition["reason"] not in cgu_conditions:
+        cgu_conditions[condition["reason"]] = 1
+      else:
+        cgu_conditions[condition["reason"]] += 1
       if condition["type"] == "Ready":
         if condition["status"] == "True":
           if "completedAt" in item["status"]["status"]:
-            cgu_completedAt = item["status"]["status"]["completedAt"]
-          cgu_status = condition["reason"]
+            # Determine latest populated completed time
+            cgu_completedAt = datetime.strptime(item["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
+            if cgus_completed_time == "":
+              cgus_completed_time = cgu_completedAt
+            elif cgus_completed_time < cgu_completedAt:
+              logger.info("Replacing cgu completed time {} with later time {}".format(cgus_completed_time, cgu_completedAt))
+              cgus_completed_time = cgu_completedAt
+
+        cgu_status = condition["reason"]
         break;
 
     if cgu_status == "UpgradeCompleted" and cgu_startedAt != "" and cgu_completedAt != "":
-      start = datetime.strptime(cgu_startedAt, "%Y-%m-%dT%H:%M:%SZ")
-      end = datetime.strptime(cgu_completedAt, "%Y-%m-%dT%H:%M:%SZ")
-      cgu_duration = (end - start).total_seconds()
+      cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
       cgu_upgradecompleted_values.append(cgu_duration)
 
     # logger.info("{},{},{},{},{}".format(cgu_name, cgu_status, cgu_startedAt, cgu_completedAt, cgu_duration))
@@ -97,6 +130,22 @@ def main():
     stats_99p = round(np.percentile(cgu_upgradecompleted_values, 99), 1)
     stats_max = np.max(cgu_upgradecompleted_values)
 
+  duration_create_start = (cgus_started_time - cgus_create_time).total_seconds()
+  duration_start_completed = (cgus_completed_time - cgus_started_time).total_seconds()
+  duration_create_completed = (cgus_completed_time - cgus_create_time).total_seconds()
+
+  logger.info("#############################################")
+  logger.info("Stats on clustergroupupgrades CRs in namespace {}".format(cliargs.namespace))
+  logger.info("Total CGUs - {}".format(cgus_total))
+  for condition in cgu_conditions:
+    logger.info("CGUs with {}: {} - {}%".format(condition, cgu_conditions[condition], round((cgu_conditions[condition] / cgus_total) * 100, 1)))
+  logger.info("Earliest CGU creationTimestamp: {}".format(cgus_create_time))
+  logger.info("Earliest CGU startedAt Timestamp: {}".format(cgus_started_time))
+  logger.info("Latest CGU completedAt Timestamp: {}".format(cgus_completed_time))
+  logger.info("Duration between creation and startedAt: {}s :: {}".format(duration_create_start, str(timedelta(seconds=duration_create_start))))
+  logger.info("Duration between startedAt and completedAt: {}s :: {}".format(duration_start_completed, str(timedelta(seconds=duration_start_completed))))
+  logger.info("Duration between creation and completedAt: {}s :: {}".format(duration_create_completed, str(timedelta(seconds=duration_create_completed))))
+  logger.info("#############################################")
   logger.info("Stats only on clustergroupupgrades CRs in UpgradeCompleted")
   logger.info("Count: {}".format(stats_count))
   logger.info("Min: {}".format(stats_min))
@@ -107,6 +156,18 @@ def main():
   logger.info("Max: {}".format(stats_max))
 
   with open(cgu_stats_file, "w") as stats_file:
+    stats_file.write("#############################################\n")
+    stats_file.write("Stats on clustergroupupgrades CRs in namespace {}\n".format(cliargs.namespace))
+    stats_file.write("Total CGUs - {}\n".format(cgus_total))
+    for condition in cgu_conditions:
+      stats_file.write("CGUs with {}: {} - {}%\n".format(condition, cgu_conditions[condition], round((cgu_conditions[condition] / cgus_total) * 100, 1)))
+    stats_file.write("Earliest CGU creationTimestamp: {}\n".format(cgus_create_time))
+    stats_file.write("Earliest CGU startedAt Timestamp: {}\n".format(cgus_started_time))
+    stats_file.write("Latest CGU completedAt Timestamp: {}\n".format(cgus_completed_time))
+    stats_file.write("Duration between creation and startedAt: {}s :: {}\n".format(duration_create_start, str(timedelta(seconds=duration_create_start))))
+    stats_file.write("Duration between startedAt and completedAt: {}s :: {}\n".format(duration_start_completed, str(timedelta(seconds=duration_start_completed))))
+    stats_file.write("Duration between creation and completedAt: {}s :: {}\n".format(duration_create_completed, str(timedelta(seconds=duration_create_completed))))
+    stats_file.write("#############################################\n")
     stats_file.write("Stats only on clustergroupupgrades CRs in UpgradeCompleted\n")
     stats_file.write("Count: {}\n".format(stats_count))
     stats_file.write("Min: {}\n".format(stats_min))
