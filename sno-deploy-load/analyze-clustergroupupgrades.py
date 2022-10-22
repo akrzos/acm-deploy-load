@@ -129,8 +129,12 @@ def main():
   duration_create_start = (cgus_started_time - cgus_create_time).total_seconds()
   if cgus_precache_done != "":
     duration_create_precache = (cgus_precache_done - cgus_create_time).total_seconds()
-  duration_start_completed = (cgus_completed_time - cgus_started_time).total_seconds()
-  duration_create_completed = (cgus_completed_time - cgus_create_time).total_seconds()
+  if cgus_completed_time == "":
+    duration_start_completed = 0
+    duration_create_completed = 0
+  else:
+    duration_start_completed = (cgus_completed_time - cgus_started_time).total_seconds()
+    duration_create_completed = (cgus_completed_time - cgus_create_time).total_seconds()
 
   with open(cgu_stats_file, "w") as stats_file:
     log_write(stats_file, "#############################################")
@@ -160,13 +164,16 @@ def main():
       log_write(stats_file, "Max: {}".format(np.max(cgu_precachingdone_values)))
     log_write(stats_file, "#############################################")
     log_write(stats_file, "Stats only on clustergroupupgrades CRs in UpgradeCompleted")
-    log_write(stats_file, "Count: {}".format(len(cgu_upgradecompleted_values)))
-    log_write(stats_file, "Min: {}".format(np.min(cgu_upgradecompleted_values)))
-    log_write(stats_file, "Average: {}".format(round(np.mean(cgu_upgradecompleted_values), 1)))
-    log_write(stats_file, "50 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 50), 1)))
-    log_write(stats_file, "95 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 95), 1)))
-    log_write(stats_file, "99 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 99), 1)))
-    log_write(stats_file, "Max: {}".format(np.max(cgu_upgradecompleted_values)))
+    if len(cgu_upgradecompleted_values) > 0:
+      log_write(stats_file, "Count: {}".format(len(cgu_upgradecompleted_values)))
+      log_write(stats_file, "Min: {}".format(np.min(cgu_upgradecompleted_values)))
+      log_write(stats_file, "Average: {}".format(round(np.mean(cgu_upgradecompleted_values), 1)))
+      log_write(stats_file, "50 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 50), 1)))
+      log_write(stats_file, "95 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 95), 1)))
+      log_write(stats_file, "99 percentile: {}".format(round(np.percentile(cgu_upgradecompleted_values, 99), 1)))
+      log_write(stats_file, "Max: {}".format(np.max(cgu_upgradecompleted_values)))
+    else:
+      log_write(stats_file, "Count: {}".format(len(cgu_upgradecompleted_values)))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
