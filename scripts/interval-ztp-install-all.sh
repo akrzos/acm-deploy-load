@@ -7,14 +7,14 @@ interval_period=1800
 batch=100
 
 ts="$(date -u +%Y%m%d-%H%M%S)"
-log_file="iz-1000-${ts}.log"
+log_file="iz-all-${ts}.log"
 acm_ver=$(cat /root/rhacm-deploy/deploy/snapshot.ver)
 test_ver="ZTP Scale Run ${iteration}"
 hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
 sno_ocp=$(grep "imageSetRef:" /root/hv-vm/sno/manifests/sno00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
 wan_em="(50ms/0.02)"
 
-time ./sno-deploy-load/sno-deploy-load.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" -e 1000 -w -i 60 -t int-ztp-100-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
+time ./sno-deploy-load/sno-deploy-load.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" -w -i 60 -t int-ztp-100-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
 
 results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 
@@ -28,7 +28,7 @@ time ./sno-deploy-load/sno-deploy-time.py ${results_dir} 2>&1 | tee -a ${log_fil
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./scripts/post-test-data-collection.sh -k 2>&1 | tee -a ${log_file}
+time ./scripts/post-ztp-install-data-collection.sh -k 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 

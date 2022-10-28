@@ -33,8 +33,8 @@ import sys
 import time
 
 # TODO:
-# * Status and Concurrent rate methods
 # * Prom queries for System metric data
+# * Upgrade script orchestration and monitoring
 
 
 kustomization_template = """---
@@ -231,27 +231,7 @@ def main():
   subparsers_interval.add_parser("manifests")
   subparsers_interval.add_parser("ztp")
 
-  parser_status = subparsers.add_parser("status", help="Status rate method of deploying SNOs",
-                                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser_status.add_argument("-b", "--batch", type=int, default=100,
-                             help="Number of SNOs to apply until that batch reaches SNO install completion")
-  subparsers_status = parser_status.add_subparsers(dest="method")
-  subparsers_status.add_parser("manifests")
-  subparsers_status.add_parser("ztp")
-
-  parser_concurrent = subparsers.add_parser("concurrent", help="Concurrent rate method of deploying SNOs",
-                                            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser_concurrent.add_argument("-c", "--concurrency", type=int, default=100,
-                                 help="Number of SNOs to maintain deploying/installing")
-  parser_concurrent.add_argument("-z", "--skip-wait-sno", action="store_true", default=False,
-                                 help="Skips waiting for SNO install completion phase")
-  subparsers_concurrent = parser_concurrent.add_subparsers(dest="method")
-  subparsers_concurrent.add_parser("manifests")
-  subparsers_concurrent.add_parser("ztp")
-
   parser_interval.set_defaults(method="ztp")
-  parser_status.set_defaults(method="ztp")
-  parser_concurrent.set_defaults(method="ztp")
   parser.set_defaults(rate="interval", method="ztp", batch=100, interval=7200, start=0, end=0, skip_wait_sno=False)
   cliargs = parser.parse_args()
 
@@ -296,25 +276,6 @@ def main():
       logger.error("Interval must be equal to or greater than 0")
       sys.exit(1)
     logger.info(" * {} SNO(s) per {}s interval".format(cliargs.batch, cliargs.interval))
-    logger.info(" * Start Index: {}, End Index: {}".format(cliargs.start, cliargs.end))
-    if cliargs.skip_wait_sno:
-      logger.info(" * Skip waiting for SNOs install completion")
-    else:
-      if cliargs.wait_sno_max > 0:
-        logger.info(" * Wait for SNOs install completion (Max {}s)".format(cliargs.wait_sno_max))
-      else:
-        logger.info(" * Wait for SNOs install completion (Infinite wait)")
-  elif cliargs.rate == "status":
-    if not (cliargs.batch >= 1):
-      logger.error("Batch size must be equal to or greater than 1")
-      sys.exit(1)
-    logger.info(" * {} SNO(s) at a time until that batch reaches SNO install completion".format(cliargs.batch))
-    logger.info(" * Start Index: {}, End Index: {}".format(cliargs.start, cliargs.end))
-  elif cliargs.rate == "concurrent":
-    if not (cliargs.concurrency >= 1):
-      logger.error("Concurrency must be equal to or greater than 1")
-      sys.exit(1)
-    logger.info(" * {}  SNO(s) deploying concurrently".format(cliargs.batch))
     logger.info(" * Start Index: {}, End Index: {}".format(cliargs.start, cliargs.end))
     if cliargs.skip_wait_sno:
       logger.info(" * Skip waiting for SNOs install completion")
@@ -477,19 +438,13 @@ def main():
           wait_logger = 0
         current_time = time.time()
 
-  elif cliargs.rate == "status":
-    logger.error("Status rate Not implemented yet")
-    sys.exit(1)
-  elif cliargs.rate == "concurrent":
-    logger.error("Concurrent rate Not implemented yet")
-    sys.exit(1)
   deploy_end_time = time.time()
 
   #############################################################################
   # Wait for SNO Install Completion Phase
   #############################################################################
   wait_sno_start_time = time.time()
-  if (cliargs.rate == "interval" or cliargs.rate == "concurrent") and (not cliargs.skip_wait_sno):
+  if (cliargs.rate == "interval") and (not cliargs.skip_wait_sno):
     phase_break()
     logger.info("Waiting for SNOs install completion - {}".format(int(time.time() * 1000)))
     phase_break()

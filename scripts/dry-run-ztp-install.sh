@@ -36,7 +36,7 @@ time ./sno-deploy-load/sno-deploy-time.py ${results_dir} 2>&1 | tee -a ${log_fil
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./scripts/post-test-data-collection.sh -k 2>&1 | tee -a ${log_file}
+time ./scripts/post-ztp-install-data-collection.sh -k 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
