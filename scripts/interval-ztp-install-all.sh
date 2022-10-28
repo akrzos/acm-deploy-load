@@ -3,8 +3,8 @@ set -e
 set -o pipefail
 
 iteration=1
-interval_period=1800
-batch=100
+interval_period=3600
+batch=500
 
 ts="$(date -u +%Y%m%d-%H%M%S)"
 log_file="iz-all-${ts}.log"
