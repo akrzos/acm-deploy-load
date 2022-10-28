@@ -3,7 +3,7 @@
 set -o pipefail
 
 results_dir=$(ls -td results/*/ | head -1)
-output_dir=${results_dir}/data
+output_dir=${results_dir}/install-data
 mkdir -p ${output_dir}
 
 if [ "$1" == "-k" ]; then
