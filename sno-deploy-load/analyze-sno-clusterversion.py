@@ -48,7 +48,7 @@ def main():
   oc_cmd = ["oc", "get", "agentclusterinstalls", "-A", "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
-    logger.error("analyze-agentclusterinstalls, oc get agentclusterinstalls rc: {}".format(rc))
+    logger.error("analyze-sno-clusterversion, oc get agentclusterinstalls rc: {}".format(rc))
     sys.exit(1)
   aci_data = json.loads(output)
 
