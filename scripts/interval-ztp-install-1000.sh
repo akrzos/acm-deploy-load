@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Test limited to 1000 SNOs
 set -e
 set -o pipefail
 
@@ -6,13 +7,17 @@ iteration=1
 interval_period=3600
 batch=500
 
+wan_em="(None)"
+# wan_em="(50ms/0.02)"
+# wan_em="(50ms/0.02) / 100Mbps"
+# wan_em="(50ms/0.02) / 20Mbps"
+
 ts="$(date -u +%Y%m%d-%H%M%S)"
 log_file="iz-1000-${ts}.log"
 acm_ver=$(cat /root/rhacm-deploy/deploy/snapshot.ver)
 test_ver="ZTP Scale Run ${iteration}"
 hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
 sno_ocp=$(grep "imageSetRef:" /root/hv-vm/sno/manifests/sno00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
-wan_em="(50ms/0.02)"
 
 time ./sno-deploy-load/sno-deploy-load.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" -e 1000 -w -i 60 -t int-ztp-100-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
 
