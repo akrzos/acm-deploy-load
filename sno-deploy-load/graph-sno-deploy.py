@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Graph monitor_data.csv from sno-deploy-load.py
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,14 +33,14 @@ import time
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
-logger = logging.getLogger("sno-deploy-graph")
+logger = logging.getLogger("graph-sno-deploy")
 logging.Formatter.converter = time.gmtime
 
 
 def main():
   parser = argparse.ArgumentParser(
       description="Produce graphs from sno-deploy-load monitor data",
-      prog="sno-deploy-graph.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+      prog="graph-sno-deploy.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # Graph Title Data
   parser.add_argument("--acm-version", type=str, default="2.5.0", help="Sets ACM version for graph title")

@@ -20,11 +20,11 @@ results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./sno-deploy-load/sno-deploy-graph.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" ${results_dir} 2>&1 | tee -a ${log_file}
+time ./sno-deploy-load/graph-sno-deploy.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./sno-deploy-load/sno-deploy-time.py ${results_dir} 2>&1 | tee -a ${log_file}
+time ./sno-deploy-load/analyze-sno-deploy-time.py ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 

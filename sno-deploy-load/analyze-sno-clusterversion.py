@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Analyze all SNO clusterversion objects to determine success and timing of upgrades. Also generates a time-series csv
+# to produce a graph displaying successful upgrades progress.
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,7 +37,7 @@ def main():
   start_time = time.time()
 
   parser = argparse.ArgumentParser(
-      description="Analyze Each SNOs clusterversion data",
+      description="Analyze each SNOs clusterversion data",
       prog="analyze-sno-clusterversion.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("-m", "--sno-manifests", type=str, default="/root/hv-vm/sno/manifests",
                       help="The location of the SNO manifests, where kubeconfig is nested under each SNO directory")

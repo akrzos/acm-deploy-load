@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Analyze ClusterGroupUpgrades data on a hub cluster to determine count/min/avg/max/50p/95p/99p timings
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");

@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+#
+# Check if cluster is healthy/stable
+# * Check if clusterversion is available
+# * Check if all clusteroperators available
+# * Check if all nodes are ready
+# * Check if all machineconfigpools updated
+# * Check for etcd leader elections in the last hour
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,12 +37,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(
 logger = logging.getLogger("cluster-health")
 logging.Formatter.converter = time.gmtime
 
-# Check if cluster is healthy/stable
-# * Check if clusterversion is available
-# * Check if all clusteroperators available
-# * Check if all nodes are ready
-# * Check if all machineconfigpools updated
-# * Check for etcd leader elections in the last hour
 
 # TODO: Future Enhancements:
 # * parameter to increase length of time to check for etcd leader elections

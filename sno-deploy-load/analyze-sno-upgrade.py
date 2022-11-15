@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Analyze "Upgrade" ClusterGroupUpgrades data on a hub cluster, clusterversion and clusterserviceversion data from the
+# SNOs to determine success/failure and timings of platform+operator upgrades of SNOs
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");

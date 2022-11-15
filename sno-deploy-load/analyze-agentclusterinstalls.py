@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Analyze AgentClusterInstalls data on a hub cluster to determine count/min/avg/max/50p/95p/99p timings
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +35,7 @@ def main():
   start_time = time.time()
 
   parser = argparse.ArgumentParser(
-      description="Analyze AgentClusterInstall data",
+      description="Analyze AgentClusterInstalls data",
       prog="analyze-agentclusterinstalls.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
   cliargs = parser.parse_args()

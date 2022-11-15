@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Tool to load ACM with SNO deployments via manifests or GitOps ZTP
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -174,7 +177,7 @@ def main():
   start_time = time.time()
 
   parser = argparse.ArgumentParser(
-      description="Run sno-deploy-load",
+      description="Tool to load ACM with SNO deployments via manifests or GitOps ZTP",
       prog="sno-deploy-load.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # "Global" args

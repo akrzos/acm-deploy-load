@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+#
+# Analyze monitor_data.csv from sno-deploy-load post run in order to determine deployment duration metrics and
+# peak concurrencies
+#
 #  Copyright 2022 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,14 +53,14 @@ INDEX_POLICY_TIMEDOUT = 13
 INDEX_POLICY_COMPLIANT = 14
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
-logger = logging.getLogger("sno-deploy-time")
+logger = logging.getLogger("analyze-sno-deploy-time")
 logging.Formatter.converter = time.gmtime
 
 
 def main():
   parser = argparse.ArgumentParser(
-      description="Determine total test time from monitor data",
-      prog="sno-deploy-time.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+      description="Analyze monitor data to determine deployment duration metrics and peak concurrencies",
+      prog="analyze-sno-deploy-time.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   # Name of csv file found in results directory
   parser.add_argument("--monitor-data-file-name", type=str, default="monitor_data.csv",
       help="The name of the monitor data csv file.")
