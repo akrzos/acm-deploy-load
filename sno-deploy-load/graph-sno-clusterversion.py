@@ -185,6 +185,5 @@ def main():
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
 
-
 if __name__ == "__main__":
   sys.exit(main())

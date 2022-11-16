@@ -23,6 +23,7 @@ from datetime import datetime
 from datetime import timedelta
 import json
 from utils.command import command
+from utils.output import log_write
 import logging
 import numpy as np
 from pathlib import Path
@@ -46,7 +47,6 @@ default_operator_csvs = [
 # TODO:
 # * CGU Percentage of success/failure
 # * Batch duration time (Success time, not include failure since that would just be the timeout)
-# * Report Card File (Stats)
 # * Determine Stats timing to complete ztp-upgrade of batch of clusters, cgu of clusters
 
 
@@ -273,57 +273,57 @@ def main():
 
   # Produce the report card on the upgrade CGU and batches
   for cgu_name in cgus:
-    logger.info("##########################################################################################")
-    logger.info("Collected Data for CGU: {}".format(cgu_name))
-    logger.info("CGU creationTimestamp: {}".format(cgus[cgu_name]["creationTimestamp"]))
-    logger.info("CGU startedAt: {}".format(cgus[cgu_name]["startedAt"]))
-    logger.info("Cluster Upgrade Batches: {}".format(len(cgus[cgu_name]["batches"])))
-    for batch_index, batch in enumerate(cgus[cgu_name]["batches"]):
-      if cgus[cgu_name]["batches"][batch_index]["platformEndTS"] != "":
-        platform_duration = (cgus[cgu_name]["batches"][batch_index]["platformEndTS"] - cgus[cgu_name]["batches"][batch_index]["startTS"]).total_seconds()
-        platform_duration_h = str(timedelta(seconds=platform_duration))
-      else:
-        platform_duration = "NA"
-        platform_duration_h = ""
-      if cgus[cgu_name]["batches"][batch_index]["operatorEndTS"] != "":
-        upgrade_duration = (cgus[cgu_name]["batches"][batch_index]["operatorEndTS"] - cgus[cgu_name]["batches"][batch_index]["startTS"]).total_seconds()
-        upgrade_duration_h = str(timedelta(seconds=upgrade_duration))
-      else:
-        upgrade_duration = "NA"
-        upgrade_duration_h = ""
-      total_clusters = len(cgus[cgu_name]["batches"][batch_index]["clusters"])
-      platform_completed = len(cgus[cgu_name]["batches"][batch_index]["completed"])
-      platform_partial = len(cgus[cgu_name]["batches"][batch_index]["partial"])
-      platform_nonattempt = len(cgus[cgu_name]["batches"][batch_index]["nonattempt"])
-      platform_unreachable = len(cgus[cgu_name]["batches"][batch_index]["unreachable"])
-      operator_completed = len(cgus[cgu_name]["batches"][batch_index]["operator_completed"])
-      operator_incomplete = len(cgus[cgu_name]["batches"][batch_index]["operator_incomplete"])
-      plat_c_percent = round((platform_completed / total_clusters) * 100, 1)
-      plat_p_percent = round((platform_partial / total_clusters) * 100, 1)
-      plat_n_percent = round((platform_nonattempt / total_clusters) * 100, 1)
-      plat_u_percent = round((platform_unreachable / total_clusters) * 100, 1)
-      oper_c_percent = round((operator_completed / total_clusters) * 100, 1)
-      oper_i_percent = round((operator_incomplete / total_clusters) * 100, 1)
-      logger.info("#############################################")
-      logger.info("Data from Batch {}".format(batch_index))
-      logger.info("Cluster Start: {}".format(cgus[cgu_name]["batches"][batch_index]["clusters"][0]))
-      logger.info("Cluster End: {}".format(cgus[cgu_name]["batches"][batch_index]["clusters"][-1]))
-      logger.info("Total Clusters: {}".format(total_clusters))
-      logger.info("Platform completed: {} :: {}%".format(platform_completed, plat_c_percent))
-      logger.info("Platform partial: {} :: {}%".format(platform_partial, plat_p_percent))
-      logger.info("Platform nonattempt: {} :: {}%".format(platform_nonattempt, plat_n_percent))
-      logger.info("Platform unreachable: {} :: {}%".format(platform_unreachable, plat_u_percent))
-      logger.info("Operator completed: {} :: {}%".format(operator_completed, oper_c_percent))
-      logger.info("Operator incomplete: {} :: {}%".format(operator_incomplete, oper_i_percent))
-      logger.info("Earliest platform start timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["startTS"]))
-      logger.info("Latest platform end timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["platformEndTS"]))
-      logger.info("Latest operator end timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["operatorEndTS"]))
-      logger.info("Platform Duration(platformEndTS - startTS): {}s :: {}".format(platform_duration, platform_duration_h))
-      logger.info("Upgrade Duration(operatorEndTS - startTS): {}s :: {}".format(upgrade_duration, upgrade_duration_h))
+    with open(upgrade_stats_file, "w") as stats_file:
+      log_write(stats_file, "##########################################################################################")
+      log_write(stats_file, "Collected Data for CGU: {}".format(cgu_name))
+      log_write(stats_file, "CGU creationTimestamp: {}".format(cgus[cgu_name]["creationTimestamp"]))
+      log_write(stats_file, "CGU startedAt: {}".format(cgus[cgu_name]["startedAt"]))
+      log_write(stats_file, "Cluster Upgrade Batches: {}".format(len(cgus[cgu_name]["batches"])))
+      for batch_index, batch in enumerate(cgus[cgu_name]["batches"]):
+        if cgus[cgu_name]["batches"][batch_index]["platformEndTS"] != "":
+          platform_duration = (cgus[cgu_name]["batches"][batch_index]["platformEndTS"] - cgus[cgu_name]["batches"][batch_index]["startTS"]).total_seconds()
+          platform_duration_h = str(timedelta(seconds=platform_duration))
+        else:
+          platform_duration = "NA"
+          platform_duration_h = ""
+        if cgus[cgu_name]["batches"][batch_index]["operatorEndTS"] != "":
+          upgrade_duration = (cgus[cgu_name]["batches"][batch_index]["operatorEndTS"] - cgus[cgu_name]["batches"][batch_index]["startTS"]).total_seconds()
+          upgrade_duration_h = str(timedelta(seconds=upgrade_duration))
+        else:
+          upgrade_duration = "NA"
+          upgrade_duration_h = ""
+        total_clusters = len(cgus[cgu_name]["batches"][batch_index]["clusters"])
+        platform_completed = len(cgus[cgu_name]["batches"][batch_index]["completed"])
+        platform_partial = len(cgus[cgu_name]["batches"][batch_index]["partial"])
+        platform_nonattempt = len(cgus[cgu_name]["batches"][batch_index]["nonattempt"])
+        platform_unreachable = len(cgus[cgu_name]["batches"][batch_index]["unreachable"])
+        operator_completed = len(cgus[cgu_name]["batches"][batch_index]["operator_completed"])
+        operator_incomplete = len(cgus[cgu_name]["batches"][batch_index]["operator_incomplete"])
+        plat_c_percent = round((platform_completed / total_clusters) * 100, 1)
+        plat_p_percent = round((platform_partial / total_clusters) * 100, 1)
+        plat_n_percent = round((platform_nonattempt / total_clusters) * 100, 1)
+        plat_u_percent = round((platform_unreachable / total_clusters) * 100, 1)
+        oper_c_percent = round((operator_completed / total_clusters) * 100, 1)
+        oper_i_percent = round((operator_incomplete / total_clusters) * 100, 1)
+        log_write(stats_file, "#############################################")
+        log_write(stats_file, "Data from Batch {}".format(batch_index))
+        log_write(stats_file, "Cluster Start: {}".format(cgus[cgu_name]["batches"][batch_index]["clusters"][0]))
+        log_write(stats_file, "Cluster End: {}".format(cgus[cgu_name]["batches"][batch_index]["clusters"][-1]))
+        log_write(stats_file, "Total Clusters: {}".format(total_clusters))
+        log_write(stats_file, "Platform completed: {} :: {}%".format(platform_completed, plat_c_percent))
+        log_write(stats_file, "Platform partial: {} :: {}%".format(platform_partial, plat_p_percent))
+        log_write(stats_file, "Platform nonattempt: {} :: {}%".format(platform_nonattempt, plat_n_percent))
+        log_write(stats_file, "Platform unreachable: {} :: {}%".format(platform_unreachable, plat_u_percent))
+        log_write(stats_file, "Operator completed: {} :: {}%".format(operator_completed, oper_c_percent))
+        log_write(stats_file, "Operator incomplete: {} :: {}%".format(operator_incomplete, oper_i_percent))
+        log_write(stats_file, "Earliest platform start timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["startTS"]))
+        log_write(stats_file, "Latest platform end timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["platformEndTS"]))
+        log_write(stats_file, "Latest operator end timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["operatorEndTS"]))
+        log_write(stats_file, "Platform Duration(platformEndTS - startTS): {}s :: {}".format(platform_duration, platform_duration_h))
+        log_write(stats_file, "Upgrade Duration(operatorEndTS - startTS): {}s :: {}".format(upgrade_duration, upgrade_duration_h))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
-
 
 if __name__ == "__main__":
   sys.exit(main())

@@ -38,6 +38,8 @@ logging.Formatter.converter = time.gmtime
 
 
 def main():
+  start_time = time.time()
+
   parser = argparse.ArgumentParser(
       description="Produce graphs from sno-deploy-load monitor data",
       prog="graph-sno-deploy.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -129,7 +131,8 @@ def main():
   fig_share.update_layout(title=title_sno, legend_orientation="v")
   fig_share.write_image("{}/share2-{}.png".format(cliargs.results_directory, ts))
 
-  logger.info("Complete")
+  end_time = time.time()
+  logger.info("Took {}s".format(round(end_time - start_time, 1)))
 
 if __name__ == "__main__":
   sys.exit(main())

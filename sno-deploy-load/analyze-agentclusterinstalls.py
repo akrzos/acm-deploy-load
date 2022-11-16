@@ -20,6 +20,7 @@ import argparse
 from datetime import datetime
 import json
 from utils.command import command
+from utils.output import log_write
 import logging
 import numpy as np
 import sys
@@ -97,24 +98,15 @@ def main():
     stats_99p = round(np.percentile(aci_installcompleted_values, 99), 1)
     stats_max = np.max(aci_installcompleted_values)
 
-  logger.info("Stats only on AgentClusterInstall CRs in InstallationCompleted")
-  logger.info("Count: {}".format(stats_count))
-  logger.info("Min: {}".format(stats_min))
-  logger.info("Average: {}".format(stats_avg))
-  logger.info("50 percentile: {}".format(stats_50p))
-  logger.info("95 percentile: {}".format(stats_95p))
-  logger.info("99 percentile: {}".format(stats_99p))
-  logger.info("Max: {}".format(stats_max))
-
   with open(aci_stats_file, "w") as stats_file:
-    stats_file.write("Stats only on AgentClusterInstall CRs in InstallationCompleted\n")
-    stats_file.write("Count: {}\n".format(stats_count))
-    stats_file.write("Min: {}\n".format(stats_min))
-    stats_file.write("Average: {}\n".format(stats_avg))
-    stats_file.write("50 percentile: {}\n".format(stats_50p))
-    stats_file.write("95 percentile: {}\n".format(stats_95p))
-    stats_file.write("99 percentile: {}\n".format(stats_99p))
-    stats_file.write("Max: {}\n".format(stats_max))
+    log_write(stats_file, "Stats only on AgentClusterInstall CRs in InstallationCompleted")
+    log_write(stats_file, "Count: {}".format(stats_count))
+    log_write(stats_file, "Min: {}".format(stats_min))
+    log_write(stats_file, "Average: {}".format(stats_avg))
+    log_write(stats_file, "50 percentile: {}".format(stats_50p))
+    log_write(stats_file, "95 percentile: {}".format(stats_95p))
+    log_write(stats_file, "99 percentile: {}".format(stats_99p))
+    log_write(stats_file, "Max: {}".format(stats_max))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))

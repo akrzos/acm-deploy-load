@@ -22,6 +22,7 @@ from collections import OrderedDict
 from datetime import datetime
 import json
 from utils.command import command
+from utils.output import log_write
 import logging
 import numpy as np
 import sys
@@ -131,59 +132,35 @@ def main():
   percent_unreachable = round((len(snos_unreachable) / snos_total) * 100, 1)
 
   logger.info("Writing Stats: {}".format(cv_stats_file))
-  logger.info("Stats only on clusterversion in Completed state")
-  logger.info("Total SNOs: {}".format(snos_total))
-  logger.info("Unreachable SNOs Count: {}".format(len(snos_unreachable)))
-  logger.info("Unreachable SNOs Percent: {}%".format(percent_unreachable))
-  logger.info("Unreachable SNOs: {}".format(snos_unreachable))
-  logger.info("Duplicated clusterversion history SNOs Count: {}".format(len(snos_duplicate_entries)))
-  logger.info("Duplicated clusterversion history SNOs: {}".format(snos_duplicate_entries))
   with open(cv_stats_file, "w") as stats_file:
-    stats_file.write("Stats only on clusterversion in Completed state\n")
-    stats_file.write("Total SNOs: {}\n".format(snos_total))
-    stats_file.write("Unreachable SNOs Count: {}\n".format(len(snos_unreachable)))
-    stats_file.write("Unreachable SNOs Percent: {}%\n".format(percent_unreachable))
-    stats_file.write("Unreachable SNOs: {}\n".format(snos_unreachable))
-    stats_file.write("Duplicated clusterversion history SNOs Count: {}\n".format(len(snos_duplicate_entries)))
-    stats_file.write("Duplicated clusterversion history SNOs: {}\n".format(snos_duplicate_entries))
+    log_write(stats_file, "Stats only on clusterversion in Completed state")
+    log_write(stats_file, "Total SNOs: {}".format(snos_total))
+    log_write(stats_file, "Unreachable SNOs Count: {}".format(len(snos_unreachable)))
+    log_write(stats_file, "Unreachable SNOs Percent: {}%".format(percent_unreachable))
+    log_write(stats_file, "Unreachable SNOs: {}".format(snos_unreachable))
+    log_write(stats_file, "Duplicated clusterversion history SNOs Count: {}".format(len(snos_duplicate_entries)))
+    log_write(stats_file, "Duplicated clusterversion history SNOs: {}".format(snos_duplicate_entries))
 
   for version in snos_ver_data:
-    logger.info("#############################################")
-    logger.info("Analyzing Version: {}".format(version))
-    logger.info("Total entries: {}".format(snos_ver_data[version]["count"]))
-    for state in snos_ver_data[version]["state"]:
-      percent_of_total = round((len(snos_ver_data[version]["state"][state]) / snos_ver_data[version]["count"]) * 100, 1)
-      if state != "Completed":
-        logger.info("State: {}, Count: {}, Percent: {}%, SNOs: {}".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total, snos_ver_data[version]["state"][state]))
-      else:
-        logger.info("State: {}, Count: {}, Percent: {}%".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total))
-    logger.info("Min: {}".format(np.min(snos_ver_data[version]["completed_durations"])))
-    logger.info("Average: {}".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
-    logger.info("50 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
-    logger.info("95 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 95), 1)))
-    logger.info("99 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 99), 1)))
-    logger.info("Max: {}".format(np.max(snos_ver_data[version]["completed_durations"])))
-
     with open(cv_stats_file, "a") as stats_file:
-      stats_file.write("#############################################\n")
-      stats_file.write("Analyzing Version: {}\n".format(version))
-      stats_file.write("Total entries: {}\n".format(snos_ver_data[version]["count"]))
+      log_write(stats_file, "#############################################")
+      log_write(stats_file, "Analyzing Version: {}".format(version))
+      log_write(stats_file, "Total entries: {}".format(snos_ver_data[version]["count"]))
       for state in snos_ver_data[version]["state"]:
         percent_of_total = round((len(snos_ver_data[version]["state"][state]) / snos_ver_data[version]["count"]) * 100, 1)
         if state != "Completed":
-          stats_file.write("State: {}, Count: {}, Percent: {}%, SNOs: {}\n".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total, snos_ver_data[version]["state"][state]))
+          log_write(stats_file, "State: {}, Count: {}, Percent: {}%, SNOs: {}".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total, snos_ver_data[version]["state"][state]))
         else:
-          stats_file.write("State: {}, Count: {}, Percent: {}%\n".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total))
-      stats_file.write("Min: {}\n".format(np.min(snos_ver_data[version]["completed_durations"])))
-      stats_file.write("Average: {}\n".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
-      stats_file.write("50 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
-      stats_file.write("95 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 95), 1)))
-      stats_file.write("99 percentile: {}\n".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 99), 1)))
-      stats_file.write("Max: {}\n".format(np.max(snos_ver_data[version]["completed_durations"])))
+          log_write(stats_file, "State: {}, Count: {}, Percent: {}%".format(state, len(snos_ver_data[version]["state"][state]), percent_of_total))
+      log_write(stats_file, "Min: {}".format(np.min(snos_ver_data[version]["completed_durations"])))
+      log_write(stats_file, "Average: {}".format(round(np.mean(snos_ver_data[version]["completed_durations"]), 1)))
+      log_write(stats_file, "50 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 50), 1)))
+      log_write(stats_file, "95 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 95), 1)))
+      log_write(stats_file, "99 percentile: {}".format(round(np.percentile(snos_ver_data[version]["completed_durations"], 99), 1)))
+      log_write(stats_file, "Max: {}".format(np.max(snos_ver_data[version]["completed_durations"])))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
-
 
 if __name__ == "__main__":
   sys.exit(main())

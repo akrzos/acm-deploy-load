@@ -21,6 +21,7 @@ import argparse
 from csv import reader
 from datetime import datetime
 from datetime import timedelta
+from utils.output import log_write
 import logging
 import pandas as pd
 import pathlib
@@ -58,6 +59,8 @@ logging.Formatter.converter = time.gmtime
 
 
 def main():
+  start_time = time.time()
+
   parser = argparse.ArgumentParser(
       description="Analyze monitor data to determine deployment duration metrics and peak concurrencies",
       prog="analyze-sno-deploy-time.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -155,13 +158,8 @@ def main():
     log_write(time_file, "Peak DU Applying: {}".format(peak_du_applying))
     log_write(time_file, "Peak Concurrency (sno_installing + policy_applying): {}".format(peak_concurrency))
 
-  logger.info("Complete")
-
-
-def log_write(file, message):
-  logger.info(message)
-  file.write(message + "\n")
-
+  end_time = time.time()
+  logger.info("Took {}s".format(round(end_time - start_time, 1)))
 
 if __name__ == "__main__":
   sys.exit(main())
