@@ -46,11 +46,8 @@ default_operator_csvs = [
 
 
 # TODO:
-# * CGU duration stats
-# * Batch duration stats
-# * Operators incomplete not due to platform failure
-# * Separate file detailing each catagory of cluster
-
+# * Operator start timestamp per cluster
+#   * creationTimestamp is "too quick", will require installplan data
 
 def main():
   start_time = time.time()
@@ -90,14 +87,7 @@ def main():
 
   logger.info("Writing CSV: {}".format(upgrade_csv_file))
   with open(upgrade_csv_file, "w") as csv_file:
-    csv_file.write("cgu,batch,name,state,platform_startedTime,platform_completionTime,platform_duration,operator_lastUpdateTime,upgrade_duration\n")
-
-  csv_cluster_state = ""
-  csv_platform_started_time = ""
-  csv_platform_completion_time = ""
-  csv_platform_duration = ""
-  csv_operator_last_update_time = ""
-  csv_upgrade_duration = ""
+    csv_file.write("cgu,batch,name,state,platform_startedTime,platform_completionTime,platform_duration,operator_creationTimestamp,operator_lastUpdateTime,operator_duration,upgrade_duration\n")
 
   cgus = OrderedDict()
 
@@ -122,21 +112,23 @@ def main():
     cgus[cgu_name] = {}
     cgus[cgu_name]["creationTimestamp"] = datetime.strptime(cgu_creation_ts, "%Y-%m-%dT%H:%M:%SZ")
     cgus[cgu_name]["startedAt"] = datetime.strptime(cgu_started_at, "%Y-%m-%dT%H:%M:%SZ")
-
     cgus[cgu_name]["batches"] = []
     for batch_index, batch in enumerate(cgu_cluster_batches):
       logger.info("Batch Index: {}".format(batch_index))
       cgus[cgu_name]["batches"].append({})
       cgus[cgu_name]["batches"][batch_index]["clusters"] = batch
+      cgus[cgu_name]["batches"][batch_index]["completed"] = []
       cgus[cgu_name]["batches"][batch_index]["partial"] = []
       cgus[cgu_name]["batches"][batch_index]["nonattempt"] = []
       cgus[cgu_name]["batches"][batch_index]["unreachable"] = []
-      cgus[cgu_name]["batches"][batch_index]["completed"] = []
+      cgus[cgu_name]["batches"][batch_index]["operator_completed"] = []
+      cgus[cgu_name]["batches"][batch_index]["operator_incomplete"] = []
       cgus[cgu_name]["batches"][batch_index]["startTS"] = ""
       cgus[cgu_name]["batches"][batch_index]["platformEndTS"] = ""
       cgus[cgu_name]["batches"][batch_index]["operatorEndTS"] = ""
-      cgus[cgu_name]["batches"][batch_index]["operator_completed"] = []
-      cgus[cgu_name]["batches"][batch_index]["operator_incomplete"] = []
+      cgus[cgu_name]["batches"][batch_index]["pc_durations"] = []
+      cgus[cgu_name]["batches"][batch_index]["oc_durations"] = []
+      cgus[cgu_name]["batches"][batch_index]["upgrade_durations"] = []
 
       # Gather per cluster data in a specific batch
       for cluster in batch:
@@ -145,7 +137,9 @@ def main():
         csv_platform_started_time = ""
         csv_platform_completion_time = ""
         csv_platform_duration = ""
+        csv_operator_creation_timestamp = ""
         csv_operator_last_update_time = ""
+        csv_operator_duration = ""
         csv_upgrade_duration = ""
         kubeconfig = "{}/{}/kubeconfig".format(cliargs.sno_manifests, cluster)
 
@@ -170,7 +164,6 @@ def main():
           logger.info("Recording {} as an unreachable cluster".format(cluster))
           csv_cluster_state = "unreachable"
           cgus[cgu_name]["batches"][batch_index]["unreachable"].append(cluster)
-          cgus[cgu_name]["batches"][batch_index]["operator_incomplete"].append(cluster)
         else:
           for ver_hist_entry in cv_data["status"]["history"]:
             cv_version = ver_hist_entry["version"]
@@ -204,6 +197,7 @@ def main():
                 cv_completiontime = datetime.strptime(ver_hist_entry["completionTime"], "%Y-%m-%dT%H:%M:%SZ")
                 csv_platform_completion_time = ver_hist_entry["completionTime"]
                 csv_platform_duration = (cv_completiontime - cv_startedtime).total_seconds()
+                cgus[cgu_name]["batches"][batch_index]["pc_durations"].append(csv_platform_duration)
 
                 logger.debug("Comparing batch platformEndTS: '{}' Cluster: '{}'".format(cgus[cgu_name]["batches"][batch_index]["platformEndTS"], cv_completiontime))
                 if cgus[cgu_name]["batches"][batch_index]["platformEndTS"] == "":
@@ -214,14 +208,8 @@ def main():
                     logger.debug("Identified later batch platformEndTS: '{}'".format(cv_completiontime))
                     cgus[cgu_name]["batches"][batch_index]["platformEndTS"] = cv_completiontime
 
-          if not found_correct_platform_upgrade:
-            logger.info("Recording {} as an nonattempt cluster".format(cluster))
-            cgus[cgu_name]["batches"][batch_index]["nonattempt"].append(cluster)
-            cgus[cgu_name]["batches"][batch_index]["operator_incomplete"].append(cluster)
-            csv_cluster_state = "nonattempt"
-            # On nonattempt clusters, do not check operator csvs since the platform never upgraded anyhow
-          else:
-
+          # Cluster had completed, check operators
+          if cluster in cgus[cgu_name]["batches"][batch_index]["completed"]:
             if not cliargs.offline_process:
               oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "clusterserviceversions", "-A", "-o", "json"]
               rc, output = command(oc_cmd, False, retries=2, no_log=True)
@@ -246,6 +234,7 @@ def main():
                 for item in csv_data["items"]:
                   if (item["metadata"]["name"] == operator and "status" in item) and item["status"]["phase"] == "Succeeded":
                     operator_found = True
+                    operator_creation_ts = datetime.strptime(item["metadata"]["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ")
                     operator_installed_ts = datetime.strptime(item["status"]["lastUpdateTime"], "%Y-%m-%dT%H:%M:%SZ")
                     logger.info("Operator was installed by: '{}'".format(operator_installed_ts))
 
@@ -258,6 +247,12 @@ def main():
                         logger.debug("Identified later batch operatorEndTS: '{}'".format(operator_installed_ts))
                         cgus[cgu_name]["batches"][batch_index]["operatorEndTS"] = operator_installed_ts
 
+                    # if csv_operator_creation_timestamp == "":
+                    #   csv_operator_creation_timestamp = item["metadata"]["creationTimestamp"]
+                    # else:
+                    #   if datetime.strptime(csv_operator_creation_timestamp, "%Y-%m-%dT%H:%M:%SZ") > operator_creation_ts:
+                    #     csv_operator_creation_timestamp = item["metadata"]["creationTimestamp"]
+
                     if csv_operator_last_update_time == "":
                       csv_operator_last_update_time = item["status"]["lastUpdateTime"]
                     else:
@@ -267,23 +262,32 @@ def main():
                     break;
                 if not operator_found:
                   logger.error("Cluster: {} failed to have Operator CSV: {} installed with phase Succeeded".format(cluster, operator))
+                  cgus[cgu_name]["batches"][batch_index]["operator_incomplete"].append(cluster)
+                  csv_operator_last_update_time = ""
                   # Don't bother checking the rest of the operators, the cluster already failed on an operator
                   break;
               if operator_found:
                 cgus[cgu_name]["batches"][batch_index]["operator_completed"].append(cluster)
+                # csv_operator_duration = (datetime.strptime(csv_operator_last_update_time, "%Y-%m-%dT%H:%M:%SZ") - datetime.strptime(csv_operator_creation_timestamp, "%Y-%m-%dT%H:%M:%SZ")).total_seconds()
                 csv_upgrade_duration = (datetime.strptime(csv_operator_last_update_time, "%Y-%m-%dT%H:%M:%SZ") - datetime.strptime(csv_platform_started_time, "%Y-%m-%dT%H:%M:%SZ")).total_seconds()
-              else:
-                cgus[cgu_name]["batches"][batch_index]["operator_incomplete"].append(cluster)
-                csv_operator_last_update_time = ""
+                # cgus[cgu_name]["batches"][batch_index]["oc_durations"].append(csv_operator_duration)
+                cgus[cgu_name]["batches"][batch_index]["upgrade_durations"].append(csv_upgrade_duration)
+
+          # Cluster not in completed and not in partial, cluster was never attempted
+          elif cluster not in cgus[cgu_name]["batches"][batch_index]["partial"]:
+            logger.info("Recording {} as an nonattempt cluster".format(cluster))
+            cgus[cgu_name]["batches"][batch_index]["nonattempt"].append(cluster)
+            csv_cluster_state = "nonattempt"
 
         with open(upgrade_csv_file, "a") as csv_file:
-          csv_file.write("{},{},{},{},{},{},{},{},{}\n".format(
+          csv_file.write("{},{},{},{},{},{},{},{},{},{},{}\n".format(
             cgu_name, batch_index, cluster, csv_cluster_state, csv_platform_started_time, csv_platform_completion_time,
-            csv_platform_duration, csv_operator_last_update_time, csv_upgrade_duration))
+            csv_platform_duration, csv_operator_creation_timestamp, csv_operator_last_update_time, csv_operator_duration,
+            csv_upgrade_duration))
 
   # Produce the report card on the upgrade CGU and batches
-  for cgu_name in cgus:
-    with open(upgrade_stats_file, "w") as stats_file:
+  with open(upgrade_stats_file, "w") as stats_file:
+    for cgu_name in cgus:
       cgu_tc = 0
       cgu_pc = 0
       cgu_pp = 0
@@ -291,6 +295,10 @@ def main():
       cgu_pu = 0
       cgu_oc = 0
       cgu_oi = 0
+      cgu_oi_pc = 0
+      cgu_pc_durations = []
+      cgu_oc_durations = []
+      cgu_upgrade_durations = []
       for batch_index, batch in enumerate(cgus[cgu_name]["batches"]):
         cgu_tc = cgu_tc + len(cgus[cgu_name]["batches"][batch_index]["clusters"])
         cgu_pc = cgu_pc + len(cgus[cgu_name]["batches"][batch_index]["completed"])
@@ -299,6 +307,9 @@ def main():
         cgu_pu = cgu_pu + len(cgus[cgu_name]["batches"][batch_index]["unreachable"])
         cgu_oc = cgu_oc + len(cgus[cgu_name]["batches"][batch_index]["operator_completed"])
         cgu_oi = cgu_oi + len(cgus[cgu_name]["batches"][batch_index]["operator_incomplete"])
+        cgu_pc_durations.extend(cgus[cgu_name]["batches"][batch_index]["pc_durations"])
+        cgu_oc_durations.extend(cgus[cgu_name]["batches"][batch_index]["oc_durations"])
+        cgu_upgrade_durations.extend(cgus[cgu_name]["batches"][batch_index]["upgrade_durations"])
       cgu_pc_percent = round((cgu_pc / cgu_tc) * 100, 1)
       cgu_pp_percent = round((cgu_pp / cgu_tc) * 100, 1)
       cgu_pn_percent = round((cgu_pn / cgu_tc) * 100, 1)
@@ -317,6 +328,9 @@ def main():
       log_write(stats_file, "CGU Platform unreachable: {} :: {}%".format(cgu_pu, cgu_pu_percent))
       log_write(stats_file, "CGU Operator completed: {} :: {}%".format(cgu_oc, cgu_oc_percent))
       log_write(stats_file, "CGU Operator incomplete: {} :: {}%".format(cgu_oi, cgu_oi_percent))
+      log_write(stats_file, "CGU Platform Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_pc_durations)))
+      # log_write(stats_file, "CGU Operator Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_oc_durations)))
+      log_write(stats_file, "CGU Upgrade Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_upgrade_durations)))
       # Now show for each batch in the CGU
       for batch_index, batch in enumerate(cgus[cgu_name]["batches"]):
         if cgus[cgu_name]["batches"][batch_index]["platformEndTS"] != "":
@@ -360,10 +374,42 @@ def main():
         log_write(stats_file, "Latest operator end timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["operatorEndTS"]))
         log_write(stats_file, "Platform Duration(platformEndTS - startTS): {}s :: {}".format(platform_duration, platform_duration_h))
         log_write(stats_file, "Upgrade Duration(operatorEndTS - startTS): {}s :: {}".format(upgrade_duration, upgrade_duration_h))
+        log_write(stats_file, "Platform Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+            assemble_stats(cgus[cgu_name]["batches"][batch_index]["pc_durations"])))
+        # log_write(stats_file, "Operator Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+        #     assemble_stats(cgus[cgu_name]["batches"][batch_index]["oc_durations"])))
+        log_write(stats_file, "Upgrade Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+            assemble_stats(cgus[cgu_name]["batches"][batch_index]["upgrade_durations"])))
+      for batch_index, batch in enumerate(cgus[cgu_name]["batches"]):
+        log_write(stats_file, "#############################################")
+        log_write(stats_file, "Erroneous Clusters from Batch {}".format(batch_index))
+        log_write(stats_file, "Platform partial: {}".format(cgus[cgu_name]["batches"][batch_index]["partial"]))
+        log_write(stats_file, "Platform nonattempt: {}".format(cgus[cgu_name]["batches"][batch_index]["nonattempt"]))
+        log_write(stats_file, "Platform unreachable: {}".format(cgus[cgu_name]["batches"][batch_index]["unreachable"]))
+        log_write(stats_file, "Operator incomplete: {}".format(cgus[cgu_name]["batches"][batch_index]["operator_incomplete"]))
+
+
+
 
   end_time = time.time()
   logger.info("##########################################################################################")
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
+
+def assemble_stats(the_list):
+  stats_min = 0
+  stats_avg = 0
+  stats_p50 = 0
+  stats_p95 = 0
+  stats_p99 = 0
+  stats_max = 0
+  if len(the_list) > 0:
+    stats_min = np.min(the_list)
+    stats_avg = round(np.mean(the_list), 1)
+    stats_p50 = round(np.percentile(the_list, 50), 1)
+    stats_p95 = round(np.percentile(the_list, 95), 1)
+    stats_p99 = round(np.percentile(the_list, 99), 1)
+    stats_max = np.max(the_list)
+  return "{} : {} : {} : {} : {} : {}".format(stats_min, stats_avg, stats_p50, stats_p95, stats_p99, stats_max)
 
 if __name__ == "__main__":
   sys.exit(main())
