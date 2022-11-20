@@ -287,6 +287,9 @@ def main():
 
   # Produce the report card on the upgrade CGU and batches
   with open(upgrade_stats_file, "w") as stats_file:
+    logger.info("##########################################################################################")
+    log_write(stats_file, "Expected platform upgrade: {}".format(cliargs.platform_upgrade))
+    log_write(stats_file, "Expected operator csv upgrade: {}".format(cliargs.operator_csvs))
     for cgu_name in cgus:
       cgu_tc = 0
       cgu_pc = 0
