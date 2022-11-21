@@ -207,6 +207,9 @@ def main():
   # Monitor Thread Options
   parser.add_argument("-i", "--monitor-interval", type=int, default=60,
                       help="Interval to collect monitoring data (seconds)")
+  # The version of talm determines how we monitor for du profile applying/compliant/timeout
+  parser.add_argument("--talm-version", type=str, default="4.12",
+                      help="The version of talm to fall back on in event we can not detect the talm version")
 
   # Report options
   parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-ztp-0",
@@ -255,6 +258,30 @@ def main():
     logger.info("SNO Deploy Load")
   phase_break()
   logger.debug("CLI Args: {}".format(cliargs))
+
+  # Detect TALM version
+  talm_version = cliargs.talm_version
+  logger.info("Detecting TALM version by image tag")
+  oc_cmd = ["oc", "get", "deploy", "-n", "openshift-cluster-group-upgrades", "cluster-group-upgrades-controller-manager", "-o", "json"]
+  rc, output = command(oc_cmd, cliargs.dry_run, retries=3, no_log=True)
+  if rc != 0:
+    logger.warn("sno-deploy-load, oc get deploy -n openshift-cluster-group-upgrades rc: {}".format(rc))
+  else:
+    if not cliargs.dry_run:
+      td_data = json.loads(output)
+      talm_image_ver = ""
+      if "spec" in td_data and "template" in td_data["spec"] and "spec" in td_data["spec"]["template"]:
+        for container in td_data["spec"]["template"]["spec"]["containers"]:
+          if container["name"] == "manager":
+            talm_image_ver = container["image"].split(":")[-1]
+            break
+      if talm_image_ver != "":
+        logger.info("Detected TALM Version: {}".format(talm_image_ver))
+        talm_version = talm_image_ver
+      else:
+        logger.warn("Unable to detect TALM version, defaulting to: {}".format(cliargs.talm_version))
+  talm_minor = talm_version.split(".")[1]
+  logger.info("Using TALM cgu monitoring based on TALM minor version: {}".format(talm_minor))
 
   # Validate parameters and display rate and method plan
   logger.info("Deploying SNOs rate: {}".format(cliargs.rate))
@@ -380,7 +407,7 @@ def main():
     "policy_compliant": 0
   }
 
-  monitor_thread = SnoMonitor(monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
+  monitor_thread = SnoMonitor(talm_minor, monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
   monitor_thread.start()
   if cliargs.start_delay > 0:
     phase_break()

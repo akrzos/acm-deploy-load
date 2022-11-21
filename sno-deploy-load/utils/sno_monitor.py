@@ -28,8 +28,9 @@ logger = logging.getLogger("sno-deploy-load")
 
 
 class SnoMonitor(Thread):
-  def __init__(self, monitor_data, csv_file, dry_run, sample_interval):
+  def __init__(self, talm_minor, monitor_data, csv_file, dry_run, sample_interval):
     super(SnoMonitor, self).__init__()
+    self.talm_minor = talm_minor
     self.monitor_data = monitor_data
     self.csv_file = csv_file
     self.dry_run = dry_run
@@ -116,7 +117,7 @@ class SnoMonitor(Thread):
             if "type" in condition:
               if condition["type"] == "Completed":
                 if "reason" in condition:
-                  logger.debug("SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
+                  logger.debug("ACI SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
                   if condition["reason"] == "InstallationNotStarted":
                     sno_notstarted += 1
                   elif condition["reason"] == "InstallationInProgress":
@@ -140,26 +141,47 @@ class SnoMonitor(Thread):
       for item in cgu_data["items"]:
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
-            if "type" in condition:
-              if condition["type"] == "Ready":
-                if "reason" in condition:
-                  logger.debug("SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
-                  if condition["reason"] == "UpgradeNotStarted":
-                    sno_policy_notstarted += 1
-                  elif condition["reason"] == "UpgradeNotCompleted":
-                    sno_policy_applying += 1
-                  elif condition["reason"] == "UpgradeTimedOut":
-                    sno_policy_timedout += 1
-                  elif condition["reason"] == "UpgradeCompleted":
-                    sno_policy_compliant += 1
+            if int(self.talm_minor) <= 11:
+              if "type" in condition:
+                if condition["type"] == "Ready":
+                  if "reason" in condition:
+                    logger.debug("CGU SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
+                    if condition["reason"] == "UpgradeNotStarted":
+                      sno_policy_notstarted += 1
+                    elif condition["reason"] == "UpgradeNotCompleted":
+                      sno_policy_applying += 1
+                    elif condition["reason"] == "UpgradeTimedOut":
+                      sno_policy_timedout += 1
+                    elif condition["reason"] == "UpgradeCompleted":
+                      sno_policy_compliant += 1
+                    else:
+                      logger.info("cgu: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
+                    break
                   else:
-                    logger.info("cgu: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
-                  break
-                else:
-                  logger.warn("reason missing from condition: {}".format(condition))
+                    logger.warn("reason missing from condition: {}".format(condition))
+              else:
+                logger.warn("cgu: type missing from condition(item): {}".format(item))
+                logger.warn("cgu: type missing from condition(condition): {}".format(condition))
             else:
-              logger.warn("cgu: type missing from condition(item): {}".format(item))
-              logger.warn("cgu: type missing from condition(condition): {}".format(condition))
+              if "type" in condition:
+                logger.debug("CGU SNO: {} Condition: {}".format(item["metadata"]["name"], condition))
+                if (condition["type"] == "Progressing" and condition["status"] == "False"
+                    and condition["reason"] != "Completed" and condition["reason"] != "TimedOut"):
+                  sno_policy_notstarted += 1
+                  break
+                if condition["type"] == "Progressing" and condition["status"] == "True" and condition["reason"] == "InProgress":
+                  sno_policy_applying += 1
+                  break
+                if condition["type"] == "Succeeded" and condition["status"] == "False" and condition["reason"] == "TimedOut":
+                  sno_policy_timedout += 1
+                  break
+                if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
+                  sno_policy_compliant += 1
+                  break
+                logger.warn("cgu: unrecognized condition: {}".format(condition))
+              else:
+                logger.warn("cgu: type missing from condition(item): {}".format(item))
+                logger.warn("cgu: type missing from condition(condition): {}".format(condition))
         else:
           logger.warn("status or conditions not found in clustergroupupgrades object: {}".format(item))
 
@@ -167,7 +189,7 @@ class SnoMonitor(Thread):
       for item in bmh_data["items"]:
         if "status" in item and "provisioning" in item["status"] and "state" in item["status"]["provisioning"]:
           if item["status"]["provisioning"]["state"] == "provisioned":
-            logger.debug("SNO: {} is {}".format(item["metadata"]["name"], item["status"]["provisioning"]["state"]))
+            logger.debug("BMH SNO: {} is {}".format(item["metadata"]["name"], item["status"]["provisioning"]["state"]))
             sno_booted += 1
         else:
           logger.warn("missing status or elements under status in baremetalhost object: {}".format(item))
@@ -179,7 +201,7 @@ class SnoMonitor(Thread):
             if "type" in condition:
               if condition["type"] == "ManagedClusterConditionAvailable":
                 logger.debug(
-                    "SNO: {} is {} is".format(item["metadata"]["name"], condition["type"], condition["status"]))
+                    "MC SNO: {} is {} is {}".format(item["metadata"]["name"], condition["type"], condition["status"]))
                 if condition["status"] == "True":
                   sno_managed += 1
                 break
