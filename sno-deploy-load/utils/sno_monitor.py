@@ -178,7 +178,6 @@ class SnoMonitor(Thread):
                 if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
                   sno_policy_compliant += 1
                   break
-                logger.warn("cgu: unrecognized condition: {}".format(condition))
               else:
                 logger.warn("cgu: type missing from condition(item): {}".format(item))
                 logger.warn("cgu: type missing from condition(condition): {}".format(condition))
