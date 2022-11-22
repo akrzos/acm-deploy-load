@@ -27,6 +27,7 @@ from utils.command import command
 from utils.output import generate_report
 from utils.output import phase_break
 from utils.sno_monitor import SnoMonitor
+from utils.talm import detect_talm_minor
 import logging
 import math
 import os
@@ -260,27 +261,7 @@ def main():
   logger.debug("CLI Args: {}".format(cliargs))
 
   # Detect TALM version
-  talm_version = cliargs.talm_version
-  logger.info("Detecting TALM version by image tag")
-  oc_cmd = ["oc", "get", "deploy", "-n", "openshift-cluster-group-upgrades", "cluster-group-upgrades-controller-manager", "-o", "json"]
-  rc, output = command(oc_cmd, cliargs.dry_run, retries=3, no_log=True)
-  if rc != 0:
-    logger.warn("sno-deploy-load, oc get deploy -n openshift-cluster-group-upgrades rc: {}".format(rc))
-  else:
-    if not cliargs.dry_run:
-      td_data = json.loads(output)
-      talm_image_ver = ""
-      if "spec" in td_data and "template" in td_data["spec"] and "spec" in td_data["spec"]["template"]:
-        for container in td_data["spec"]["template"]["spec"]["containers"]:
-          if container["name"] == "manager":
-            talm_image_ver = container["image"].split(":")[-1]
-            break
-      if talm_image_ver != "":
-        logger.info("Detected TALM Version: {}".format(talm_image_ver))
-        talm_version = talm_image_ver
-      else:
-        logger.warn("Unable to detect TALM version, defaulting to: {}".format(cliargs.talm_version))
-  talm_minor = talm_version.split(".")[1]
+  talm_minor = detect_talm_minor(cliargs.talm_version, cliargs.dry_run)
   logger.info("Using TALM cgu monitoring based on TALM minor version: {}".format(talm_minor))
 
   # Validate parameters and display rate and method plan
