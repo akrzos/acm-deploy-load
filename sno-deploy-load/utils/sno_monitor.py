@@ -141,7 +141,26 @@ class SnoMonitor(Thread):
       for item in cgu_data["items"]:
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
-            if int(self.talm_minor) <= 11:
+            if self.talm_minor >= 12:
+              if "type" in condition:
+                logger.debug("CGU SNO: {} Condition: {}".format(item["metadata"]["name"], condition))
+                if (condition["type"] == "Progressing" and condition["status"] == "False"
+                    and condition["reason"] != "Completed" and condition["reason"] != "TimedOut"):
+                  sno_policy_notstarted += 1
+                  break
+                if condition["type"] == "Progressing" and condition["status"] == "True" and condition["reason"] == "InProgress":
+                  sno_policy_applying += 1
+                  break
+                if condition["type"] == "Succeeded" and condition["status"] == "False" and condition["reason"] == "TimedOut":
+                  sno_policy_timedout += 1
+                  break
+                if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
+                  sno_policy_compliant += 1
+                  break
+              else:
+                logger.warn("cgu: type missing from condition(item): {}".format(item))
+                logger.warn("cgu: type missing from condition(condition): {}".format(condition))
+            else:
               if "type" in condition:
                 if condition["type"] == "Ready":
                   if "reason" in condition:
@@ -159,25 +178,6 @@ class SnoMonitor(Thread):
                     break
                   else:
                     logger.warn("reason missing from condition: {}".format(condition))
-              else:
-                logger.warn("cgu: type missing from condition(item): {}".format(item))
-                logger.warn("cgu: type missing from condition(condition): {}".format(condition))
-            else:
-              if "type" in condition:
-                logger.debug("CGU SNO: {} Condition: {}".format(item["metadata"]["name"], condition))
-                if (condition["type"] == "Progressing" and condition["status"] == "False"
-                    and condition["reason"] != "Completed" and condition["reason"] != "TimedOut"):
-                  sno_policy_notstarted += 1
-                  break
-                if condition["type"] == "Progressing" and condition["status"] == "True" and condition["reason"] == "InProgress":
-                  sno_policy_applying += 1
-                  break
-                if condition["type"] == "Succeeded" and condition["status"] == "False" and condition["reason"] == "TimedOut":
-                  sno_policy_timedout += 1
-                  break
-                if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
-                  sno_policy_compliant += 1
-                  break
               else:
                 logger.warn("cgu: type missing from condition(item): {}".format(item))
                 logger.warn("cgu: type missing from condition(condition): {}".format(condition))

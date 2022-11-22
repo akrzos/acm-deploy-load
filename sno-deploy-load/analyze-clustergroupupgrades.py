@@ -22,6 +22,7 @@ from datetime import timedelta
 import json
 from utils.command import command
 from utils.output import log_write
+from utils.talm import detect_talm_minor
 import logging
 import numpy as np
 import sys
@@ -41,12 +42,18 @@ def main():
       prog="analyze-clustergroupupgrades.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
   parser.add_argument("-n", "--namespace", type=str, default="ztp-install", help="Namespace of the CGUs to analyze")
+  parser.add_argument("--talm-version", type=str, default="4.12",
+                      help="The version of talm to fall back on in event we can not detect the talm version")
   cliargs = parser.parse_args()
 
   logger.info("Analyze clustergroupupgrades")
   ts = datetime.now().strftime("%Y%m%d-%H%M%S")
   cgu_csv_file = "{}/clustergroupupgrades-{}-{}.csv".format(cliargs.results_directory, cliargs.namespace, ts)
   cgu_stats_file = "{}/clustergroupupgrades-{}-{}.stats".format(cliargs.results_directory, cliargs.namespace, ts)
+
+  # Detect TALM version
+  talm_minor = int(detect_talm_minor(cliargs.talm_version, False))
+  logger.info("Using TALM cgu analysis based on TALM minor version: {}".format(talm_minor))
 
   oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", cliargs.namespace, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
@@ -93,34 +100,73 @@ def main():
     cgu_completedAt = ""
     cgu_duration = 0
     for condition in item["status"]["conditions"]:
-      if condition["reason"] not in cgu_conditions:
-        cgu_conditions[condition["reason"]] = 1
-      else:
-        cgu_conditions[condition["reason"]] += 1
-      if condition["type"] == "Ready":
-        if condition["status"] == "True":
-          if "completedAt" in item["status"]["status"]:
-            # Determine latest populated completed time
-            cgu_completedAt = datetime.strptime(item["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
-            if cgus_completed_time == "":
-              cgus_completed_time = cgu_completedAt
-            elif cgus_completed_time < cgu_completedAt:
-              logger.info("Replacing cgu completed time {} with later time {}".format(cgus_completed_time, cgu_completedAt))
-              cgus_completed_time = cgu_completedAt
-        cgu_status = condition["reason"]
-      elif condition["type"] == "PrecachingDone":
-        precache_ltt = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
-        if cgus_precache_done == "":
-          cgus_precache_done = precache_ltt
-        elif cgus_precache_done < precache_ltt:
-          logger.info("Replacing cgu precache completed time {} with later time {}".format(cgus_precache_done, precache_ltt))
-          cgus_precache_done = precache_ltt
-        cgu_precache_duration = (cgus_precache_done - cgu_created).total_seconds()
-        cgu_precachingdone_values.append(cgu_precache_duration)
+      if talm_minor >= 12:
+        if "type" in condition:
+          if (condition["type"] == "Progressing" and condition["status"] == "False"
+              and condition["reason"] != "Completed" and condition["reason"] != "TimedOut"):
+            cgu_status = "NotStarted"
+          if condition["type"] == "PrecachingSucceeded" and condition["status"] == "True" and condition["reason"] == "PrecachingCompleted":
+            # Save precaching timestamp?
+            precache_ltt = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
+            if cgus_precache_done == "":
+              cgus_precache_done = precache_ltt
+            elif cgus_precache_done < precache_ltt:
+              logger.info("Replacing cgu precache completed time {} with later time {}".format(cgus_precache_done, precache_ltt))
+              cgus_precache_done = precache_ltt
+            cgu_precache_duration = (cgus_precache_done - cgu_created).total_seconds()
+            cgu_precachingdone_values.append(cgu_precache_duration)
+          if condition["type"] == "Progressing" and condition["status"] == "True" and condition["reason"] == "InProgress":
+            cgu_status = "InProgress"
+          if condition["type"] == "Succeeded" and condition["status"] == "False" and condition["reason"] == "TimedOut":
+            cgu_status = "TimedOut"
+          if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
+            cgu_status = "Completed"
 
-    if cgu_status == "UpgradeCompleted" and cgu_startedAt != "" and cgu_completedAt != "":
-      cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
-      cgu_upgradecompleted_values.append(cgu_duration)
+            if "completedAt" in item["status"]["status"]:
+              # Determine latest populated completed time
+              cgu_completedAt = datetime.strptime(item["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
+              if cgus_completed_time == "":
+                cgus_completed_time = cgu_completedAt
+              elif cgus_completed_time < cgu_completedAt:
+                logger.info("Replacing cgu completed time {} with later time {}".format(cgus_completed_time, cgu_completedAt))
+                cgus_completed_time = cgu_completedAt
+              cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
+              cgu_upgradecompleted_values.append(cgu_duration)
+          if cgu_status != "unknown":
+            if cgu_status not in cgu_conditions:
+              cgu_conditions[cgu_status] = 1
+            else:
+              cgu_conditions[cgu_status] += 1
+            break
+      else:
+        if condition["reason"] not in cgu_conditions:
+          cgu_conditions[condition["reason"]] = 1
+        else:
+          cgu_conditions[condition["reason"]] += 1
+        if condition["type"] == "Ready":
+          if condition["status"] == "True":
+            if "completedAt" in item["status"]["status"]:
+              # Determine latest populated completed time
+              cgu_completedAt = datetime.strptime(item["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
+              if cgus_completed_time == "":
+                cgus_completed_time = cgu_completedAt
+              elif cgus_completed_time < cgu_completedAt:
+                logger.info("Replacing cgu completed time {} with later time {}".format(cgus_completed_time, cgu_completedAt))
+                cgus_completed_time = cgu_completedAt
+          cgu_status = condition["reason"]
+        elif condition["type"] == "PrecachingDone":
+          precache_ltt = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
+          if cgus_precache_done == "":
+            cgus_precache_done = precache_ltt
+          elif cgus_precache_done < precache_ltt:
+            logger.info("Replacing cgu precache completed time {} with later time {}".format(cgus_precache_done, precache_ltt))
+            cgus_precache_done = precache_ltt
+          cgu_precache_duration = (cgus_precache_done - cgu_created).total_seconds()
+          cgu_precachingdone_values.append(cgu_precache_duration)
+
+        if cgu_status == "UpgradeCompleted" and cgu_startedAt != "" and cgu_completedAt != "":
+          cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
+          cgu_upgradecompleted_values.append(cgu_duration)
 
     # logger.info("{},{},{},{},{}".format(cgu_name, cgu_status, cgu_startedAt, cgu_completedAt, cgu_duration))
 

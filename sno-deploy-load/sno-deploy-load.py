@@ -261,7 +261,7 @@ def main():
   logger.debug("CLI Args: {}".format(cliargs))
 
   # Detect TALM version
-  talm_minor = detect_talm_minor(cliargs.talm_version, cliargs.dry_run)
+  talm_minor = int(detect_talm_minor(cliargs.talm_version, cliargs.dry_run))
   logger.info("Using TALM cgu monitoring based on TALM minor version: {}".format(talm_minor))
 
   # Validate parameters and display rate and method plan
