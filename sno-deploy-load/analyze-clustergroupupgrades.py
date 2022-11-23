@@ -105,8 +105,7 @@ def main():
           if (condition["type"] == "Progressing" and condition["status"] == "False"
               and condition["reason"] != "Completed" and condition["reason"] != "TimedOut"):
             cgu_status = "NotStarted"
-          if condition["type"] == "PrecachingSucceeded" and condition["status"] == "True" and condition["reason"] == "PrecachingCompleted":
-            # Save precaching timestamp?
+          if condition["type"] == "PrecachingSuceeded" and condition["status"] == "True" and condition["reason"] == "PrecachingCompleted":
             precache_ltt = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
             if cgus_precache_done == "":
               cgus_precache_done = precache_ltt
