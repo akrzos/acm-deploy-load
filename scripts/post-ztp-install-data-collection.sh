@@ -60,12 +60,12 @@ oc describe policy -A > ${output_dir}/policy.describe
 
 echo "$(date -u) :: Collecting clustergroupupgrades data"
 
-oc get clustergroupupgrades -n ztp-install --no-headers -o custom-columns=NAME:'.metadata.name',READY:'.status.conditions[?(@.type=="Ready")].reason' > ${output_dir}/cgu.status
+oc get clustergroupupgrades -n ztp-install --no-headers -o custom-columns=NAME:'.metadata.name',READY:'.status.conditions[?(@.type=="Succeeded")].reason' > ${output_dir}/cgu.status
 oc describe clustergroupupgrades -n ztp-install > ${output_dir}/cgu.describe
 oc get clustergroupupgrades -n ztp-install -o yaml > ${output_dir}/cgu.yaml
 
 cat ${output_dir}/cgu.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/cgu.status_count
-cat ${output_dir}/cgu.status | grep "UpgradeTimedOut" > ${output_dir}/cgu.UpgradeTimedOut
+cat ${output_dir}/cgu.status | grep "TimedOut" > ${output_dir}/cgu.TimedOut
 
 echo "$(date -u) :: Inspecting failed SNO installs"
 truncate -s 0 ${output_dir}/sno-install-failures
