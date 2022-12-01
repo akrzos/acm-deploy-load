@@ -38,6 +38,7 @@ clusterversion resource and generates Time-series csv of upgrades to be consumed
 
 * graph-sno-clusterversion.py - Graph time-series csv from analyze-sno-clusterversion script
 * graph-sno-deploy.py - Graph monitor_data.csv from sno-deploy-load.py
+* graph-sno-upgrade.py - Graph time series csv from analyze-sno-upgrade script
 
 ## Other Scripts
 
