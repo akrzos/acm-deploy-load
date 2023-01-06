@@ -331,9 +331,12 @@ def main():
       log_write(stats_file, "CGU Platform unreachable: {} :: {}%".format(cgu_pu, cgu_pu_percent))
       log_write(stats_file, "CGU Operator completed: {} :: {}%".format(cgu_oc, cgu_oc_percent))
       log_write(stats_file, "CGU Operator incomplete: {} :: {}%".format(cgu_oi, cgu_oi_percent))
-      log_write(stats_file, "CGU Platform Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_pc_durations)))
-      # log_write(stats_file, "CGU Operator Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_oc_durations)))
-      log_write(stats_file, "CGU Upgrade Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_upgrade_durations)))
+      log_write(stats_file, "CGU Platform Completed Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(cgu_pc_durations)))
+      # log_write(stats_file, "CGU Operator Completed Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(cgu_oc_durations)))
+      log_write(stats_file, "CGU Upgrade Completed Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(cgu_upgrade_durations)))
+      log_write(stats_file, "CGU Platform Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_pc_durations, False)))
+      # log_write(stats_file, "CGU Operator Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_oc_durations, False)))
+      log_write(stats_file, "CGU Upgrade Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(cgu_upgrade_durations, False)))
       # Now show for each batch in the CGU
       for batch_index, batch in enumerate(cgus[cgu_name]["batches"]):
         if cgus[cgu_name]["batches"][batch_index]["platformEndTS"] != "":
@@ -377,12 +380,18 @@ def main():
         log_write(stats_file, "Latest operator end timestamp: {}".format(cgus[cgu_name]["batches"][batch_index]["operatorEndTS"]))
         log_write(stats_file, "Platform Duration(platformEndTS - startTS): {}s :: {}".format(platform_duration, platform_duration_h))
         log_write(stats_file, "Upgrade Duration(operatorEndTS - startTS): {}s :: {}".format(upgrade_duration, upgrade_duration_h))
-        log_write(stats_file, "Platform Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+        log_write(stats_file, "Platform Completed Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(
             assemble_stats(cgus[cgu_name]["batches"][batch_index]["pc_durations"])))
-        # log_write(stats_file, "Operator Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+        # log_write(stats_file, "Operator Completed Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(
         #     assemble_stats(cgus[cgu_name]["batches"][batch_index]["oc_durations"])))
-        log_write(stats_file, "Upgrade Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+        log_write(stats_file, "Upgrade Completed Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(
             assemble_stats(cgus[cgu_name]["batches"][batch_index]["upgrade_durations"])))
+        log_write(stats_file, "Platform Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+            assemble_stats(cgus[cgu_name]["batches"][batch_index]["pc_durations"], False)))
+        # log_write(stats_file, "Operator Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+        #     assemble_stats(cgus[cgu_name]["batches"][batch_index]["oc_durations"], False)))
+        log_write(stats_file, "Upgrade Completed Durations Min/Avg/50p/95p/99p/Max: {}".format(
+            assemble_stats(cgus[cgu_name]["batches"][batch_index]["upgrade_durations"], False)))
       for batch_index, batch in enumerate(cgus[cgu_name]["batches"]):
         log_write(stats_file, "#############################################")
         log_write(stats_file, "Erroneous Clusters from Batch {}".format(batch_index))
@@ -391,14 +400,11 @@ def main():
         log_write(stats_file, "Platform unreachable: {}".format(cgus[cgu_name]["batches"][batch_index]["unreachable"]))
         log_write(stats_file, "Operator incomplete: {}".format(cgus[cgu_name]["batches"][batch_index]["operator_incomplete"]))
 
-
-
-
   end_time = time.time()
   logger.info("##########################################################################################")
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
 
-def assemble_stats(the_list):
+def assemble_stats(the_list, seconds=True):
   stats_min = 0
   stats_avg = 0
   stats_p50 = 0
@@ -406,13 +412,21 @@ def assemble_stats(the_list):
   stats_p99 = 0
   stats_max = 0
   if len(the_list) > 0:
-    stats_min = np.min(the_list)
-    stats_avg = round(np.mean(the_list), 1)
-    stats_p50 = round(np.percentile(the_list, 50), 1)
-    stats_p95 = round(np.percentile(the_list, 95), 1)
-    stats_p99 = round(np.percentile(the_list, 99), 1)
-    stats_max = np.max(the_list)
-  return "{} : {} : {} : {} : {} : {}".format(stats_min, stats_avg, stats_p50, stats_p95, stats_p99, stats_max)
+    if seconds:
+      stats_min = np.min(the_list)
+      stats_avg = round(np.mean(the_list), 1)
+      stats_p50 = round(np.percentile(the_list, 50), 1)
+      stats_p95 = round(np.percentile(the_list, 95), 1)
+      stats_p99 = round(np.percentile(the_list, 99), 1)
+      stats_max = np.max(the_list)
+    else:
+      stats_min = str(timedelta(seconds=np.min(the_list)))
+      stats_avg = str(timedelta(seconds=round(np.mean(the_list))))
+      stats_p50 = str(timedelta(seconds=round(np.percentile(the_list, 50))))
+      stats_p95 = str(timedelta(seconds=round(np.percentile(the_list, 95))))
+      stats_p99 = str(timedelta(seconds=round(np.percentile(the_list, 99))))
+      stats_max = str(timedelta(seconds=np.max(the_list)))
+  return "{} :: {} :: {} :: {} :: {} :: {}".format(stats_min, stats_avg, stats_p50, stats_p95, stats_p99, stats_max)
 
 if __name__ == "__main__":
   sys.exit(main())
