@@ -88,6 +88,8 @@ def main():
       cgus_create_time = cgu_created
 
     cgu_startedAt = ""
+    cgu_completedAt = ""
+    cgu_duration = 0
     if "startedAt" in item["status"]["status"]:
       # Determine earliest startedAt time for the cgus in this namespace
       cgu_startedAt = datetime.strptime(item["status"]["status"]["startedAt"], "%Y-%m-%dT%H:%M:%SZ")
@@ -96,9 +98,16 @@ def main():
       elif cgus_started_time > cgu_startedAt:
         logger.info("Replacing cgu started time {} with earlier time {}".format(cgus_started_time, cgu_startedAt))
         cgus_started_time = cgu_startedAt
+    if "completedAt" in item["status"]["status"]:
+      # Determine latest populated completed time
+      cgu_completedAt = datetime.strptime(item["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
+      if cgus_completed_time == "":
+        cgus_completed_time = cgu_completedAt
+      elif cgus_completed_time < cgu_completedAt:
+        logger.info("Replacing cgu completed time {} with later time {}".format(cgus_completed_time, cgu_completedAt))
+        cgus_completed_time = cgu_completedAt
+      cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
 
-    cgu_completedAt = ""
-    cgu_duration = 0
     for condition in item["status"]["conditions"]:
       if talm_minor >= 12:
         if "type" in condition:
@@ -120,17 +129,7 @@ def main():
             cgu_status = "TimedOut"
           if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
             cgu_status = "Completed"
-
-            if "completedAt" in item["status"]["status"]:
-              # Determine latest populated completed time
-              cgu_completedAt = datetime.strptime(item["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
-              if cgus_completed_time == "":
-                cgus_completed_time = cgu_completedAt
-              elif cgus_completed_time < cgu_completedAt:
-                logger.info("Replacing cgu completed time {} with later time {}".format(cgus_completed_time, cgu_completedAt))
-                cgus_completed_time = cgu_completedAt
-              cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
-              cgu_upgradecompleted_values.append(cgu_duration)
+            cgu_upgradecompleted_values.append(cgu_duration)
           if cgu_status != "unknown":
             if cgu_status not in cgu_conditions:
               cgu_conditions[cgu_status] = 1
@@ -211,7 +210,7 @@ def main():
       log_write(stats_file, "99 percentile: {}".format(round(np.percentile(cgu_precachingdone_values, 99), 1)))
       log_write(stats_file, "Max: {}".format(np.max(cgu_precachingdone_values)))
     log_write(stats_file, "#############################################")
-    log_write(stats_file, "Stats only on clustergroupupgrades CRs in UpgradeCompleted")
+    log_write(stats_file, "Stats only on clustergroupupgrades CRs in UpgradeCompleted/Completed")
     if len(cgu_upgradecompleted_values) > 0:
       log_write(stats_file, "Count: {}".format(len(cgu_upgradecompleted_values)))
       log_write(stats_file, "Min: {}".format(np.min(cgu_upgradecompleted_values)))
