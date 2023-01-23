@@ -42,6 +42,7 @@ def main():
       prog="analyze-clustergroupupgrades.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
   parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
   parser.add_argument("-n", "--namespace", type=str, default="ztp-install", help="Namespace of the CGUs to analyze")
+  parser.add_argument("-p", "--display-precache", action="store_true", default=False, help="Display CGU precache duration")
   parser.add_argument("--talm-version", type=str, default="4.12",
                       help="The version of talm to fall back on in event we can not detect the talm version")
   cliargs = parser.parse_args()
@@ -170,8 +171,6 @@ def main():
 
     # logger.info("{},{},{},{},{}".format(cgu_name, cgu_status, cgu_startedAt, cgu_completedAt, cgu_duration))
 
-    # csv_file.write("name,status,creationTimestamp,precacheCompleted,precache_duration,startedAt,completedAt,duration\n")
-
     with open(cgu_csv_file, "a") as csv_file:
       csv_file.write("{},{},{},{},{},{},{},{}\n".format(cgu_name, cgu_status, cgu_created, precache_ltt, cgu_precache_duration, cgu_startedAt, cgu_completedAt, cgu_duration))
 
@@ -213,6 +212,9 @@ def main():
       log_write(stats_file, "95 percentile: {}".format(round(np.percentile(cgu_precachingdone_values, 95), 1)))
       log_write(stats_file, "99 percentile: {}".format(round(np.percentile(cgu_precachingdone_values, 99), 1)))
       log_write(stats_file, "Max: {}".format(np.max(cgu_precachingdone_values)))
+    if cliargs.display_precache:
+      for index, duration in enumerate(cgu_precachingdone_values):
+        log_write(stats_file, "Collected CGU {}, Precache Duration: {}s :: {}".format(index, duration, str(timedelta(seconds=duration))))
     log_write(stats_file, "#############################################")
     log_write(stats_file, "Stats only on clustergroupupgrades CRs in UpgradeCompleted/Completed")
     if len(cgu_upgradecompleted_values) > 0:
