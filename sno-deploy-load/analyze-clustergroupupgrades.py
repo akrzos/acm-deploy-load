@@ -73,7 +73,7 @@ def main():
 
   logger.info("Writing CSV: {}".format(cgu_csv_file))
   with open(cgu_csv_file, "w") as csv_file:
-    csv_file.write("name,status,startedAt,completedAt,duration\n")
+    csv_file.write("name,status,creationTimestamp,precacheCompleted,precache_duration,startedAt,completedAt,duration\n")
 
   for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
@@ -87,6 +87,8 @@ def main():
       logger.info("Replacing cgu created time {} with earlier time {}".format(cgus_create_time, cgu_created))
       cgus_create_time = cgu_created
 
+    precache_ltt = ""
+    cgu_precache_duration = 0
     cgu_startedAt = ""
     cgu_completedAt = ""
     cgu_duration = 0
@@ -168,8 +170,10 @@ def main():
 
     # logger.info("{},{},{},{},{}".format(cgu_name, cgu_status, cgu_startedAt, cgu_completedAt, cgu_duration))
 
+    # csv_file.write("name,status,creationTimestamp,precacheCompleted,precache_duration,startedAt,completedAt,duration\n")
+
     with open(cgu_csv_file, "a") as csv_file:
-      csv_file.write("{},{},{},{},{}\n".format(cgu_name, cgu_status, cgu_startedAt, cgu_completedAt, cgu_duration))
+      csv_file.write("{},{},{},{},{},{},{},{}\n".format(cgu_name, cgu_status, cgu_created, precache_ltt, cgu_precache_duration, cgu_startedAt, cgu_completedAt, cgu_duration))
 
   logger.info("Writing Stats: {}".format(cgu_stats_file))
 
