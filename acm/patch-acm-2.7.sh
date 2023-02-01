@@ -23,7 +23,7 @@ export KUBECONFIG=/root/bm/kubeconfig
 
 echo "Applying ACM search-postgres configmap max_connections bump"
 POSTGRESQL_CONF="ssl = 'on' \n ssl_cert_file = '/sslcert/tls.crt' \n ssl_key_file = '/sslcert/tls.key' \n max_connections = 120"
-oc patch cm search-postgres --type merge -p '{"data":{"postgresql.conf": "'${POSTGRESQL_CONF}'" }}'
+oc patch cm -n open-cluster-management search-postgres --type merge -p '{"data":{"postgresql.conf": "'${POSTGRESQL_CONF}'" }}'
 echo "Sleep 10"
 sleep 10
 echo "Applying ACM search-v2-operator collector resources bump"
