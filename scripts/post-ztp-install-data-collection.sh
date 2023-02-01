@@ -31,8 +31,9 @@ oc describe agentclusterinstall -A > ${output_dir}/aci.describe
 oc get agentclusterinstall -A -o yaml > ${output_dir}/aci.yaml
 
 cat ${output_dir}/aci.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/aci.status_count
-cat ${output_dir}/aci.status | grep "InstallationFailed" | awk '{print $1}'  > ${output_dir}/aci.InstallationFailed
+cat ${output_dir}/aci.status | grep "InstallationFailed" | awk '{print $1}' > ${output_dir}/aci.InstallationFailed
 cat ${output_dir}/aci.status | grep "InstallationNotStarted" | awk '{print $1}' > ${output_dir}/aci.InstallationNotStarted
+cat ${output_dir}/aci.status | grep "InstallationInProgress" | awk '{print $1}' > ${output_dir}/aci.InstallationInProgress
 
 echo "$(date -u) :: Collecting managedcluster data"
 
@@ -65,7 +66,7 @@ oc describe clustergroupupgrades -n ztp-install > ${output_dir}/cgu.describe
 oc get clustergroupupgrades -n ztp-install -o yaml > ${output_dir}/cgu.yaml
 
 cat ${output_dir}/cgu.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/cgu.status_count
-cat ${output_dir}/cgu.status | grep "TimedOut" > ${output_dir}/cgu.TimedOut
+cat ${output_dir}/cgu.status | grep "TimedOut"  | awk '{print $1}' > ${output_dir}/cgu.TimedOut
 
 echo "$(date -u) :: Inspecting failed SNO installs"
 truncate -s 0 ${output_dir}/sno-install-failures
@@ -137,5 +138,49 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
 done
 
 cat ${output_dir}/sno-install-failures | awk '{print $1}' | sort | uniq -c > ${output_dir}/sno-install-failures.failure_count
+
+echo "$(date -u) :: Inspecting TimedOut CGUs"
+mkdir -p ${output_dir}/cgu-failures
+
+for cluster in $(cat ${output_dir}/cgu.TimedOut); do
+  echo "$(date -u) :: Checking cluster ${cluster}"
+  export KUBECONFIG=/root/hv-vm/sno/manifests/${cluster}/kubeconfig
+  mkdir -p ${output_dir}/cgu-failures/${cluster}
+
+  oc get pods -A > ${output_dir}/cgu-failures/${cluster}/pods
+  oc get pods -A -o yaml > ${output_dir}/cgu-failures/${cluster}/pods.yaml
+  oc describe pods -A > ${output_dir}/cgu-failures/${cluster}/pods.describe
+
+  oc get clusteroperators -A > ${output_dir}/cgu-failures/${cluster}/clusteroperators
+  oc get clusteroperators -A -o yaml > ${output_dir}/cgu-failures/${cluster}/clusteroperators.yaml
+  oc describe clusteroperators -A > ${output_dir}/cgu-failures/${cluster}/clusteroperators.describe
+
+  oc get clusterversion -o yaml > ${output_dir}/cgu-failures/${cluster}/clusterversion.yaml
+
+  oc get configurationpolicies -A > ${output_dir}/cgu-failures/${cluster}/configurationpolicies
+  oc get configurationpolicies -A -o yaml > ${output_dir}/cgu-failures/${cluster}/configurationpolicies.yaml
+  oc describe configurationpolicies -A > ${output_dir}/cgu-failures/${cluster}/configurationpolicies.describe
+
+  oc get policies -A > ${output_dir}/cgu-failures/${cluster}/policies
+  oc get policies -A -o yaml > ${output_dir}/cgu-failures/${cluster}/policies.yaml
+  oc describe policies -A > ${output_dir}/cgu-failures/${cluster}/policies.describe
+
+  oc get subs -A > ${output_dir}/cgu-failures/${cluster}/subs
+  oc get subs -A -o yaml > ${output_dir}/cgu-failures/${cluster}/subs.yaml
+  oc describe subs -A > ${output_dir}/cgu-failures/${cluster}/subs.describe
+
+  oc get csvs -A > ${output_dir}/cgu-failures/${cluster}/csvs
+  oc get csvs -A -o yaml > ${output_dir}/cgu-failures/${cluster}/csvs.yaml
+  oc describe csvs -A > ${output_dir}/cgu-failures/${cluster}/csvs.describe
+
+  oc get installplans -A > ${output_dir}/cgu-failures/${cluster}/installplans
+  oc get installplans -A -o yaml > ${output_dir}/cgu-failures/${cluster}/installplans.yaml
+  oc describe installplans -A > ${output_dir}/cgu-failures/${cluster}/installplans.describe
+
+  oc get catalogsources -A > ${output_dir}/cgu-failures/${cluster}/catalogsources
+  oc get catalogsources -A -o yaml > ${output_dir}/cgu-failures/${cluster}/catalogsources.yaml
+  oc describe catalogsources -A > ${output_dir}/cgu-failures/${cluster}/catalogsources.describe
+
+done
 
 echo "$(date -u) :: Done collecting data"
