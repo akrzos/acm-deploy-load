@@ -124,7 +124,7 @@ def main():
             elif cgus_precache_done < precache_ltt:
               logger.info("Replacing cgu precache completed time {} with later time {}".format(cgus_precache_done, precache_ltt))
               cgus_precache_done = precache_ltt
-            cgu_precache_duration = (cgus_precache_done - cgu_created).total_seconds()
+            cgu_precache_duration = (precache_ltt - cgu_created).total_seconds()
             cgu_precachingdone_values.append(cgu_precache_duration)
           if condition["type"] == "Progressing" and condition["status"] == "True" and condition["reason"] == "InProgress":
             cgu_status = "InProgress"
