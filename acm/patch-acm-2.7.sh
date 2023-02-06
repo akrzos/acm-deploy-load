@@ -21,11 +21,14 @@ export KUBECONFIG=/root/bm/kubeconfig
 # sleep 45
 
 
-echo "Applying ACM search-postgres configmap max_connections bump"
-POSTGRESQL_CONF="ssl = 'on'\nssl_cert_file = '/sslcert/tls.crt'\nssl_key_file = '/sslcert/tls.key'\nmax_connections = 120"
-oc patch cm -n open-cluster-management search-postgres --type merge -p '{"data":{"postgresql.conf": "'"${POSTGRESQL_CONF}"'" }}'
+# https://issues.redhat.com/browse/ACM-3065 
+echo "Patching ACM search-v2-operator indexer image"
+oc image mirror -a /opt/registry/sync/pull-secret-disconnected.acm_d.txt quay.io/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-06-21-36-31 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:PR84 --keep-manifest-list
+oc patch search -n open-cluster-management search-v2-operator --type merge -p '{"spec":{"deployments":{"indexer": {"imageOverride": "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:PR84" }}}}'
 echo "Sleep 10"
 sleep 10
+
+
 echo "Applying ACM search-v2-operator collector resources bump"
 oc patch search -n open-cluster-management search-v2-operator --type json -p '[{"op": "add", "path": "/spec/deployments/collector/resources", "value": {"limits": {"memory": "16Gi"}, "requests": {"memory": "64Mi", "cpu": "25m"}}}]'
 echo "Sleep 10"
