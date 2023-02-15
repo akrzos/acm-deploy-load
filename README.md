@@ -40,6 +40,11 @@ clusterversion resource and generates Time-series csv of upgrades to be consumed
 * graph-sno-deploy.py - Graph monitor_data.csv from sno-deploy-load.py
 * graph-sno-upgrade.py - Graph time series csv from analyze-sno-upgrade script
 
+## Patch Scripts
+
+Located in the [acm directory](acm), and provide memory limits tuning or image patches specific to scale tests for specific
+versions
+
 ## Other Scripts
 
 * cluster-health.py - Check if a cluster is healthy/stable
