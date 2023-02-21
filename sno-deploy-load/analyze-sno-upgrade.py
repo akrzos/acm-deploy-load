@@ -36,13 +36,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(
 logger = logging.getLogger("analyze-sno-upgrade")
 logging.Formatter.converter = time.gmtime
 
-# Latest defaults (1/16/2023)
+# Latest defaults (2/21/2023)
 default_operator_csvs = [
-  "local-storage-operator.4.11.0-202212070335",
+  "local-storage-operator.v4.12.0-202301042354",
   # For reasons unknown, cluster-logging csv shows a status.lastUpdateTime much beyond the time expected
-  # "cluster-logging.5.5.5",
-  "ptp-operator.4.11.0-202301031954",
-  "sriov-network-operator.4.11.0-202212071535"
+  # "cluster-logging.v5.6.1",
+  "ptp-operator.4.12.0-202301231836",
+  "sriov-network-operator.v4.12.0-202301062016"
 ]
 
 # Old defaults
@@ -55,6 +55,7 @@ default_operator_csvs = [
 # ]
 
 # TODO:
+# * Only check platform
 # * Operator start timestamp per cluster
 #   * creationTimestamp is "too quick", will require installplan data
 
@@ -67,7 +68,7 @@ def main():
   parser.add_argument("-m", "--sno-manifests", type=str, default="/root/hv-vm/sno/manifests",
                       help="The location of the SNO manifests, where kubeconfig is nested under each SNO directory")
 
-  parser.add_argument("-p", "--platform-upgrade", type=str, default="4.11.5",
+  parser.add_argument("-p", "--platform-upgrade", type=str, default="4.12.2",
                       help="The version clusters are expected to have upgraded to")
 
   parser.add_argument("-o", "--operator-csvs", nargs="*", default=default_operator_csvs,
@@ -240,6 +241,7 @@ def main():
               if csv_data == "":
                 logger.warn("No csv data found")
               else:
+                operator_found = False
                 for operator in cliargs.operator_csvs:
                   operator_found = False
                   logger.info("Checking if operator {} is installed".format(operator))
