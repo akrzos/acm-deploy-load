@@ -1,6 +1,7 @@
 jinja2
 kaleido
 numpy
+packaging
 pandas
 plotly
 python-dateutil
