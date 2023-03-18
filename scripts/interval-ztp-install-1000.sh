@@ -6,7 +6,7 @@ set -o pipefail
 iteration=1
 interval_period=3600
 batch=500
-snos_per_app=100
+clusters_per_app=100
 
 wan_em="(None)"
 # wan_em="(50ms/0.02)"
@@ -20,13 +20,13 @@ test_ver="ZTP Scale Run ${iteration}"
 hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
 sno_ocp=$(grep "imageSetRef:" /root/hv-vm/sno/manifests/sno00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
 
-time ./sno-deploy-load/sno-deploy-load.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" -e 1000 --snos-per-app ${snos_per_app} -w -i 60 -t int-ztp-${snos_per_app}-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
+time ./sno-deploy-load/sno-deploy-load.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --deploy-version "${sno_ocp}" --wan-emulation "${wan_em}" -e 1000 --clusters-per-app ${clusters_per_app} -w -i 60 -t int-ztp-${clusters_per_app}-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
 
 results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./sno-deploy-load/graph-sno-deploy.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --sno-version "${sno_ocp}" --wan-emulation "${wan_em}" ${results_dir} 2>&1 | tee -a ${log_file}
+time ./sno-deploy-load/graph-sno-deploy.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --deploy-version "${sno_ocp}" --wan-emulation "${wan_em}" ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 

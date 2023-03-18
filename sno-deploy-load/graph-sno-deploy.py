@@ -48,7 +48,7 @@ def main():
   parser.add_argument("--acm-version", type=str, default="2.5.0", help="Sets ACM version for graph title")
   parser.add_argument("--test-version", type=str, default="ZTP Scale Run 1", help="Sets test version for graph title")
   parser.add_argument("--hub-version", type=str, default="4.10.8", help="Sets OCP Hub version for graph title")
-  parser.add_argument("--sno-version", type=str, default="4.10.8", help="Sets OCP SNO version for graph title")
+  parser.add_argument("--deploy-version", type=str, default="4.10.8", help="Sets OCP SNO version for graph title")
   parser.add_argument("--wan-emulation", type=str, default="(50ms/0.02)", help="Sets WAN emulation for graph title")
 
   # Name of csv file found in results directory
@@ -80,11 +80,11 @@ def main():
   policy_compliant = df["policy_compliant"].values[-1]
 
   title_sno = "ACM {} {} ({}/{} clusters)<br>OCP {}, SNO {}, W/E {}".format(cliargs.acm_version, cliargs.test_version,
-      sno_completed, sno_inited, cliargs.hub_version, cliargs.sno_version, cliargs.wan_emulation)
+      sno_completed, sno_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
   title_managed = "ACM {} {} ({}/{} clusters)<br>OCP {}, SNO {}, W/E {}".format(cliargs.acm_version,
-      cliargs.test_version, managed, sno_inited, cliargs.hub_version, cliargs.sno_version, cliargs.wan_emulation)
+      cliargs.test_version, managed, sno_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
   title_policy = "ACM {} {} ({}/{} policy)<br>OCP {}, SNO {}, W/E {}".format(cliargs.acm_version, cliargs.test_version,
-      policy_compliant, policy_inited, cliargs.hub_version, cliargs.sno_version, cliargs.wan_emulation)
+      policy_compliant, policy_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
 
   y_sno = ["sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed", "sno_install_completed"]
   y_sno2 = ["sno_applied", "sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed",
