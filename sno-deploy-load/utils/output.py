@@ -37,7 +37,7 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
   failed_du_percent = 0
   success_overall_percent = 0
   failed_overall_percent = 0
-  if monitor_data["_applied_committed"] > 0:
+  if monitor_data["sno_applied_committed"] > 0:
     success_cluster_percent = round((monitor_data["sno_install_completed"] / monitor_data["sno_applied_committed"]) * 100, 1)
     failed_cluster_percent = round(100 - success_cluster_percent, 1)
   if monitor_data["sno_install_completed"] > 0:
