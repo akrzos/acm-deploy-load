@@ -42,8 +42,8 @@ clusterversion resource and generates Time-series csv of upgrades to be consumed
 
 ## Patch Scripts
 
-Located in the [acm directory](acm), and provide memory limits tuning or image patches specific to scale tests for specific
-versions
+Located in the [patch directory](patch), and provide memory limits tuning or image patches specific to scale tests for
+specific versions.
 
 ## Other Scripts
 
