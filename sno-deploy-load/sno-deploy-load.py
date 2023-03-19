@@ -90,9 +90,8 @@ logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 
-def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clusters_per_app, cluster_siteconfigs, argocd_dir, dry_run, ztp_client_templates):
+def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clusters_per_app, argocd_dir, dry_run, ztp_client_templates):
   git_files = []
-  siteconfig_dir = "{}/siteconfigs".format(cluster_siteconfigs)
   last_ztp_app_index = math.floor((start_index) / clusters_per_app)
   for idx, cluster in enumerate(clusters[start_index:end_index]):
     ztp_app_index = math.floor((start_index + idx) / clusters_per_app)
@@ -110,6 +109,7 @@ def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clust
       last_ztp_app_index = ztp_app_index
 
     siteconfig_name = os.path.basename(cluster)
+    siteconfig_dir = os.path.dirname(cluster)
     cluster_name = siteconfig_name.replace("-siteconfig.yml", "")
     ztp_deploy_apps[ztp_app_index]["clusters"].append(cluster_name)
     logger.debug("Clusters: {}".format(ztp_deploy_apps[ztp_app_index]["clusters"]))
@@ -440,8 +440,7 @@ def main():
         monitor_data["cluster_applied_committed"] += len(cluster_list[start_cluster_index:end_cluster_index])
         deploy_ztp_clusters(
             cluster_list, ztp_deploy_apps, start_cluster_index, end_cluster_index, cliargs.clusters_per_app,
-            cliargs.cluster_manifests_siteconfigs, cliargs.argocd_base_directory, cliargs.dry_run,
-            cliargs.ztp_client_templates)
+            cliargs.argocd_base_directory, cliargs.dry_run, cliargs.ztp_client_templates)
 
       start_cluster_index += cliargs.batch
       if start_cluster_index >= available_clusters or end_cluster_index == cliargs.end:
