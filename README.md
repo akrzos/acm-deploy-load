@@ -1,11 +1,11 @@
-# sno-deploy-load
+# acm-deploy-load
 
 Tools and scripts to load and analyze ACM with cluster deployments and upgrades. Clusters are deployed via manifests or
 GitOps using Zero Touch Provisioning (ZTP).
 
 ## Workload Script
 
-### sno-deploy-load.py
+### acm-deploy-load.py
 
 Tool to load ACM with cluster deployments via manifests or GitOps ZTP
 
@@ -28,7 +28,7 @@ Analysis scripts can be run after deploying or upgrading clusters to understand 
 installation timing
 * analyze-clustergroupupgrades.py - Summarize and report count, min/avg/max, and 50/95/99 percentiles for ztp-install
 clustergroupupgrade custom resources
-* analyze-sno-deploy-time.py - Determine deployment duration metrics and peak concurrencies from sno-deploy-load
+* analyze-acm-deploy-time.py - Determine deployment duration metrics and peak concurrency from acm-deploy-load
 monitoring data
 * analyze-sno-upgrade.py - Summarize platform and operator upgrade success and timings from CGUs across upgraded SNOs
 * analyze-sno-clusterversion.py - Summarizes cluster upgrade success and timing as observed from the SNO's
@@ -37,7 +37,7 @@ clusterversion resource and generates Time-series csv of upgrades to be consumed
 ## Graphing Scripts
 
 * graph-sno-clusterversion.py - Graph time-series csv from analyze-sno-clusterversion script
-* graph-sno-deploy.py - Graph monitor_data.csv from sno-deploy-load.py
+* graph-acm-deploy.py - Graph monitor_data.csv from acm-deploy-load.py
 * graph-sno-upgrade.py - Graph time series csv from analyze-sno-upgrade script
 
 ## Patch Scripts

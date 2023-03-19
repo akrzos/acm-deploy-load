@@ -37,7 +37,6 @@ import sys
 import time
 
 # TODO:
-# * Rename to acm-deploy-load
 # * Allow randomization mix of sno, compact and standard clusters during applying/committing
 # * Discern sno, compact, and standard clusters in monitor data and report individual results
 # * Prom queries for System metric data
