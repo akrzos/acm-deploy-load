@@ -26,7 +26,7 @@ import json
 from utils.command import command
 from utils.output import generate_report
 from utils.output import phase_break
-from utils.sno_monitor import SnoMonitor
+from utils.ztp_monitor import ZTPMonitor
 from utils.talm import detect_talm_minor
 import logging
 import math
@@ -38,8 +38,8 @@ import time
 
 # TODO:
 # * Rename to acm-deploy-load
-# * Adjust cluster-manifests-siteconfigs to just /root/hv-vm and scale sno, compact and standard
-# * Support all sno, compact clusters, and standard clusters at same time
+# * Allow randomization mix of sno, compact and standard clusters during applying/committing
+# * Discern sno, compact, and standard clusters in monitor data and report individual results
 # * Prom queries for System metric data
 # * Upgrade script orchestration and monitoring
 
@@ -79,6 +79,10 @@ data:
   network-1-ns: {{ clusterName }}-sriov-ns
 
 """
+
+
+# Scan all three directories for clusters and add to cluster list
+cluster_types = ["sno", "compact", "standard"]
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
@@ -161,14 +165,14 @@ def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clust
 
 def log_monitor_data(data, elapsed_seconds):
   logger.info("Elapsed total time: {}s :: {}".format(elapsed_seconds, str(timedelta(seconds=elapsed_seconds))))
-  logger.info("Applied/Committed Clusters: {}".format(data["sno_applied_committed"]))
-  logger.info("Initialized Clusters: {}".format(data["sno_init"]))
-  logger.info("Not Started Clusters: {}".format(data["sno_notstarted"]))
-  logger.info("Booted Clusters: {}".format(data["sno_booted"]))
-  logger.info("Discovered Clusters: {}".format(data["sno_discovered"]))
-  logger.info("Installing Clusters: {}".format(data["sno_installing"]))
-  logger.info("Failed Clusters: {}".format(data["sno_install_failed"]))
-  logger.info("Completed Clusters: {}".format(data["sno_install_completed"]))
+  logger.info("Applied/Committed Clusters: {}".format(data["cluster_applied_committed"]))
+  logger.info("Initialized Clusters: {}".format(data["cluster_init"]))
+  logger.info("Not Started Clusters: {}".format(data["cluster_notstarted"]))
+  logger.info("Booted Nodes: {}".format(data["node_booted"]))
+  logger.info("Discovered Nodes: {}".format(data["node_discovered"]))
+  logger.info("Installing Clusters: {}".format(data["cluster_installing"]))
+  logger.info("Failed Clusters: {}".format(data["cluster_install_failed"]))
+  logger.info("Completed Clusters: {}".format(data["cluster_install_completed"]))
   logger.info("Managed Clusters: {}".format(data["managed"]))
   logger.info("Initialized Policy Clusters: {}".format(data["policy_init"]))
   logger.info("Policy Not Started Clusters: {}".format(data["policy_notstarted"]))
@@ -185,13 +189,13 @@ def main():
       prog="acm-deploy-load.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # "Global" args
-  parser.add_argument("-m", "--cluster-manifests-siteconfigs", type=str, default="/root/hv-vm/sno",
+  parser.add_argument("-m", "--cluster-manifests-siteconfigs", type=str, default="/root/hv-vm/",
                       help="The location of the cluster manifests, siteconfigs and resource files")
   parser.add_argument("-a", "--argocd-base-directory", type=str,
                       default="/root/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd",
                       help="The location of the ArgoCD cluster and cluster applications directories")
   parser.add_argument("-s", "--start", type=int, default=0,
-                      help="Cluster start index, follows array logic starting at 0 for 'sno00001'")
+                      help="Cluster start index, follows array logic starting at 0 for '00001'")
   parser.add_argument("-e", "--end", type=int, default=0, help="Cluster end index (0 = total manifest count)")
   parser.add_argument("--start-delay", type=int, default=15,
                       help="Delay to starting deploys, allowing monitor thread to gather data (seconds)")
@@ -218,10 +222,10 @@ def main():
   # Report options
   parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-ztp-0",
                       help="Suffix to be appended to results directory name")
-  parser.add_argument("--acm-version", type=str, default="2.5.0", help="Sets ACM version for report")
+  parser.add_argument("--acm-version", type=str, default="2.8.0", help="Sets ACM version for report")
   parser.add_argument("--test-version", type=str, default="ZTP Scale Run 1", help="Sets test version for graph title")
-  parser.add_argument("--hub-version", type=str, default="4.10.8", help="Sets OCP Hub version for report")
-  parser.add_argument("--deploy-version", type=str, default="4.10.8", help="Sets OCP deployed version for report")
+  parser.add_argument("--hub-version", type=str, default="4.12.7", help="Sets OCP Hub version for report")
+  parser.add_argument("--deploy-version", type=str, default="4.12.7", help="Sets OCP deployed version for report")
   parser.add_argument("--wan-emulation", type=str, default="(50ms/0.02)", help="Sets WAN emulation for graph title")
 
   # Debug and dry-run options
@@ -247,7 +251,7 @@ def main():
 
   # # From laptop for debugging, should be commented out before commit
   # logger.info("Replacing directories for testing purposes#############################################################")
-  # cliargs.cluster_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220725-cloud27-stage-acm-2.6/hv-vm/sno"
+  # cliargs.cluster_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220725-cloud27-stage-acm-2.6/hv-vm/"
   # cliargs.argocd_base_directory = "/home/akrzos/akrh/project-things/20220725-cloud27-stage-acm-2.6/argocd"
   # cliargs.start_delay = 1
   # cliargs.end_delay = 1
@@ -326,26 +330,34 @@ def main():
   available_ztp_apps = 0
   ztp_deploy_apps = OrderedDict()
   if cliargs.method == "manifests":
-    cluster_list = glob.glob("{}/manifests/*".format(cliargs.cluster_manifests_siteconfigs))
-    cluster_list.sort()
-    for manifest_dir in cluster_list:
-      if pathlib.Path("{}/manifest.yml".format(manifest_dir)).is_file():
-        logger.debug("Found {}".format("{}/manifest.yml".format(manifest_dir)))
-      else:
-        logger.error("Directory appears to be missing manifest.yml file: {}".format(manifest_dir))
-        sys.exit(1)
+    for c_type in cluster_types:
+      logger.info("Checking {}{}/manifests/ for manifests".format(cliargs.cluster_manifests_siteconfigs, c_type))
+      temp_cluster_list = glob.glob("{}{}/manifests/*".format(cliargs.cluster_manifests_siteconfigs, c_type))
+      temp_cluster_list.sort()
+      for manifest_dir in temp_cluster_list:
+        if pathlib.Path("{}/manifest.yml".format(manifest_dir)).is_file():
+          logger.debug("Found {}".format("{}/manifest.yml".format(manifest_dir)))
+        else:
+          logger.error("Directory appears to be missing manifest.yml file: {}".format(manifest_dir))
+          sys.exit(1)
+      logger.info("Discovered {} available clusters of type {} for deployment".format(len(temp_cluster_list), c_type))
+      cluster_list.extend(temp_cluster_list)
   elif cliargs.method == "ztp":
-    cluster_list = glob.glob("{}/siteconfigs/*-siteconfig.yml".format(cliargs.cluster_manifests_siteconfigs))
-    cluster_list.sort()
-    siteconfig_dir = "{}/siteconfigs".format(cliargs.cluster_manifests_siteconfigs)
-    for siteconfig_file in cluster_list:
-      siteconfig_name = os.path.basename(siteconfig_file)
-      resources_name = siteconfig_name.replace("-siteconfig", "-resources")
-      if pathlib.Path("{}/{}".format(siteconfig_dir, resources_name)).is_file():
-        logger.debug("Found {}".format("{}/{}".format(siteconfig_dir, resources_name)))
-      else:
-        logger.error("Directory appears to be missing {} file: {}".format(resources_name, siteconfig_dir))
-        sys.exit(1)
+    for c_type in cluster_types:
+      siteconfig_dir = "{}{}/siteconfigs".format(cliargs.cluster_manifests_siteconfigs, c_type)
+      logger.info("Checking {} for siteconfigs".format(siteconfig_dir))
+      temp_cluster_list = glob.glob("{}/*-siteconfig.yml".format(siteconfig_dir))
+      temp_cluster_list.sort()
+      for siteconfig_file in temp_cluster_list:
+        siteconfig_name = os.path.basename(siteconfig_file)
+        resources_name = siteconfig_name.replace("-siteconfig", "-resources")
+        if pathlib.Path("{}/{}".format(siteconfig_dir, resources_name)).is_file():
+          logger.debug("Found {}".format("{}/{}".format(siteconfig_dir, resources_name)))
+        else:
+          logger.error("Directory appears to be missing {} file: {}".format(resources_name, siteconfig_dir))
+          sys.exit(1)
+      logger.info("Discovered {} available clusters of type {} for deployment".format(len(temp_cluster_list), c_type))
+      cluster_list.extend(temp_cluster_list)
     ztp_apps = glob.glob("{}/cluster/ztp-*".format(cliargs.argocd_base_directory))
     ztp_apps.sort()
     for idx, ztp_app in enumerate(ztp_apps):
@@ -356,7 +368,7 @@ def main():
   if available_clusters == 0:
     logger.error("Zero clusters discovered.")
     sys.exit(1)
-  logger.info("Discovered {} available clusters for deployment".format(available_clusters))
+  logger.info("Total {} available clusters for deployment".format(available_clusters))
 
   if cliargs.method == "ztp":
     max_ztp_clusters = available_ztp_apps * cliargs.clusters_per_app
@@ -375,14 +387,14 @@ def main():
   #############################################################################
   total_intervals = 0
   monitor_data = {
-    "sno_applied_committed": 0,
-    "sno_init": 0,
-    "sno_notstarted": 0,
-    "sno_booted": 0,
-    "sno_discovered": 0,
-    "sno_installing": 0,
-    "sno_install_failed": 0,
-    "sno_install_completed": 0,
+    "cluster_applied_committed": 0,
+    "cluster_init": 0,
+    "cluster_notstarted": 0,
+    "node_booted": 0,
+    "node_discovered": 0,
+    "cluster_installing": 0,
+    "cluster_install_failed": 0,
+    "cluster_install_completed": 0,
     "managed": 0,
     "policy_init": 0,
     "policy_notstarted": 0,
@@ -391,7 +403,7 @@ def main():
     "policy_compliant": 0
   }
 
-  monitor_thread = SnoMonitor(talm_minor, monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
+  monitor_thread = ZTPMonitor(talm_minor, monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
   monitor_thread.start()
   if cliargs.start_delay > 0:
     phase_break()
@@ -417,7 +429,7 @@ def main():
       # Apply the clusters
       if cliargs.method == "manifests":
         for cluster in cluster_list[start_cluster_index:end_cluster_index]:
-          monitor_data["sno_applied_committed"] += 1
+          monitor_data["cluster_applied_committed"] += 1
           oc_cmd = ["oc", "apply", "-f", cluster]
           # Might need to add retries and have method to count retries
           rc, output = command(oc_cmd, cliargs.dry_run)
@@ -425,7 +437,7 @@ def main():
             logger.error("acm-deploy-load, oc apply rc: {}".format(rc))
             sys.exit(1)
       elif cliargs.method == "ztp":
-        monitor_data["sno_applied_committed"] += len(cluster_list[start_cluster_index:end_cluster_index])
+        monitor_data["cluster_applied_committed"] += len(cluster_list[start_cluster_index:end_cluster_index])
         deploy_ztp_clusters(
             cluster_list, ztp_deploy_apps, start_cluster_index, end_cluster_index, cliargs.clusters_per_app,
             cliargs.cluster_manifests_siteconfigs, cliargs.argocd_base_directory, cliargs.dry_run,
@@ -463,14 +475,14 @@ def main():
     logger.info("Waiting for clusters install completion - {}".format(int(time.time() * 1000)))
     phase_break()
     if cliargs.dry_run:
-      monitor_data["sno_applied_committed"] = 0
+      monitor_data["cluster_applied_committed"] = 0
 
     wait_logger = 4
     while True:
       time.sleep(30)
       # Break from phase if inited clusters match applied/committed clusters and failed+completed = inited clusters
-      if ((monitor_data["sno_init"] >= monitor_data["sno_applied_committed"]) and
-          ((monitor_data["sno_install_failed"] + monitor_data["sno_install_completed"]) == monitor_data["sno_init"])):
+      if ((monitor_data["cluster_init"] >= monitor_data["cluster_applied_committed"]) and
+          ((monitor_data["cluster_install_failed"] + monitor_data["cluster_install_completed"]) == monitor_data["cluster_init"])):
         logger.info("Clusters install completion")
         log_monitor_data(monitor_data, round(time.time() - start_time))
         break
@@ -501,13 +513,13 @@ def main():
     logger.info("Waiting for DU Profile completion - {}".format(int(time.time() * 1000)))
     phase_break()
     if cliargs.dry_run:
-      monitor_data["sno_applied_committed"] = 0
+      monitor_data["cluster_applied_committed"] = 0
 
     wait_logger = 4
     while True:
       time.sleep(30)
       # Break from phase if inited policy equal completed clusters and timeout+compliant policy = inited policy
-      if ((monitor_data["policy_init"] >= monitor_data["sno_install_completed"]) and
+      if ((monitor_data["policy_init"] >= monitor_data["cluster_install_completed"]) and
           ((monitor_data["policy_timedout"] + monitor_data["policy_compliant"]) == monitor_data["policy_init"])):
         logger.info("DU Profile completion")
         log_monitor_data(monitor_data, round(time.time() - start_time))

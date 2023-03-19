@@ -7,7 +7,7 @@ output_dir=${results_dir}/install-data
 mkdir -p ${output_dir}
 
 if [ "$1" == "-k" ]; then
-  echo "$(date -u) :: Getting SNO kubeconfigs"
+  echo "$(date -u) :: Getting sno kubeconfigs"
   ls /root/hv-vm/sno/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/sno/manifests/%/kubeconfig"
   echo "$(date -u) :: Getting compact cluster kubeconfigs"
   ls /root/hv-vm/compact/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/compact/manifests/%/kubeconfig"

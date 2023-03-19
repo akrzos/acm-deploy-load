@@ -24,12 +24,12 @@ from threading import Thread
 import traceback
 
 
-logger = logging.getLogger("sno-deploy-load")
+logger = logging.getLogger("acm-deploy-load")
 
 
-class SnoMonitor(Thread):
+class ZTPMonitor(Thread):
   def __init__(self, talm_minor, monitor_data, csv_file, dry_run, sample_interval):
-    super(SnoMonitor, self).__init__()
+    super(ZTPMonitor, self).__init__()
     self.talm_minor = talm_minor
     self.monitor_data = monitor_data
     self.csv_file = csv_file
@@ -38,10 +38,10 @@ class SnoMonitor(Thread):
     self.signal = True
 
   def _real_run(self):
-    logger.info("Starting SNO Monitor")
+    logger.info("Starting ZTP Monitor")
 
     with open(self.csv_file, "w") as csv_file:
-      csv_file.write("date,sno_applied,sno_init,sno_notstarted,sno_booted,sno_discovered,sno_installing,sno_install_failed,sno_install_completed,managed,policy_init,policy_notstarted,policy_applying,policy_timedout,policy_compliant\n")
+      csv_file.write("date,cluster_applied,cluster_init,cluster_notstarted,node_booted,node_discovered,cluster_installing,cluster_install_failed,cluster_install_completed,managed,policy_init,policy_notstarted,policy_applying,policy_timedout,policy_compliant\n")
 
     while self.signal:
       start_sample_time = time.time()
@@ -51,7 +51,7 @@ class SnoMonitor(Thread):
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
       aci_data = {"items": []}
       if rc != 0:
-        logger.error("sno-deploy-load, oc get agentclusterinstall rc: {}".format(rc))
+        logger.error("acm-deploy-load, oc get agentclusterinstall rc: {}".format(rc))
       else:
         if not self.dry_run:
           aci_data = json.loads(output)
@@ -61,7 +61,7 @@ class SnoMonitor(Thread):
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
       cgu_data = {"items": []}
       if rc != 0:
-        logger.error("sno-deploy-load, oc get clustergroupupgrades rc: {}".format(rc))
+        logger.error("acm-deploy-load, oc get clustergroupupgrades rc: {}".format(rc))
       else:
         if not self.dry_run:
           cgu_data = json.loads(output)
@@ -71,7 +71,7 @@ class SnoMonitor(Thread):
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
       bmh_data = {"items": []}
       if rc != 0:
-        logger.error("sno-deploy-load, oc get baremetalhost rc: {}".format(rc))
+        logger.error("acm-deploy-load, oc get baremetalhost rc: {}".format(rc))
       else:
         if not self.dry_run:
           bmh_data = json.loads(output)
@@ -81,7 +81,7 @@ class SnoMonitor(Thread):
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
       agent_data = {"items": []}
       if rc != 0:
-        logger.error("sno-deploy-load, oc get agent rc: {}".format(rc))
+        logger.error("acm-deploy-load, oc get agent rc: {}".format(rc))
       else:
         if not self.dry_run:
           agent_data = json.loads(output)
@@ -91,24 +91,24 @@ class SnoMonitor(Thread):
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
       mc_data = {"items": []}
       if rc != 0:
-        logger.error("sno-deploy-load, oc get managedcluster rc: {}".format(rc))
+        logger.error("acm-deploy-load, oc get managedcluster rc: {}".format(rc))
       else:
         if not self.dry_run:
           mc_data = json.loads(output)
 
-      sno_init = len(aci_data["items"])
-      sno_notstarted = 0
-      sno_booted = 0
-      sno_discovered = len(agent_data["items"])
-      sno_installing = 0
-      sno_install_failed = 0
-      sno_install_completed = 0
-      sno_managed = 0
-      sno_policy_init = len(cgu_data["items"])
-      sno_policy_notstarted = 0
-      sno_policy_applying = 0
-      sno_policy_timedout = 0
-      sno_policy_compliant = 0
+      cluster_init = len(aci_data["items"])
+      cluster_notstarted = 0
+      node_booted = 0
+      node_discovered = len(agent_data["items"])
+      cluster_installing = 0
+      cluster_install_failed = 0
+      cluster_install_completed = 0
+      cluster_managed = 0
+      cluster_policy_init = len(cgu_data["items"])
+      cluster_policy_notstarted = 0
+      cluster_policy_applying = 0
+      cluster_policy_timedout = 0
+      cluster_policy_compliant = 0
 
       # Parse agentclusterinstall data
       for item in aci_data["items"]:
@@ -117,15 +117,15 @@ class SnoMonitor(Thread):
             if "type" in condition:
               if condition["type"] == "Completed":
                 if "reason" in condition:
-                  logger.debug("ACI SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
+                  logger.debug("ACI: {} is {}".format(item["metadata"]["name"], condition["reason"]))
                   if condition["reason"] == "InstallationNotStarted":
-                    sno_notstarted += 1
+                    cluster_notstarted += 1
                   elif condition["reason"] == "InstallationInProgress":
-                    sno_installing += 1
+                    cluster_installing += 1
                   elif condition["reason"] == "InstallationFailed":
-                    sno_install_failed += 1
+                    cluster_install_failed += 1
                   elif condition["reason"] == "InstallationCompleted":
-                    sno_install_completed += 1
+                    cluster_install_completed += 1
                   else:
                     logger.info("aci: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
                   break
@@ -143,19 +143,19 @@ class SnoMonitor(Thread):
           for condition in item["status"]["conditions"]:
             if self.talm_minor >= 12:
               if "type" in condition:
-                logger.debug("CGU SNO: {} Condition: {}".format(item["metadata"]["name"], condition))
+                logger.debug("CGU: {} Condition: {}".format(item["metadata"]["name"], condition))
                 if (condition["type"] == "Progressing" and condition["status"] == "False"
                     and condition["reason"] != "Completed" and condition["reason"] != "TimedOut"):
-                  sno_policy_notstarted += 1
+                  cluster_policy_notstarted += 1
                   break
                 if condition["type"] == "Progressing" and condition["status"] == "True" and condition["reason"] == "InProgress":
-                  sno_policy_applying += 1
+                  cluster_policy_applying += 1
                   break
                 if condition["type"] == "Succeeded" and condition["status"] == "False" and condition["reason"] == "TimedOut":
-                  sno_policy_timedout += 1
+                  cluster_policy_timedout += 1
                   break
                 if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
-                  sno_policy_compliant += 1
+                  cluster_policy_compliant += 1
                   break
               else:
                 logger.warn("cgu: type missing from condition(item): {}".format(item))
@@ -164,15 +164,15 @@ class SnoMonitor(Thread):
               if "type" in condition:
                 if condition["type"] == "Ready":
                   if "reason" in condition:
-                    logger.debug("CGU SNO: {} is {}".format(item["metadata"]["name"], condition["reason"]))
+                    logger.debug("CGU: {} is {}".format(item["metadata"]["name"], condition["reason"]))
                     if condition["reason"] == "UpgradeNotStarted":
-                      sno_policy_notstarted += 1
+                      cluster_policy_notstarted += 1
                     elif condition["reason"] == "UpgradeNotCompleted":
-                      sno_policy_applying += 1
+                      cluster_policy_applying += 1
                     elif condition["reason"] == "UpgradeTimedOut":
-                      sno_policy_timedout += 1
+                      cluster_policy_timedout += 1
                     elif condition["reason"] == "UpgradeCompleted":
-                      sno_policy_compliant += 1
+                      cluster_policy_compliant += 1
                     else:
                       logger.info("cgu: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
                     break
@@ -188,8 +188,8 @@ class SnoMonitor(Thread):
       for item in bmh_data["items"]:
         if "status" in item and "provisioning" in item["status"] and "state" in item["status"]["provisioning"]:
           if item["status"]["provisioning"]["state"] == "provisioned":
-            logger.debug("BMH SNO: {} is {}".format(item["metadata"]["name"], item["status"]["provisioning"]["state"]))
-            sno_booted += 1
+            logger.debug("BMH: {} is {}".format(item["metadata"]["name"], item["status"]["provisioning"]["state"]))
+            node_booted += 1
         else:
           logger.warn("missing status or elements under status in baremetalhost object: {}".format(item))
 
@@ -200,9 +200,9 @@ class SnoMonitor(Thread):
             if "type" in condition:
               if condition["type"] == "ManagedClusterConditionAvailable":
                 logger.debug(
-                    "MC SNO: {} is {} is {}".format(item["metadata"]["name"], condition["type"], condition["status"]))
+                    "MC: {} is {} is {}".format(item["metadata"]["name"], condition["type"], condition["status"]))
                 if condition["status"] == "True":
-                  sno_managed += 1
+                  cluster_managed += 1
                 break
             else:
               logger.warn("mc: type missing from condition(item): {}".format(item))
@@ -210,43 +210,44 @@ class SnoMonitor(Thread):
         else:
           logger.warn("status or conditions not found in managedcluster object: {}".format(item))
 
-      self.monitor_data["sno_init"] = sno_init
-      self.monitor_data["sno_notstarted"] = sno_notstarted
-      self.monitor_data["sno_booted"] = sno_booted
-      self.monitor_data["sno_discovered"] = sno_discovered
-      self.monitor_data["sno_installing"] = sno_installing
-      self.monitor_data["sno_install_failed"] = sno_install_failed
-      self.monitor_data["sno_install_completed"] = sno_install_completed
-      self.monitor_data["managed"] = sno_managed
-      self.monitor_data["policy_init"] = sno_policy_init
-      self.monitor_data["policy_notstarted"] = sno_policy_notstarted
-      self.monitor_data["policy_applying"] = sno_policy_applying
-      self.monitor_data["policy_timedout"] = sno_policy_timedout
-      self.monitor_data["policy_compliant"] = sno_policy_compliant
+      self.monitor_data["cluster_init"] = cluster_init
+      self.monitor_data["cluster_notstarted"] = cluster_notstarted
+      self.monitor_data["node_booted"] = node_booted
+      self.monitor_data["node_discovered"] = node_discovered
+      self.monitor_data["cluster_installing"] = cluster_installing
+      self.monitor_data["cluster_install_failed"] = cluster_install_failed
+      self.monitor_data["cluster_install_completed"] = cluster_install_completed
+      self.monitor_data["managed"] = cluster_managed
+      self.monitor_data["policy_init"] = cluster_policy_init
+      self.monitor_data["policy_notstarted"] = cluster_policy_notstarted
+      self.monitor_data["policy_applying"] = cluster_policy_applying
+      self.monitor_data["policy_timedout"] = cluster_policy_timedout
+      self.monitor_data["policy_compliant"] = cluster_policy_compliant
 
       # Write csv data
       with open(self.csv_file, "a") as csv_file:
         csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
             datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'),
-            self.monitor_data["sno_applied_committed"], sno_init, sno_notstarted, sno_booted, sno_discovered,
-            sno_installing, sno_install_failed, sno_install_completed, sno_managed, sno_policy_init,
-            sno_policy_notstarted, sno_policy_applying, sno_policy_timedout, sno_policy_compliant
+            self.monitor_data["cluster_applied_committed"], cluster_init, cluster_notstarted, node_booted,
+            node_discovered, cluster_installing, cluster_install_failed, cluster_install_completed, cluster_managed,
+            cluster_policy_init, cluster_policy_notstarted, cluster_policy_applying, cluster_policy_timedout,
+            cluster_policy_compliant
         ))
 
-      logger.debug("Applied/Committed SNOs: {}".format(self.monitor_data["sno_applied_committed"]))
-      logger.debug("Initialized SNOs: {}".format(self.monitor_data["sno_init"]))
-      logger.debug("Not Started SNOs: {}".format(self.monitor_data["sno_notstarted"]))
-      logger.debug("Booted SNOs: {}".format(self.monitor_data["sno_booted"]))
-      logger.debug("Discovered SNOs: {}".format(self.monitor_data["sno_discovered"]))
-      logger.debug("Installing SNOs: {}".format(self.monitor_data["sno_installing"]))
-      logger.debug("Failed SNOs: {}".format(self.monitor_data["sno_install_failed"]))
-      logger.debug("Completed SNOs: {}".format(self.monitor_data["sno_install_completed"]))
-      logger.debug("Managed SNOs: {}".format(self.monitor_data["managed"]))
-      logger.debug("Initialized Policy SNOs: {}".format(self.monitor_data["policy_init"]))
-      logger.debug("Policy Not Started SNOs: {}".format(self.monitor_data["policy_notstarted"]))
-      logger.debug("Policy Applying SNOs: {}".format(self.monitor_data["policy_applying"]))
-      logger.debug("Policy Timedout SNOs: {}".format(self.monitor_data["policy_timedout"]))
-      logger.debug("Policy Compliant SNOs: {}".format(self.monitor_data["policy_compliant"]))
+      logger.debug("Applied/Committed Clusters: {}".format(self.monitor_data["cluster_applied_committed"]))
+      logger.debug("Initialized Clusters: {}".format(self.monitor_data["cluster_init"]))
+      logger.debug("Not Started Clusters: {}".format(self.monitor_data["cluster_notstarted"]))
+      logger.debug("Booted Nodes: {}".format(self.monitor_data["node_booted"]))
+      logger.debug("Discovered Nodes: {}".format(self.monitor_data["node_discovered"]))
+      logger.debug("Installing Clusters: {}".format(self.monitor_data["cluster_installing"]))
+      logger.debug("Failed Clusters: {}".format(self.monitor_data["cluster_install_failed"]))
+      logger.debug("Completed Clusters: {}".format(self.monitor_data["cluster_install_completed"]))
+      logger.debug("Managed Clusters: {}".format(self.monitor_data["managed"]))
+      logger.debug("Initialized Policy Clusters: {}".format(self.monitor_data["policy_init"]))
+      logger.debug("Policy Not Started Clusters: {}".format(self.monitor_data["policy_notstarted"]))
+      logger.debug("Policy Applying Clusters: {}".format(self.monitor_data["policy_applying"]))
+      logger.debug("Policy Timedout Clusters: {}".format(self.monitor_data["policy_timedout"]))
+      logger.debug("Policy Compliant Clusters: {}".format(self.monitor_data["policy_compliant"]))
 
       end_sample_time = time.time()
       sample_time = round(end_sample_time - start_sample_time, 1)

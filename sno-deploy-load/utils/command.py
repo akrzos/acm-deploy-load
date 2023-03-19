@@ -18,7 +18,7 @@ import os
 import subprocess
 import time
 
-logger = logging.getLogger("sno-deploy-load")
+logger = logging.getLogger("acm-deploy-load")
 
 
 def command(cmd, dry_run, cmd_directory="", retries=1, retry_backoff=True, no_log=False, readlines=False):

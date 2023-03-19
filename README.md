@@ -1,30 +1,30 @@
 # sno-deploy-load
 
-Tools and scripts to load and analyze ACM with SNO deployments and upgrades. SNOs are deployed via manifests or GitOps
-using Zero Touch Provisioning (ZTP).
+Tools and scripts to load and analyze ACM with cluster deployments and upgrades. Clusters are deployed via manifests or
+GitOps using Zero Touch Provisioning (ZTP).
 
 ## Workload Script
 
 ### sno-deploy-load.py
 
-Tool to load ACM with SNO deployments via manifests or GitOps ZTP
+Tool to load ACM with cluster deployments via manifests or GitOps ZTP
 
 Load/Rate Option
 
-* interval - Deploys X number of SNOs (manifests or GitOps ZTP) per Y interval time period
+* interval - Deploys X number of clusters (manifests or GitOps ZTP) per Y interval time period
 
 Phases of the Workload
 
-1. Deploy Phase - Apply Manifests or GitOps ZTP to deploy SNOs
-2. Wait for SNO Install Completion
+1. Deploy Phase - Apply Manifests or GitOps ZTP to deploy clusters
+2. Wait for Cluster Install Completion
 3. Wait for DU Profile Completion
 4. Report Card / Graphing
 
 ## Analysis Scripts
 
-Analysis scripts can be run after deploying or upgrading SNOs to understand success and performance of the system.
+Analysis scripts can be run after deploying or upgrading clusters to understand success and performance of the system.
 
-* analyze-agentclusterinstalls.py - Summarize and report count, min/avg/max, and 50/95/99 percentiles for SNO
+* analyze-agentclusterinstalls.py - Summarize and report count, min/avg/max, and 50/95/99 percentiles for cluster
 installation timing
 * analyze-clustergroupupgrades.py - Summarize and report count, min/avg/max, and 50/95/99 percentiles for ztp-install
 clustergroupupgrade custom resources

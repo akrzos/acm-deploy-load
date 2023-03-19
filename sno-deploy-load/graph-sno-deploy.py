@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Graph monitor_data.csv from sno-deploy-load.py
+# Graph monitor_data.csv from acm-deploy-load.py
 #
 #  Copyright 2022 Red Hat
 #
@@ -33,7 +33,7 @@ import time
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
-logger = logging.getLogger("graph-sno-deploy")
+logger = logging.getLogger("graph-acm-deploy")
 logging.Formatter.converter = time.gmtime
 
 
@@ -41,14 +41,14 @@ def main():
   start_time = time.time()
 
   parser = argparse.ArgumentParser(
-      description="Produce graphs from sno-deploy-load monitor data",
-      prog="graph-sno-deploy.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+      description="Produce graphs from acm-deploy-load monitor data",
+      prog="graph-acm-deploy.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # Graph Title Data
-  parser.add_argument("--acm-version", type=str, default="2.5.0", help="Sets ACM version for graph title")
+  parser.add_argument("--acm-version", type=str, default="2.8.0", help="Sets ACM version for graph title")
   parser.add_argument("--test-version", type=str, default="ZTP Scale Run 1", help="Sets test version for graph title")
-  parser.add_argument("--hub-version", type=str, default="4.10.8", help="Sets OCP Hub version for graph title")
-  parser.add_argument("--deploy-version", type=str, default="4.10.8", help="Sets OCP SNO version for graph title")
+  parser.add_argument("--hub-version", type=str, default="4.12.7", help="Sets OCP Hub version for graph title")
+  parser.add_argument("--deploy-version", type=str, default="4.12.7", help="Sets OCP deployed version for graph title")
   parser.add_argument("--wan-emulation", type=str, default="(50ms/0.02)", help="Sets WAN emulation for graph title")
 
   # Name of csv file found in results directory
@@ -60,11 +60,11 @@ def main():
   parser.add_argument("-t", "--height", type=int, default=700, help="Sets height of all graphs")
 
   # Directory to find the csv file for graphing
-  parser.add_argument("results_directory", type=str, help="The location of a sno-deploy-load results")
+  parser.add_argument("results_directory", type=str, help="The location of a acm-deploy-load results")
 
   cliargs = parser.parse_args()
 
-  logger.info("SNO Deploy Graph")
+  logger.info("ACM Deploy Graph")
   # logger.info("CLI Args: {}".format(cliargs))
   md_csv_file = "{}/{}".format(cliargs.results_directory, cliargs.monitor_data_file_name)
   if not pathlib.Path(md_csv_file).is_file():
@@ -73,48 +73,50 @@ def main():
 
   df = pd.read_csv(md_csv_file)
 
-  sno_inited = df["sno_init"].values[-1]
-  sno_completed = df["sno_install_completed"].values[-1]
+  cluster_inited = df["cluster_init"].values[-1]
+  cluster_completed = df["cluster_install_completed"].values[-1]
   managed = df["managed"].values[-1]
   policy_inited = df["policy_init"].values[-1]
   policy_compliant = df["policy_compliant"].values[-1]
 
-  title_sno = "ACM {} {} ({}/{} clusters)<br>OCP {}, SNO {}, W/E {}".format(cliargs.acm_version, cliargs.test_version,
-      sno_completed, sno_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
-  title_managed = "ACM {} {} ({}/{} clusters)<br>OCP {}, SNO {}, W/E {}".format(cliargs.acm_version,
-      cliargs.test_version, managed, sno_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
-  title_policy = "ACM {} {} ({}/{} policy)<br>OCP {}, SNO {}, W/E {}".format(cliargs.acm_version, cliargs.test_version,
-      policy_compliant, policy_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
+  title_cluster_node = "ACM {} {} ({}/{} clusters)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
+      cliargs.test_version, cluster_completed, cluster_inited, cliargs.hub_version, cliargs.deploy_version,
+      cliargs.wan_emulation)
+  title_cluster = "ACM {} {} ({}/{} clusters)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
+      cliargs.test_version, managed, cluster_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
+  title_policy = "ACM {} {} ({}/{} policy)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
+      cliargs.test_version, policy_compliant, policy_inited, cliargs.hub_version, cliargs.deploy_version,
+      cliargs.wan_emulation)
+  title_share = "ACM {} {} ({}/{} compliant clusters)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
+      cliargs.test_version, policy_compliant, cluster_inited, cliargs.hub_version, cliargs.deploy_version,
+      cliargs.wan_emulation)
 
-  y_sno = ["sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed", "sno_install_completed"]
-  y_sno2 = ["sno_applied", "sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed",
-      "sno_install_completed"]
-  y_managed = ["sno_init", "sno_install_failed", "sno_install_completed", "managed"]
-  y_policy = ["sno_init", "sno_install_completed", "managed", "policy_init", "policy_applying", "policy_timedout",
+  y_cluster_node = ["cluster_applied", "cluster_init", "node_booted", "node_discovered", "cluster_installing",
+      "cluster_install_failed", "cluster_install_completed"]
+  y_cluster = ["cluster_applied", "cluster_init", "cluster_installing", "cluster_install_failed",
+      "cluster_install_completed", "managed"]
+  y_policy = ["cluster_init", "cluster_install_completed", "managed", "policy_init", "policy_applying", "policy_timedout",
       "policy_compliant"]
-  y_share = ["sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed",
-      "sno_install_completed", "managed", "policy_applying", "policy_timedout", "policy_compliant"]
-  y_share2 = ["sno_applied", "sno_init", "sno_booted", "sno_discovered", "sno_installing", "sno_install_failed",
-      "sno_install_completed", "managed", "policy_applying", "policy_timedout", "policy_compliant"]
+  y_share = ["cluster_applied", "cluster_init", "node_booted", "node_discovered", "cluster_installing",
+      "cluster_install_failed", "cluster_install_completed", "managed", "policy_applying", "policy_timedout",
+      "policy_compliant"]
+  y_share2 = ["cluster_applied", "cluster_init", "cluster_installing", "cluster_install_failed",
+      "cluster_install_completed", "managed", "policy_applying", "policy_timedout", "policy_compliant"]
 
   l = {"value" : "# clusters", "date" : ""}
+  l2 = {"value" : "# clusters or # nodes", "date" : ""}
 
   ts = datetime.utcfromtimestamp(time.time()).strftime("%Y%m%d-%H%M%S")
 
-  logger.info("Creating Graph - {}/sno-{}.png".format(cliargs.results_directory, ts))
-  fig_sno = px.line(df, x="date", y=y_sno, labels=l, width=cliargs.width, height=cliargs.height)
-  fig_sno.update_layout(title=title_sno, legend_orientation="v")
-  fig_sno.write_image("{}/sno-{}.png".format(cliargs.results_directory, ts))
+  logger.info("Creating Graph - {}/cluster-node-{}.png".format(cliargs.results_directory, ts))
+  fig_cluster_node = px.line(df, x="date", y=y_cluster_node, labels=l2, width=cliargs.width, height=cliargs.height)
+  fig_cluster_node.update_layout(title=title_cluster_node, legend_orientation="v")
+  fig_cluster_node.write_image("{}/cluster-node-{}.png".format(cliargs.results_directory, ts))
 
-  logger.info("Creating Graph - {}/sno2-{}.png".format(cliargs.results_directory, ts))
-  fig_sno = px.line(df, x="date", y=y_sno2, labels=l, width=cliargs.width, height=cliargs.height)
-  fig_sno.update_layout(title=title_sno, legend_orientation="v")
-  fig_sno.write_image("{}/sno2-{}.png".format(cliargs.results_directory, ts))
-
-  logger.info("Creating Graph - {}/managed-{}.png".format(cliargs.results_directory, ts))
-  fig_managed = px.line(df, x="date", y=y_managed, labels=l, width=cliargs.width, height=cliargs.height)
-  fig_managed.update_layout(title=title_managed, legend_orientation="v")
-  fig_managed.write_image("{}/managed-{}.png".format(cliargs.results_directory, ts))
+  logger.info("Creating Graph - {}/cluster-{}.png".format(cliargs.results_directory, ts))
+  fig_cluster = px.line(df, x="date", y=y_cluster, labels=l, width=cliargs.width, height=cliargs.height)
+  fig_cluster.update_layout(title=title_cluster, legend_orientation="v")
+  fig_cluster.write_image("{}/cluster-{}.png".format(cliargs.results_directory, ts))
 
   logger.info("Creating Graph - {}/policy-{}.png".format(cliargs.results_directory, ts))
   fig_policy = px.line(df, x="date", y=y_policy, labels=l, width=cliargs.width, height=cliargs.height)
@@ -122,13 +124,13 @@ def main():
   fig_policy.write_image("{}/policy-{}.png".format(cliargs.results_directory, ts))
 
   logger.info("Creating Graph - {}/share-{}.png".format(cliargs.results_directory, ts))
-  fig_share = px.line(df, x="date", y=y_share, labels=l, width=cliargs.width, height=cliargs.height)
-  fig_share.update_layout(title=title_sno, legend_orientation="v")
+  fig_share = px.line(df, x="date", y=y_share, labels=l2, width=cliargs.width, height=cliargs.height)
+  fig_share.update_layout(title=title_share, legend_orientation="v")
   fig_share.write_image("{}/share-{}.png".format(cliargs.results_directory, ts))
 
   logger.info("Creating Graph - {}/share2-{}.png".format(cliargs.results_directory, ts))
   fig_share = px.line(df, x="date", y=y_share2, labels=l, width=cliargs.width, height=cliargs.height)
-  fig_share.update_layout(title=title_sno, legend_orientation="v")
+  fig_share.update_layout(title=title_share, legend_orientation="v")
   fig_share.write_image("{}/share2-{}.png".format(cliargs.results_directory, ts))
 
   end_time = time.time()

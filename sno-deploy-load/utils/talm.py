@@ -18,7 +18,7 @@ import logging
 from utils.command import command
 
 
-logger = logging.getLogger("sno-deploy-load")
+logger = logging.getLogger("acm-deploy-load")
 
 
 def detect_talm_minor(default_talm_version, dry_run):

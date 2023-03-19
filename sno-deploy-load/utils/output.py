@@ -21,8 +21,8 @@ logger = logging.getLogger("acm-deploy-load")
 
 
 def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wait_cluster_start_time,
-    wait_cluster_end_time, wait_du_profile_start_time, wait_du_profile_end_time, available_clusters, monitor_data, cliargs,
-    total_intervals, report_dir):
+    wait_cluster_end_time, wait_du_profile_start_time, wait_du_profile_end_time, available_clusters, monitor_data,
+    cliargs, total_intervals, report_dir):
 
   # Determine result data
   total_deploy_time = round(deploy_end_time - deploy_start_time)
@@ -37,16 +37,16 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
   failed_du_percent = 0
   success_overall_percent = 0
   failed_overall_percent = 0
-  if monitor_data["sno_applied_committed"] > 0:
-    success_cluster_percent = round((monitor_data["sno_install_completed"] / monitor_data["sno_applied_committed"]) * 100, 1)
+  if monitor_data["cluster_applied_committed"] > 0:
+    success_cluster_percent = round((monitor_data["cluster_install_completed"] / monitor_data["cluster_applied_committed"]) * 100, 1)
     failed_cluster_percent = round(100 - success_cluster_percent, 1)
-  if monitor_data["sno_install_completed"] > 0:
-    success_managed_percent = round((monitor_data["managed"] / monitor_data["sno_install_completed"]) * 100, 1)
+  if monitor_data["cluster_install_completed"] > 0:
+    success_managed_percent = round((monitor_data["managed"] / monitor_data["cluster_install_completed"]) * 100, 1)
     failed_managed_percent = round(100 - success_managed_percent, 1)
   if monitor_data["policy_init"] > 0:
     success_du_percent = round((monitor_data["policy_compliant"] / monitor_data["policy_init"]) * 100, 1)
     failed_du_percent = round(100 - success_du_percent, 1)
-    success_overall_percent = round((monitor_data["policy_compliant"] / monitor_data["sno_applied_committed"]) * 100, 1)
+    success_overall_percent = round((monitor_data["policy_compliant"] / monitor_data["cluster_applied_committed"]) * 100, 1)
     failed_overall_percent = round(100 - success_overall_percent, 1)
 
   # Log the report and output to report.txt in results directory
@@ -61,17 +61,17 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, " * Deployed OCP: {}".format(cliargs.deploy_version))
     log_write(report, "Deployed Cluster Results")
     log_write(report, " * Available Clusters: {}".format(available_clusters))
-    log_write(report, " * Deployed (Applied/Committed) Clusters: {}".format(monitor_data["sno_applied_committed"]))
-    log_write(report, " * Installed Clusters: {}".format(monitor_data["sno_install_completed"]))
-    log_write(report, " * Failed Clusters: {}".format(monitor_data["sno_install_failed"]))
-    if monitor_data["sno_notstarted"] > 0:
-      log_write(report, " * InstallationNotStarted Clusters: {}".format(monitor_data["sno_notstarted"]))
-    if monitor_data["sno_installing"] > 0:
-      log_write(report, " * InstallationInProgress Clusters: {}".format(monitor_data["sno_installing"]))
+    log_write(report, " * Deployed (Applied/Committed) Clusters: {}".format(monitor_data["cluster_applied_committed"]))
+    log_write(report, " * Installed Clusters: {}".format(monitor_data["cluster_install_completed"]))
+    log_write(report, " * Failed Clusters: {}".format(monitor_data["cluster_install_failed"]))
+    if monitor_data["cluster_notstarted"] > 0:
+      log_write(report, " * InstallationNotStarted Clusters: {}".format(monitor_data["cluster_notstarted"]))
+    if monitor_data["cluster_installing"] > 0:
+      log_write(report, " * InstallationInProgress Clusters: {}".format(monitor_data["cluster_installing"]))
     log_write(report, " * Cluster Successful Percent: {}%".format(success_cluster_percent))
     log_write(report, " * Cluster Failed Percent: {}%".format(failed_cluster_percent))
     log_write(report, "Managed Cluster Results")
-    log_write(report, " * Installed Clusters: {}".format(monitor_data["sno_install_completed"]))
+    log_write(report, " * Installed Clusters: {}".format(monitor_data["cluster_install_completed"]))
     log_write(report, " * Managed Clusters: {}".format(monitor_data["managed"]))
     log_write(report, " * Managed Successful Percent: {}%".format(success_managed_percent))
     log_write(report, " * Managed Failed Percent: {}%".format(failed_managed_percent))
