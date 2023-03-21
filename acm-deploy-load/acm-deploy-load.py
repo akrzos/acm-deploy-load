@@ -32,12 +32,12 @@ import logging
 import math
 import os
 import pathlib
+import random
 import shutil
 import sys
 import time
 
 # TODO:
-# * Allow randomization mix of sno, compact and standard clusters during applying/committing
 # * Discern sno, compact, and standard clusters in monitor data and report individual results
 # * Prom queries for System metric data
 # * Upgrade script orchestration and monitoring
@@ -196,6 +196,8 @@ def main():
   parser.add_argument("-s", "--start", type=int, default=0,
                       help="Cluster start index, follows array logic starting at 0 for '00001'")
   parser.add_argument("-e", "--end", type=int, default=0, help="Cluster end index (0 = total manifest count)")
+  parser.add_argument("-n", "--no-shuffle", action="store_true", default=False,
+                      help="Do not shuffle the list of discovered siteconfigs")
   parser.add_argument("--start-delay", type=int, default=15,
                       help="Delay to starting deploys, allowing monitor thread to gather data (seconds)")
   parser.add_argument("--end-delay", type=int, default=120,
@@ -376,6 +378,11 @@ def main():
     if max_ztp_clusters < available_clusters:
       logger.error("There are more clusters than expected capacity of clusters per ZTP cluster application")
       sys.exit(1)
+
+  # Now shuffle the list of siteconfigs
+  if not cliargs.no_shuffle:
+    random.shuffle(cluster_list)
+    logger.info("Randomized the cluster order: {}".format(cluster_list))
 
   # Create the results directory to store data into
   logger.debug("Creating report directory: {}".format(report_dir))
