@@ -34,7 +34,7 @@ import time
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
-logger = logging.getLogger("graph-sno-upgrade")
+logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 

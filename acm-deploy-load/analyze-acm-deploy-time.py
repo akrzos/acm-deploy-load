@@ -54,7 +54,7 @@ INDEX_POLICY_TIMEDOUT = 13
 INDEX_POLICY_COMPLIANT = 14
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
-logger = logging.getLogger("analyze-acm-deploy-time")
+logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 

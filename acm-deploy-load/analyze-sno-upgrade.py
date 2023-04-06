@@ -33,7 +33,7 @@ from utils.output import log_write
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
-logger = logging.getLogger("analyze-sno-upgrade")
+logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 # Latest defaults (2/21/2023)
