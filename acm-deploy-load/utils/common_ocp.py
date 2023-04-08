@@ -17,6 +17,7 @@ from utils.command import command
 import json
 import logging
 import time
+import sys
 
 logger = logging.getLogger("acm-deploy-load")
 
@@ -27,7 +28,7 @@ def get_ocp_version(kubeconfig):
   oc_cmd = ["oc", "--kubeconfig", kubeconfig, "version", "-o", "json"]
   rc, output = command(oc_cmd, False, no_log=True)
   if rc != 0:
-    logger.error("cluster-health, oc version rc: {}".format(rc))
+    logger.error("oc version rc: {}".format(rc))
     sys.exit(1)
   version_data = json.loads(output)
   logger.debug("Version is {}".format(version_data["openshiftVersion"]))
