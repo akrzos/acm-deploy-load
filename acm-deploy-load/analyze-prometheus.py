@@ -24,15 +24,17 @@ from utils.common_ocp import get_prometheus_token
 from utils.common_ocp import get_thanos_querier_route
 import json
 import logging
+import os
 import pandas as pd
 import plotly.express as px
+import urllib3
 import requests
 import sys
 import time
 
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # TODO:
-# * proper timestamp argparse implementation
 # * Graph cluster cpu and Memory
 # * Graph cluster disk and network
 # * OCP CPU, Memory, other?
@@ -58,7 +60,7 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
   offset = calculate_query_offset(end_ts)
 
   query_complete = query + "[" + duration + ":" + resolution + "] offset " + offset
-  logger.debug("Query: {}".format(query_complete))
+  logger.info("Query: {}".format(query_complete))
   query_endpoint = "{}/api/v1/query?query={}".format(route, query_complete)
   headers = {"Authorization": "Bearer {}".format(token)}
   # logger.debug("Query Endpoint: {}".format(query_endpoint))
@@ -90,17 +92,31 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
     fig_cluster_node = px.line(df, x="datetime", y=series, labels=l, width=1000, height=700)
     fig_cluster_node.update_layout(title=g_title, legend_orientation="v")
     fig_cluster_node.write_image("{}/{}.png".format(directory, fname))
-    with open("{}/{}.stats".format(directory, fname), "a") as stats_file:
+
+    csv_dir = os.path.join(directory, "csv")
+    stats_dir = os.path.join(directory, "stats")
+
+    with open("{}/{}.stats".format(stats_dir, fname), "a") as stats_file:
       stats_file.write(str(df.describe()))
-    df.to_csv("{}/{}.csv".format(directory, fname))
+    df.to_csv("{}/{}.csv".format(csv_dir, fname))
 
   logger.info("Completed querying and graphing data")
 
 
+def valid_datetime(datetime_arg):
+    try:
+        return datetime.strptime(datetime_arg, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        raise argparse.ArgumentTypeError("Datetime ({}) not valid! Expected format, 'YYYY-MM-DDTHH:mm:SSZ'!".format(datetime_arg))
+
+
 def main():
+  # Start time of script (Now)
   start_time = time.time()
-  # Timestamp for files generated
-  ts = datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S")
+  # Default end time for analysis is the start time of the script
+  # Default start time for analysis is start time of script minus one hour (Default analyzes one hour from now)
+  default_ap_end_time = datetime.utcfromtimestamp(start_time)
+  default_ap_start_time = datetime.utcfromtimestamp(start_time - (60 * 60))
 
   parser = argparse.ArgumentParser(
       description="Query and Graph Prometheus data off a live OpenShift cluster",
@@ -109,15 +125,10 @@ def main():
   parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
 
-  # parser.add_argument("-s", "--start-ts", type=str, default="2023-04-04T22:56:54Z",
-  #                     help="Sets start utc timestamp (Ex '2023-04-04T22:56:54Z')")
-  # parser.add_argument("-e", "--end-ts", type=str, default="2023-04-05T09:02:57Z",
-  #                     help="Sets end utc timestamp (Ex '2023-04-05T09:02:57Z')")
-
-  parser.add_argument("-s", "--start-ts", type=str, default="2023-04-04T22:56:54Z",
-                      help="Sets start utc timestamp (Ex '2023-04-04T22:56:54Z')")
-  parser.add_argument("-e", "--end-ts", type=str, default="2023-04-05T09:02:57Z",
-                      help="Sets end utc timestamp (Ex '2023-04-05T09:02:57Z')")
+  parser.add_argument("-s", "--start-ts", type=valid_datetime, default=default_ap_start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                      help="Sets start utc timestamp")
+  parser.add_argument("-e", "--end-ts", type=valid_datetime, default=default_ap_end_time.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                      help="Sets end utc timestamp")
 
   # Quick way to add small amount of time to front and end of test period
   parser.add_argument("-b", "--buffer-minutes", type=int, default=5,
@@ -140,23 +151,17 @@ def main():
   logger.info("Analyze Prometheus")
 
   # Set/Validate start and end timestamps for queries
-  q_end_ts = ""
-  q_start_ts = ""
   buffer_time = (cliargs.buffer_minutes * 60)
-  if cliargs.end_ts:
-    logger.info("End timestamp set: {}".format(cliargs.end_ts))
-    q_end_ts = int(time.mktime(datetime.strptime(cliargs.end_ts, "%Y-%m-%dT%H:%M:%SZ").timetuple())) + buffer_time
-    logger.info("End timestamp Unix: {}".format(q_end_ts))
-  else:
-    q_end_ts = int(start_time)
-    logger.info("End timestamp not set, defaulting to now: {}".format(q_end_ts))
-  if cliargs.start_ts:
-    logger.info("Start timestamp set: {}".format(cliargs.start_ts))
-    q_start_ts = int(time.mktime(datetime.strptime(cliargs.start_ts, "%Y-%m-%dT%H:%M:%SZ").timetuple())) - buffer_time
-    logger.info("Start timestamp Unix: {}".format(q_start_ts))
-  else:
-    q_start_ts = q_end_ts - (60 * 60)
-    logger.info("Start timestamp not set, defaulting end timestamp - 1 hour: {}".format(q_start_ts))
+  logger.info("Buffer time set to: {} seconds".format(buffer_time))
+
+  logger.info("Start timestamp set: {}".format(cliargs.start_ts))
+  q_start_ts = int(time.mktime(cliargs.start_ts.timetuple())) - buffer_time
+  logger.info("Start timestamp Unix: {}".format(q_start_ts))
+
+  logger.info("End timestamp set: {}".format(cliargs.end_ts))
+  q_end_ts = int(time.mktime(cliargs.end_ts.timetuple())) + buffer_time
+  logger.info("End timestamp Unix: {}".format(q_end_ts))
+
   analyze_duration = q_end_ts - q_start_ts
   # Ensure start/end are at least 5 minutes apart
   if analyze_duration <= (60 * 5):
@@ -180,29 +185,36 @@ def main():
     logger.error("Could not obtain the prometheus token")
     sys.exit(1)
 
+  # Create the results directories to store data into
+  report_dir = os.path.join(cliargs.results_directory, "pa-{}".format(datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S")))
+  csv_dir = os.path.join(report_dir, "csv")
+  stats_dir = os.path.join(report_dir, "stats")
+  logger.debug("Creating report directory: {}".format(report_dir))
+  os.mkdir(report_dir)
+  os.mkdir(csv_dir)
+  os.mkdir(stats_dir)
+
   ############################################################################
   # Cluster / Node Queries
   ############################################################################
   # Cluster CPU graph
   q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='', namespace!='minio'})"
-  query_thanos(route, q, "Cluster", token, q_end_ts, q_duration, cliargs.results_directory, "cpu-cluster-{}".format(ts), "Cluster CPU Cores Usage", "CPU (Cores)")
+  query_thanos(route, q, "Cluster", token, q_end_ts, q_duration, report_dir, "cpu-cluster", "Cluster CPU Cores Usage", "CPU (Cores)")
   # Node CPU graphs
   q = "sum by(node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio'})"
-  query_thanos(route, q, "node", token, q_end_ts, q_duration, cliargs.results_directory, "cpu-node-{}".format(ts), "Node CPU Cores Usage", "CPU (Cores)")
-
+  query_thanos(route, q, "node", token, q_end_ts, q_duration, report_dir, "cpu-node", "Node CPU Cores Usage", "CPU (Cores)")
 
   ############################################################################
   # ACM Queries
   ############################################################################
   # ACM CPU graphs
   q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio',namespace=~'open-cluster-management.*|multicluster-engine'})"
-  query_thanos(route, q, "ACM", token, q_end_ts, q_duration, cliargs.results_directory, "cpu-acm-{}".format(ts), "ACM CPU Cores Usage", "CPU (Cores)")
+  query_thanos(route, q, "ACM", token, q_end_ts, q_duration, report_dir, "cpu-acm", "ACM CPU Cores Usage", "CPU (Cores)")
 
 
   # Managedcluster objects
   query = "apiserver_storage_objects{resource=~'managedclusters.cluster.open-cluster-management.io'}"
-  query_thanos(route, query, "instance", token, q_end_ts, q_duration, cliargs.results_directory, "acm-mc-{}".format(ts), "Managedcluster Objects", "Count")
-
+  query_thanos(route, query, "instance", token, q_end_ts, q_duration, report_dir, "acm-mc", "Managedcluster Objects", "Count")
 
 
   end_time = time.time()
