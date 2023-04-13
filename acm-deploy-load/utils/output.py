@@ -87,6 +87,7 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, "Deployed Cluster Orchestration")
     log_write(report, " * Method: {}".format(cliargs.rate))
     log_write(report, " * Cluster Start: {} End: {}".format(cliargs.start, cliargs.end))
+    log_write(report, " * {} cluster(s) per ZTP argoCD application".format(cliargs.clusters_per_app))
     if cliargs.rate == "interval":
       log_write(report, " * {} cluster(s) per {}s interval".format(cliargs.batch, cliargs.interval))
       log_write(report, " * Actual Intervals: {}".format(total_intervals))
