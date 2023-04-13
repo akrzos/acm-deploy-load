@@ -51,6 +51,112 @@ def calculate_query_offset(end_ts):
   return "{}m".format(int(offset_minutes))
 
 
+def acm_queries(report_dir, route, token, end_ts, duration, w, h):
+  # ACM CPU/Memory
+  sub_report_dir = os.path.join(report_dir, "acm")
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace=~'open-cluster-management.*|multicluster-engine'})"
+  query_thanos(route, q, "ACM", token, end_ts, duration, sub_report_dir, "cpu-acm", "ACM CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace=~'open-cluster-management.*|multicluster-engine'})"
+  query_thanos(route, q, "ACM", token, end_ts, duration, sub_report_dir, "mem-acm", "ACM Memory Usage", "MEM", w, h)
+
+  # ACM Open-cluster-management namespace CPU/Memory
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management'})"
+  query_thanos(route, q, "ACM - open-cluster-management", token, end_ts, duration, sub_report_dir, "cpu-acm-ocm", "ACM open-cluster-management CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='open-cluster-management'})"
+  query_thanos(route, q, "ACM - open-cluster-management", token, end_ts, duration, sub_report_dir, "mem-acm-ocm", "ACM open-cluster-management Memory Usage", "MEM", w, h)
+
+  # ACM MCE CPU/Memory
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='multicluster-engine'})"
+  query_thanos(route, q, "ACM - MCE", token, end_ts, duration, sub_report_dir, "cpu-acm-mce", "ACM MCE CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='multicluster-engine'})"
+  query_thanos(route, q, "ACM - MCE", token, end_ts, duration, sub_report_dir, "mem-acm-mce", "ACM MCE Memory Usage", "MEM", w, h)
+
+  # ACM MCE Assisted-installer CPU/Memory
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='multicluster-engine',pod=~'assisted-service.*'})"
+  query_thanos(route, q, "ACM - MCE Assisted-Installer", token, end_ts, duration, sub_report_dir, "cpu-acm-mce-ai", "ACM Assisted-Installer CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='multicluster-engine',pod=~'assisted-service.*'})"
+  query_thanos(route, q, "ACM - MCE Assisted-Installer", token, end_ts, duration, sub_report_dir, "mem-acm-mce-ai", "ACM MCE Memory Usage", "MEM", w, h)
+
+  # ACM Observability CPU/Memory
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management-observability'})"
+  query_thanos(route, q, "ACM - Observability", token, end_ts, duration, sub_report_dir, "cpu-acm-obs", "ACM Observability CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='open-cluster-management-observability'})"
+  query_thanos(route, q, "ACM - Observability", token, end_ts, duration, sub_report_dir, "mem-acm-obs", "ACM Observability Memory Usage", "MEM", w, h)
+
+  q = "sum(container_memory_working_set_bytes{cluster='',namespace='open-cluster-management-observability', pod=~'observability-thanos-receive-default.*', container!=''})"
+  query_thanos(route, q, "ACM - Observability Receiver", token, end_ts, duration, sub_report_dir, "mem-acm-obs-rcv-total", "ACM Observability Receiver Memory Usage", "MEM", w, h)
+  q = "sum by (pod) (container_memory_working_set_bytes{cluster='',namespace='open-cluster-management-observability', pod=~'observability-thanos-receive-default.*', container!=''})"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "mem-acm-obs-rcv-pod", "ACM Observability Receiver Memory Usage", "MEM", w, h)
+
+  # ACM Search CPU/Memory
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management',pod=~'search.*'})"
+  query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "cpu-acm-search", "ACM Search CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='open-cluster-management',pod=~'search.*'})"
+  query_thanos(route, q, "ACM - Observability", token, end_ts, duration, sub_report_dir, "mem-acm-obs", "ACM Observability Memory Usage", "MEM", w, h)
+
+  # Managedcluster objects
+  q = "apiserver_storage_objects{resource=~'managedclusters.cluster.open-cluster-management.io'}"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "acm-mc", "Managedcluster Objects", "Count", w, h)
+
+
+def cluster_node_queries(report_dir, route, token, end_ts, duration, w, h):
+  # Cluster CPU/Memory
+  sub_report_dir = os.path.join(report_dir, "cluster")
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='', namespace!='minio'})"
+  query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "cpu-cluster", "Cluster CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
+  query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "mem-cluster", "Cluster Memory Usage", "MEM", w, h)
+  # Node CPU/Memory
+  sub_report_dir = os.path.join(report_dir, "node")
+  q = "sum by(node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio'})"
+  query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "cpu-node", "Node CPU Cores Usage", "CPU", w, h)
+  q = "sum by(node) (container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
+  query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "mem-node", "Node Memory Usage", "MEM", w, h)
+
+
+def etcd_queries(report_dir, route, token, end_ts, duration, w, h):
+  sub_report_dir = os.path.join(report_dir, "etcd")
+  q = "etcd_mvcc_db_total_size_in_bytes"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "db-size", "ETCD DB Size", "DISK", w, h)
+  q = "etcd_mvcc_db_total_size_in_use_in_bytes"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "db-size-in-use", "ETCD DB Size In-use", "DISK", w, h)
+  q = "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job='etcd'}[5m])) by (instance, pod, le))"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "fsync-duration", "ETCD Disk Sync Duration", "Seconds", w, h)
+  q = "histogram_quantile(0.99, irate(etcd_disk_backend_commit_duration_seconds_bucket[5m]))"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "backend-commit-duration", "ETCD Backend Commit Duration", "Seconds", w, h)
+  q = "changes(etcd_server_leader_changes_seen_total{job='etcd'}[1d])"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "total-leader-elections", "ETCD Leader Elections Per Day", "Count", w, h)
+  q = "max by (pod) (etcd_server_leader_changes_seen_total)"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "leader-changes", "ETCD Max Leader Changes", "Count", w, h)
+  q = "histogram_quantile(0.99, irate(etcd_network_peer_round_trip_time_seconds_bucket[1m]))"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "peer-roundtrip-time", "ETCD Peer Roundtrip Time", "Seconds", w, h)
+
+
+def ocp_queries(report_dir, route, token, end_ts, duration, w, h):
+  ocp_namespaces = [
+    "openshift-apiserver",
+    "openshift-controller-manager",
+    "openshift-etcd",
+    "openshift-gitops",
+    "openshift-ingress",
+    "openshift-kni-infra",
+    "openshift-kube-apiserver",
+    "openshift-kube-controller-manager",
+    "openshift-kube-scheduler",
+    "openshift-local-storage",
+    "openshift-monitoring"
+  ]
+  sub_report_dir = os.path.join(report_dir, "ocp")
+  for ns in ocp_namespaces:
+    q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='" + ns + "'})"
+    query_thanos(route, q, ns, token, end_ts, duration, sub_report_dir, "cpu-{}".format(ns), "{} CPU Cores Usage".format(ns), "CPU", w, h)
+    q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='" + ns + "'})"
+    query_thanos(route, q, ns, token, end_ts, duration, sub_report_dir, "mem-{}".format(ns), "{} CPU Cores Usage".format(ns), "MEM", w, h)
+
+  q = "(sum by (container) (kube_pod_container_status_restarts_total) > 3)"
+  query_thanos(route, q, "container", token, end_ts, duration, sub_report_dir, "pod-restarts", "Pod Restarts > 3", "Count", w, h)
+
+
 def query_thanos(route, query, series_label, token, end_ts, duration, directory, fname, g_title, y_unit, g_width, g_height, resolution="1m"):
   logger.info("Querying data")
 
@@ -231,114 +337,13 @@ def main():
     os.mkdir(csv_dir)
     os.mkdir(stats_dir)
 
-  ############################################################################
-  # Cluster/Node Queries
-  ############################################################################
-  # Cluster CPU/Memory
-  sub_report_dir = os.path.join(report_dir, "cluster")
-  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='', namespace!='minio'})"
-  query_thanos(route, q, "cluster", token, q_end_ts, q_duration, sub_report_dir, "cpu-cluster", "Cluster CPU Cores Usage", "CPU", w, h)
-  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
-  query_thanos(route, q, "cluster", token, q_end_ts, q_duration, sub_report_dir, "mem-cluster", "Cluster Memory Usage", "MEM", w, h)
-  # Node CPU/Memory
-  sub_report_dir = os.path.join(report_dir, "node")
-  q = "sum by(node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio'})"
-  query_thanos(route, q, "node", token, q_end_ts, q_duration, sub_report_dir, "cpu-node", "Node CPU Cores Usage", "CPU", w, h)
-  q = "sum by(node) (container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
-  query_thanos(route, q, "node", token, q_end_ts, q_duration, sub_report_dir, "mem-node", "Node Memory Usage", "MEM", w, h)
+  cluster_node_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
-  ############################################################################
-  # etcd Queries
-  ############################################################################
-  sub_report_dir = os.path.join(report_dir, "etcd")
-  q = "etcd_mvcc_db_total_size_in_bytes"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "db-size", "ETCD DB Size", "DISK", w, h)
-  q = "etcd_mvcc_db_total_size_in_use_in_bytes"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "db-size-in-use", "ETCD DB Size In-use", "DISK", w, h)
-  q = "histogram_quantile(0.99, sum(rate(etcd_disk_wal_fsync_duration_seconds_bucket{job='etcd'}[5m])) by (instance, pod, le))"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "fsync-duration", "ETCD Disk Sync Duration", "Seconds", w, h)
-  q = "histogram_quantile(0.99, irate(etcd_disk_backend_commit_duration_seconds_bucket[5m]))"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "backend-commit-duration", "ETCD Backend Commit Duration", "Seconds", w, h)
-  q = "changes(etcd_server_leader_changes_seen_total{job='etcd'}[1d])"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "total-leader-elections", "ETCD Leader Elections Per Day", "Count", w, h)
-  q = "max by (pod) (etcd_server_leader_changes_seen_total)"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "leader-changes", "ETCD Max Leader Changes", "Count", w, h)
-  q = "histogram_quantile(0.99, irate(etcd_network_peer_round_trip_time_seconds_bucket[1m]))"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "peer-roundtrip-time", "ETCD Peer Roundtrip Time", "Seconds", w, h)
+  etcd_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
-  ############################################################################
-  # OCP Namespaces Queries
-  ############################################################################
-  ocp_namespaces = [
-    "openshift-apiserver",
-    "openshift-controller-manager",
-    "openshift-etcd",
-    "openshift-gitops",
-    "openshift-ingress",
-    "openshift-kni-infra",
-    "openshift-kube-apiserver",
-    "openshift-kube-controller-manager",
-    "openshift-kube-scheduler",
-    "openshift-local-storage",
-    "openshift-monitoring"
-  ]
-  sub_report_dir = os.path.join(report_dir, "ocp")
-  for ns in ocp_namespaces:
-    q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='" + ns + "'})"
-    query_thanos(route, q, ns, token, q_end_ts, q_duration, sub_report_dir, "cpu-{}".format(ns), "{} CPU Cores Usage".format(ns), "CPU", w, h)
-    q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='" + ns + "'})"
-    query_thanos(route, q, ns, token, q_end_ts, q_duration, sub_report_dir, "mem-{}".format(ns), "{} CPU Cores Usage".format(ns), "MEM", w, h)
+  ocp_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
-  ############################################################################
-  # ACM Queries
-  ############################################################################
-  # ACM CPU/Memory
-  sub_report_dir = os.path.join(report_dir, "acm")
-  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace=~'open-cluster-management.*|multicluster-engine'})"
-  query_thanos(route, q, "ACM", token, q_end_ts, q_duration, sub_report_dir, "cpu-acm", "ACM CPU Cores Usage", "CPU", w, h)
-  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace=~'open-cluster-management.*|multicluster-engine'})"
-  query_thanos(route, q, "ACM", token, q_end_ts, q_duration, sub_report_dir, "mem-acm", "ACM Memory Usage", "MEM", w, h)
-
-  # ACM Open-cluster-management namespace CPU/Memory
-  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management'})"
-  query_thanos(route, q, "ACM - open-cluster-management", token, q_end_ts, q_duration, sub_report_dir, "cpu-acm-ocm", "ACM open-cluster-management CPU Cores Usage", "CPU", w, h)
-  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='open-cluster-management'})"
-  query_thanos(route, q, "ACM - open-cluster-management", token, q_end_ts, q_duration, sub_report_dir, "mem-acm-ocm", "ACM open-cluster-management Memory Usage", "MEM", w, h)
-
-  # ACM MCE CPU/Memory
-  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='multicluster-engine'})"
-  query_thanos(route, q, "ACM - MCE", token, q_end_ts, q_duration, sub_report_dir, "cpu-acm-mce", "ACM MCE CPU Cores Usage", "CPU", w, h)
-  q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='multicluster-engine'})"
-  query_thanos(route, q, "ACM - MCE", token, q_end_ts, q_duration, sub_report_dir, "mem-acm-mce", "ACM MCE Memory Usage", "MEM", w, h)
-
-  # ACM MCE Assisted-installer CPU/Memory
-  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='multicluster-engine',pod=~'assisted-service.*'})"
-  query_thanos(route, q, "ACM - MCE Assisted-Installer", token, q_end_ts, q_duration, sub_report_dir, "cpu-acm-mce-ai", "ACM Assisted-Installer CPU Cores Usage", "CPU", w, h)
-  q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='multicluster-engine',pod=~'assisted-service.*'})"
-  query_thanos(route, q, "ACM - MCE Assisted-Installer", token, q_end_ts, q_duration, sub_report_dir, "mem-acm-mce-ai", "ACM MCE Memory Usage", "MEM", w, h)
-
-  # ACM Observability CPU/Memory
-  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management-observability'})"
-  query_thanos(route, q, "ACM - Observability", token, q_end_ts, q_duration, sub_report_dir, "cpu-acm-obs", "ACM Observability CPU Cores Usage", "CPU", w, h)
-  q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='open-cluster-management-observability'})"
-  query_thanos(route, q, "ACM - Observability", token, q_end_ts, q_duration, sub_report_dir, "mem-acm-obs", "ACM Observability Memory Usage", "MEM", w, h)
-
-  q = "sum(container_memory_working_set_bytes{cluster='',namespace='open-cluster-management-observability', pod=~'observability-thanos-receive-default.*', container!=''})"
-  query_thanos(route, q, "ACM - Observability Receiver", token, q_end_ts, q_duration, sub_report_dir, "mem-acm-obs-rcv-total", "ACM Observability Receiver Memory Usage", "MEM", w, h)
-  q = "sum by (pod) (container_memory_working_set_bytes{cluster='',namespace='open-cluster-management-observability', pod=~'observability-thanos-receive-default.*', container!=''})"
-  query_thanos(route, q, "pod", token, q_end_ts, q_duration, sub_report_dir, "mem-acm-obs-rcv-pod", "ACM Observability Receiver Memory Usage", "MEM", w, h)
-
-
-  # ACM Search CPU/Memory
-  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management',pod=~'search.*'})"
-  query_thanos(route, q, "ACM - Search", token, q_end_ts, q_duration, sub_report_dir, "cpu-acm-search", "ACM Search CPU Cores Usage", "CPU", w, h)
-  q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='open-cluster-management',pod=~'search.*'})"
-  query_thanos(route, q, "ACM - Observability", token, q_end_ts, q_duration, sub_report_dir, "mem-acm-obs", "ACM Observability Memory Usage", "MEM", w, h)
-
-  # Managedcluster objects
-  q = "apiserver_storage_objects{resource=~'managedclusters.cluster.open-cluster-management.io'}"
-  query_thanos(route, q, "instance", token, q_end_ts, q_duration, sub_report_dir, "acm-mc", "Managedcluster Objects", "Count", w, h)
-
+  acm_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
