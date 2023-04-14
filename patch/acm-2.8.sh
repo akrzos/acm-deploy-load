@@ -16,4 +16,19 @@ oc patch search -n open-cluster-management search-v2-operator --type json -p '[{
 echo "Sleep 10"
 sleep 10
 
+echo "Applying ACM observability tuning"
+echo "Applying ACM observability memcache tuning"
+oc patch mco -n open-cluster-management-observability observability --type json -p '[{"op": "add", "path": "/spec/advanced", "value": {"queryFrontendMemcached": {"connectionLimit": 10240, "maxItemSize": "10m", "memoryLimitMb": 10240}, "storeMemcached": {"connectionLimit": 10240, "maxItemSize": "10m", "memoryLimitMb": 10240}}}]'
+echo "Sleep 10"
+sleep 10
+# echo "Applying ACM observability store replicas 6 tuning"
+# oc patch mco -n open-cluster-management-observability observability --type json -p '[{"op": "add", "path": "/spec/advanced/store", "value": {"replicas": "6"}}]'
+# echo "Sleep 10"
+# sleep 10
+echo "Applying ACM observability route timeout tuning"
+oc annotate route -n open-cluster-management-observability rbac-query-proxy --overwrite haproxy.router.openshift.io/timeout=300s
+oc annotate route -n open-cluster-management-observability observatorium-api --overwrite haproxy.router.openshift.io/timeout=300s
+echo "Sleep 10"
+sleep 10
+
 echo "Done Patching"
