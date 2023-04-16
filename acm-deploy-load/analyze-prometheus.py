@@ -92,7 +92,7 @@ def acm_queries(report_dir, route, token, end_ts, duration, w, h):
   q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management',pod=~'search.*'})"
   query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "cpu-acm-search", "ACM Search CPU Cores Usage", "CPU", w, h)
   q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='open-cluster-management',pod=~'search.*'})"
-  query_thanos(route, q, "ACM - Observability", token, end_ts, duration, sub_report_dir, "mem-acm-obs", "ACM Observability Memory Usage", "MEM", w, h)
+  query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "mem-acm-search", "ACM Search Memory Usage", "MEM", w, h)
 
   # Managedcluster objects
   q = "apiserver_storage_objects{resource=~'managedclusters.cluster.open-cluster-management.io'}"
@@ -153,6 +153,13 @@ def ocp_queries(report_dir, route, token, end_ts, duration, w, h):
     q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='" + ns + "'})"
     query_thanos(route, q, ns, token, end_ts, duration, sub_report_dir, "mem-{}".format(ns), "{} CPU Cores Usage".format(ns), "MEM", w, h)
 
+    # Needs work as pods don't always "survive" complete query time period
+    # # split by pods in the namespaces
+    # q = "sum by (pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='" + ns + "'})"
+    # query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "cpu-{}-pod".format(ns), "{} CPU Cores Usage".format(ns), "CPU", w, h)
+    # q = "sum by (pod) (container_memory_working_set_bytes{cluster='',namespace!='minio', container!='',namespace='" + ns + "'})"
+    # query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "mem-{}-pod".format(ns), "{} CPU Cores Usage".format(ns), "MEM", w, h)
+
   q = "(sum by (container) (kube_pod_container_status_restarts_total) > 3)"
   query_thanos(route, q, "container", token, end_ts, duration, sub_report_dir, "pod-restarts", "Pod Restarts > 3", "Count", w, h)
 
@@ -187,8 +194,17 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
     frame = {}
     series = []
     for metric in query_data["data"]["result"]:
+      # Get/set the datetime series
       if len(frame) == 0:
         frame["datetime"] = pd.Series([datetime.utcfromtimestamp(x[0]) for x in metric["values"]], name="datetime")
+      # Need to rework how datetime series is generated and how series are merged together.  Pods come and go and their
+      # series of data is shorter and not paded, so we need some sort of "merge" method instead of picking the largest.
+      # Also not all series start at the same datetime. ugh
+      # else:
+      #   logger.debug("length of metrics: {}, length of previous datetime: {}".format(len(metric["values"]), len(frame["datetime"])))
+      #   if len(metric["values"]) > len(frame["datetime"]):
+      #     frame["datetime"] = pd.Series([datetime.utcfromtimestamp(x[0]) for x in metric["values"]], name="datetime")
+      # Get the metrics series
       if series_label not in metric["metric"]:
         logger.debug("Num of values: {}".format(len(metric["values"])))
         if y_unit == "MEM":
