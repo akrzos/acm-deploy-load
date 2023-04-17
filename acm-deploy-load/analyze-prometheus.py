@@ -18,6 +18,7 @@
 
 # import prometheus_api_client
 import argparse
+from collections import OrderedDict
 from datetime import datetime
 from utils.common_ocp import get_ocp_version
 from utils.common_ocp import get_prometheus_token
@@ -44,6 +45,21 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
 logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
+
+
+ocp_namespaces = [
+  "openshift-apiserver",
+  "openshift-controller-manager",
+  "openshift-etcd",
+  "openshift-gitops",
+  "openshift-ingress",
+  "openshift-kni-infra",
+  "openshift-kube-apiserver",
+  "openshift-kube-controller-manager",
+  "openshift-kube-scheduler",
+  "openshift-local-storage",
+  "openshift-monitoring"
+]
 
 
 def calculate_query_offset(end_ts):
@@ -144,19 +160,6 @@ def etcd_queries(report_dir, route, token, end_ts, duration, w, h):
 
 
 def ocp_queries(report_dir, route, token, end_ts, duration, w, h):
-  ocp_namespaces = [
-    "openshift-apiserver",
-    "openshift-controller-manager",
-    "openshift-etcd",
-    "openshift-gitops",
-    "openshift-ingress",
-    "openshift-kni-infra",
-    "openshift-kube-apiserver",
-    "openshift-kube-controller-manager",
-    "openshift-kube-scheduler",
-    "openshift-local-storage",
-    "openshift-monitoring"
-  ]
   sub_report_dir = os.path.join(report_dir, "ocp")
   for ns in ocp_namespaces:
     q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='" + ns + "'})"
@@ -265,6 +268,80 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
   logger.info("Completed querying and graphing data")
 
 
+def generate_report_html(report_dir):
+  cluster_data = [
+    "cpu-cluster",
+    "mem-cluster",
+    "net-rcv-cluster",
+    "net-xmt-cluster"
+  ]
+  node_data = [
+    "cpu-node",
+    "mem-node",
+    "net-rcv-node",
+    "net-xmt-node"
+  ]
+  etcd_data = [
+    "db-size",
+    "db-size-in-use",
+    "fsync-duration",
+    "backend-commit-duration",
+    "total-leader-elections",
+    "leader-changes",
+    "peer-roundtrip-time"
+  ]
+  ocp_data = []
+  for ns in ocp_namespaces:
+    ocp_data.append("cpu-{}".format(ns))
+    ocp_data.append("mem-{}".format(ns))
+  acm_data = [
+    "acm-mc",
+    "cpu-acm",
+    "mem-acm",
+    "cpu-acm-ocm",
+    "mem-acm-ocm",
+    "cpu-acm-mce",
+    "mem-acm-mce",
+    "cpu-acm-mce-ai",
+    "mem-acm-mce-ai",
+    "cpu-acm-obs",
+    "mem-acm-obs",
+    "mem-acm-obs-rcv-total",
+    "mem-acm-obs-rcv-pod",
+    "cpu-acm-search",
+    "mem-acm-search"
+  ]
+
+  report_data = OrderedDict()
+  report_data["cluster"] = cluster_data
+  report_data["node"] = node_data
+  report_data["etcd"] = etcd_data
+  report_data["ocp"] = ocp_data
+  report_data["acm"] = acm_data
+
+  logger.info("Generating report html file")
+  with open("{}/report.html".format(report_dir), "w") as html_file:
+    html_file.write("<html>\n")
+    html_file.write("<head><title>Prometheus Analysis Report</title></head>")
+    html_file.write("<body>\n")
+    html_file.write("<b>Prometheus Analysis Report</b><br>\n")
+    for i, (section, v) in enumerate(report_data.items()):
+      if i == len(report_data) - 1:
+        html_file.write("<a href='#{0}'>{0} section</a>\n".format(section))
+      else:
+        html_file.write("<a href='#{0}'>{0} section</a> | \n".format(section))
+    for section in report_data:
+      html_file.write("<h2 id='{0}'>{0} section</h2>\n".format(section))
+      for dp in report_data[section]:
+        html_file.write("<a href='{0}/{1}.png'><img src='{0}/{1}.png' width='700' height='500'></a><br>\n".format(section,dp))
+        html_file.write("<a href='{0}/{1}.png'>graph</a> | \n".format(section, dp))
+        html_file.write("<a href='{0}/stats/{1}.stats'>stats</a> | \n".format(section, dp))
+        html_file.write("<a href='{0}/csv/{1}.csv'>csv</a><br>\n".format(section, dp))
+    html_file.write("</body>\n")
+    html_file.write("</html>\n")
+  logger.info("Finished generating report html file")
+
+
 def valid_datetime(datetime_arg):
     try:
         return datetime.strptime(datetime_arg, "%Y-%m-%dT%H:%M:%SZ")
@@ -363,14 +440,18 @@ def main():
   report_dir = os.path.join(cliargs.results_directory, "{}-{}".format(cliargs.prefix,
       datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S")))
   logger.debug("Creating report directory: {}".format(report_dir))
-  os.mkdir(report_dir)
+  if not os.path.exists(report_dir):
+    os.mkdir(report_dir)
   for dir in directories:
     sub_report_dir = os.path.join(report_dir, dir)
     csv_dir = os.path.join(sub_report_dir, "csv")
     stats_dir = os.path.join(sub_report_dir, "stats")
-    os.mkdir(sub_report_dir)
-    os.mkdir(csv_dir)
-    os.mkdir(stats_dir)
+    if not os.path.exists(sub_report_dir):
+      os.mkdir(sub_report_dir)
+    if not os.path.exists(csv_dir):
+      os.mkdir(csv_dir)
+    if not os.path.exists(stats_dir):
+      os.mkdir(stats_dir)
 
   cluster_node_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
@@ -379,6 +460,8 @@ def main():
   ocp_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
   acm_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
+
+  generate_report_html(report_dir)
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
