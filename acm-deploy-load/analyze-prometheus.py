@@ -35,7 +35,8 @@ import time
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # TODO:
-# * Graph cluster disk and network
+# * Fix timeseries with coming and leaving pods
+# * Graph cluster/node disk (throughput, iops, util)
 # * OCP CPU, Memory, split on pods?
 # * Total pod count??, total object count?
 # * ACM Disk?, Network?
@@ -106,12 +107,22 @@ def cluster_node_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "cpu-cluster", "Cluster CPU Cores Usage", "CPU", w, h)
   q = "sum(container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
   query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "mem-cluster", "Cluster Memory Usage", "MEM", w, h)
+  q = "sum(irate(container_network_receive_bytes_total{cluster='',namespace!=''}[5m]))"
+  query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "net-rcv-cluster", "Cluster Network Receive Usage", "NET", w, h)
+  q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace!=''}[5m]))"
+  query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "net-xmt-cluster", "Cluster Network Transmit Usage", "NET", w, h)
+
   # Node CPU/Memory
   sub_report_dir = os.path.join(report_dir, "node")
   q = "sum by(node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio'})"
   query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "cpu-node", "Node CPU Cores Usage", "CPU", w, h)
   q = "sum by(node) (container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
   query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "mem-node", "Node Memory Usage", "MEM", w, h)
+  q = "sum by (instance) (instance:node_network_receive_bytes_excluding_lo:rate1m{cluster=''})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-rcv-node", "Node Network Receive Usage", "NET", w, h)
+  q = "sum by (instance) (instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster=''})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-xmt-node", "Node Network Transmit Usage", "NET", w, h)
+
 
 
 def etcd_queries(report_dir, route, token, end_ts, duration, w, h):
@@ -171,6 +182,8 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
     y_title = "CPU (Cores)"
   elif y_unit == "MEM":
     y_title = "Memory (GiB)"
+  elif y_unit == "NET":
+    y_title = "Network (MiB)"
   elif y_unit == "DISK":
     y_title = "Disk (GB)"
   else:
@@ -210,6 +223,9 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
         if y_unit == "MEM":
           bytes_to_gib = 1024 * 1024 * 1024
           frame[series_label] = pd.Series([float(x[1]) / bytes_to_gib for x in metric["values"]], name=series_label)
+        elif y_unit == "NET":
+          bytes_to_mib = 1024 * 1024
+          frame[series_label] = pd.Series([float(x[1]) / bytes_to_mib for x in metric["values"]], name=series_label)
         elif y_unit == "DISK":
           bytes_to_gb = 1000 * 1000 * 1000
           frame[series_label] = pd.Series([float(x[1]) / bytes_to_gb for x in metric["values"]], name=series_label)
@@ -221,6 +237,9 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
         if y_unit == "MEM":
           bytes_to_gib = 1024 * 1024 * 1024
           frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_gib for x in metric["values"]], name=metric["metric"][series_label])
+        elif y_unit == "NET":
+          bytes_to_mib = 1024 * 1024
+          frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_mib for x in metric["values"]], name=metric["metric"][series_label])
         elif y_unit == "DISK":
           bytes_to_gb = 1000 * 1000 * 1000
           frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_gb for x in metric["values"]], name=metric["metric"][series_label])

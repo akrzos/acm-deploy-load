@@ -56,10 +56,10 @@ kubectl promdump -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /p
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-mkdir -p ${results_dir}
 start_time=$(grep "Start Time:" ${results_dir}/report.txt | awk '{print $4}')
 end_time=$(grep "End Time:" ${results_dir}/report.txt | awk '{print $4}')
-time ./acm-deploy-load/analyze-prometheus.py -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
+time ./acm-deploy-load/analyze-prometheus.py -p "deploy-pa" -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
+echo "time ./acm-deploy-load/analyze-prometheus.py -p deploy-pa -s ${start_time} -e ${end_time} ${results_dir}" | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 

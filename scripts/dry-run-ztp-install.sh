@@ -64,7 +64,7 @@ echo "##########################################################################
 
 start_time=$(grep "Start Time:" ${results_dir}/report.txt | awk '{print $4}')
 end_time=$(grep "End Time:" ${results_dir}/report.txt | awk '{print $4}')
-time ./acm-deploy-load/analyze-prometheus.py -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
+time ./acm-deploy-load/analyze-prometheus.py -p "deploy-pa" -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
