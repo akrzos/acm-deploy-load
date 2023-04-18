@@ -37,7 +37,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # TODO:
 # * Fix timeseries with coming and leaving pods
-# * Graph cluster/node disk (throughput, iops, util)
+# * Graph cluster/node disk (throughput, iops)
 # * Node kubelet, crio cpu/memory
 # * OCP CPU, Memory, split on pods?
 # * Total pod count??, total object count?
@@ -80,6 +80,9 @@ cluster_data = [
 node_data = [
   "cpu-node",
   "mem-node",
+  "disk-util-root-node",
+  "disk-util-etcd-node",
+  "disk-util-containers-node",
   "net-rcv-node",
   "net-xmt-node"
 ]
@@ -262,12 +265,18 @@ def etcd_queries(report_dir, route, token, end_ts, duration, w, h):
 
 
 def node_queries(report_dir, route, token, end_ts, duration, w, h):
-  # Node CPU/Memory
+  # Node CPU/Memory/Disk/Network
   sub_report_dir = os.path.join(report_dir, "node")
   q = "sum by(node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio'})"
   query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "cpu-node", "Node CPU Cores Usage", "CPU", w, h)
   q = "sum by(node) (container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
   query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "mem-node", "Node Memory Usage", "MEM", w, h)
+  q = "sum by (instance) (node_filesystem_size_bytes{mountpoint='/'} - node_filesystem_avail_bytes{mountpoint='/'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "disk-util-root-node", "Node / usage", "DISK", w, h)
+  q = "sum by (instance) (node_filesystem_size_bytes{mountpoint='/var/lib/etcd'} - node_filesystem_avail_bytes{mountpoint='/var/lib/etcd'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "disk-util-etcd-node", "Node /var/lib/etcd usage", "DISK", w, h)
+  q = "sum by (instance) (node_filesystem_size_bytes{mountpoint='/var/lib/containers'} - node_filesystem_avail_bytes{mountpoint='/var/lib/containers'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "disk-util-containers-node", "Node /var/lib/containers usage", "DISK", w, h)
   q = "sum by (instance) (instance:node_network_receive_bytes_excluding_lo:rate1m{cluster=''})"
   query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-rcv-node", "Node Network Receive Throughput", "NET", w, h)
   q = "sum by (instance) (instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster=''})"
