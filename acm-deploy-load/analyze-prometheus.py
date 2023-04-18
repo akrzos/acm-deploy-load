@@ -49,6 +49,14 @@ logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 
+directories = [
+  "cluster",
+  "node",
+  "etcd",
+  "ocp",
+  "resource",
+  "acm"
+]
 ocp_namespaces = [
   "openshift-apiserver",
   "openshift-controller-manager",
@@ -88,6 +96,20 @@ ocp_data = []
 for ns in ocp_namespaces:
   ocp_data.append("cpu-{}".format(ns))
   ocp_data.append("mem-{}".format(ns))
+resource_data = [
+  "all",
+  "namespaces",
+  "serviceaccounts",
+  "pods",
+  "replicasets",
+  "deployments",
+  "daemonsets",
+  "statefulsets",
+  "endpoints",
+  "services",
+  "configmaps",
+  "secrets"
+]
 acm_data = [
   "acm-mc",
   "acm-mcaddons",
@@ -207,6 +229,7 @@ def acm_queries(report_dir, route, token, end_ts, duration, w, h):
   q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace='open-cluster-management',pod=~'search.*'}[5m]))"
   query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "net-xmt-acm-mce", "ACM Search Network Transmit Throughput", "NET", w, h)
 
+
 def cluster_queries(report_dir, route, token, end_ts, duration, w, h):
   # Cluster CPU/Memory
   sub_report_dir = os.path.join(report_dir, "cluster")
@@ -218,20 +241,6 @@ def cluster_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "net-rcv-cluster", "Cluster Network Receive Throughput", "NET", w, h)
   q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace!=''}[5m]))"
   query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "net-xmt-cluster", "Cluster Network Transmit Throughput", "NET", w, h)
-
-
-def node_queries(report_dir, route, token, end_ts, duration, w, h):
-  # Node CPU/Memory
-  sub_report_dir = os.path.join(report_dir, "node")
-  q = "sum by(node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio'})"
-  query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "cpu-node", "Node CPU Cores Usage", "CPU", w, h)
-  q = "sum by(node) (container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
-  query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "mem-node", "Node Memory Usage", "MEM", w, h)
-  q = "sum by (instance) (instance:node_network_receive_bytes_excluding_lo:rate1m{cluster=''})"
-  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-rcv-node", "Node Network Receive Throughput", "NET", w, h)
-  q = "sum by (instance) (instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster=''})"
-  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-xmt-node", "Node Network Transmit Throughput", "NET", w, h)
-
 
 
 def etcd_queries(report_dir, route, token, end_ts, duration, w, h):
@@ -252,6 +261,19 @@ def etcd_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "peer-roundtrip-time", "ETCD Peer Roundtrip Time", "Seconds", w, h)
 
 
+def node_queries(report_dir, route, token, end_ts, duration, w, h):
+  # Node CPU/Memory
+  sub_report_dir = os.path.join(report_dir, "node")
+  q = "sum by(node) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace!='minio'})"
+  query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "cpu-node", "Node CPU Cores Usage", "CPU", w, h)
+  q = "sum by(node) (container_memory_working_set_bytes{cluster='',namespace!='minio', container!=''})"
+  query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "mem-node", "Node Memory Usage", "MEM", w, h)
+  q = "sum by (instance) (instance:node_network_receive_bytes_excluding_lo:rate1m{cluster=''})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-rcv-node", "Node Network Receive Throughput", "NET", w, h)
+  q = "sum by (instance) (instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster=''})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-xmt-node", "Node Network Transmit Throughput", "NET", w, h)
+
+
 def ocp_queries(report_dir, route, token, end_ts, duration, w, h):
   sub_report_dir = os.path.join(report_dir, "ocp")
   for ns in ocp_namespaces:
@@ -269,6 +291,34 @@ def ocp_queries(report_dir, route, token, end_ts, duration, w, h):
 
   q = "(sum by (container) (kube_pod_container_status_restarts_total) > 3)"
   query_thanos(route, q, "container", token, end_ts, duration, sub_report_dir, "pod-restarts", "Pod Restarts > 3", "Count", w, h)
+
+
+def resource_queries(report_dir, route, token, end_ts, duration, w, h):
+  sub_report_dir = os.path.join(report_dir, "resource")
+  q = "sum by (instance) (apiserver_storage_objects)"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "all", "All Resources", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='namespaces'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "namespaces", "Namespaces", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='serviceaccounts'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "serviceaccounts", "Serviceaccounts", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='pods'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "pods", "Pods", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='replicasets.apps'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "replicasets", "Replicasets", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='deployments.apps'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "deployments", "Deployments", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='daemonsets.apps'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "daemonsets", "Daemonsets", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='statefulsets.apps'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "statefulsets", "Statefulsets", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='endpoints'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "endpoints", "Endpoints", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='services'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "services", "Services", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='configmaps'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "configmaps", "Configmaps", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='secrets'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "secrets", "Secrets", "Count", w, h)
 
 
 def query_thanos(route, query, series_label, token, end_ts, duration, directory, fname, g_title, y_unit, g_width, g_height, resolution="1m"):
@@ -368,6 +418,7 @@ def generate_report_html(report_dir):
   report_data["node"] = node_data
   report_data["etcd"] = etcd_data
   report_data["ocp"] = ocp_data
+  report_data["resource"] = resource_data
   report_data["acm"] = acm_data
 
   logger.info("Generating report html file")
@@ -481,13 +532,6 @@ def main():
     sys.exit(1)
 
   # Create the results directories to store data into
-  directories = [
-    "acm",
-    "cluster",
-    "etcd",
-    "node",
-    "ocp",
-  ]
   report_dir = os.path.join(cliargs.results_directory, "{}-{}".format(cliargs.prefix,
       datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S")))
   logger.debug("Creating report directory: {}".format(report_dir))
@@ -511,6 +555,8 @@ def main():
   etcd_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
   ocp_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
+
+  resource_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
   acm_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
