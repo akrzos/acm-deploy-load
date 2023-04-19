@@ -20,6 +20,7 @@
 import argparse
 from collections import OrderedDict
 from datetime import datetime
+from datetime import timedelta
 from utils.common_ocp import get_ocp_version
 from utils.common_ocp import get_prometheus_token
 from utils.common_ocp import get_thanos_querier_route
@@ -529,7 +530,8 @@ def main():
     logger.error("Start/End timestamps are too close")
     sys.exit(1)
   q_duration = "{}m".format(int(analyze_duration / 60))
-  logger.info("Examining duration {}s : {}".format(analyze_duration, q_duration))
+  logger.info("Examining duration {}s :: {}".format(analyze_duration, str(timedelta(seconds=analyze_duration))))
+  logger.info("Query duration: {}".format(q_duration))
   # Finished with start/end time
 
   version = get_ocp_version(cliargs.kubeconfig)
