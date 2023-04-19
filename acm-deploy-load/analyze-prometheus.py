@@ -108,6 +108,8 @@ resource_data = [
   "deployments",
   "daemonsets",
   "statefulsets",
+  "jobs",
+  "cronjobs",
   "endpoints",
   "services",
   "configmaps",
@@ -320,6 +322,10 @@ def resource_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "daemonsets", "Daemonsets", "Count", w, h)
   q = "sum by (instance) (apiserver_storage_objects{resource='statefulsets.apps'})"
   query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "statefulsets", "Statefulsets", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='jobs.batch'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "jobs", "Jobs", "Count", w, h)
+  q = "sum by (instance) (apiserver_storage_objects{resource='cronjobs.batch'})"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "cronjobs", "Cronjobs", "Count", w, h)
   q = "sum by (instance) (apiserver_storage_objects{resource='endpoints'})"
   query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "endpoints", "Endpoints", "Count", w, h)
   q = "sum by (instance) (apiserver_storage_objects{resource='services'})"
