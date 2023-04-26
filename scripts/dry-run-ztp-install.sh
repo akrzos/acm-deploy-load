@@ -19,6 +19,7 @@ log_file="dr-${ts}.log"
 # test_ver="ZTP Scale Run ${iteration}"
 # hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
 # cluster_ocp=$(grep "imageSetRef:" /root/hv-vm/*/manifests/*00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
+# cluster_ocp=$(grep "clusterImageSetNameRef:" /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 1 | awk '{print $NF}' | sed 's/openshift-//')
 
 # Dry run "overrides"
 acm_ver="ACM Version Dry Run"

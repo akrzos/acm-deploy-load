@@ -18,7 +18,8 @@ log_file="iz-1000-${ts}.log"
 acm_ver=$(cat /root/rhacm-deploy/deploy/snapshot.ver)
 test_ver="ZTP Scale Run ${iteration}"
 hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
-cluster_ocp=$(grep "imageSetRef:" /root/hv-vm/*/manifests/*00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
+# cluster_ocp=$(grep "imageSetRef:" /root/hv-vm/*/manifests/*00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
+cluster_ocp=$(grep "clusterImageSetNameRef:" /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 1 | awk '{print $NF}' | sed 's/openshift-//')
 
 time ./acm-deploy-load/acm-deploy-load.py --acm-version "${acm_ver}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --deploy-version "${cluster_ocp}" --wan-emulation "${wan_em}" -e 1000 --clusters-per-app ${clusters_per_app} -w -i 60 -t int-ztp-${clusters_per_app}-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} ztp 2>&1 | tee ${log_file}
 
