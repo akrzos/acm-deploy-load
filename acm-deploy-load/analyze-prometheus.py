@@ -100,6 +100,7 @@ ocp_data = []
 for ns in ocp_namespaces:
   ocp_data.append("cpu-{}".format(ns))
   ocp_data.append("mem-{}".format(ns))
+ocp_data.append("pod-restarts")
 resource_data = [
   "all",
   "namespaces",
@@ -208,7 +209,7 @@ def acm_queries(report_dir, route, token, end_ts, duration, w, h):
   q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='multicluster-engine',pod=~'assisted-service.*'})"
   query_thanos(route, q, "ACM - MCE Assisted-Installer", token, end_ts, duration, sub_report_dir, "cpu-acm-mce-ai", "ACM Assisted-Installer CPU Cores Usage", "CPU", w, h)
   q = "sum(container_memory_working_set_bytes{cluster='', container!='',namespace='multicluster-engine',pod=~'assisted-service.*'})"
-  query_thanos(route, q, "ACM - MCE Assisted-Installer", token, end_ts, duration, sub_report_dir, "mem-acm-mce-ai", "ACM MCE Memory Usage", "MEM", w, h)
+  query_thanos(route, q, "ACM - MCE Assisted-Installer", token, end_ts, duration, sub_report_dir, "mem-acm-mce-ai", "ACM Assisted-Installer Memory Usage", "MEM", w, h)
 
   # ACM Observability CPU/Memory/Network
   q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management-observability'})"
