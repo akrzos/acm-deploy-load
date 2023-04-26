@@ -8,11 +8,11 @@ mkdir -p ${output_dir}
 
 if [ "$1" == "-k" ]; then
   echo "$(date -u) :: Getting sno cluster kubeconfigs"
-  ls /root/hv-vm/sno/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/sno/manifests/%/kubeconfig"
+  ls /root/hv-vm/sno/manifests/ | xargs -I % sh -c "mkdir -p /root/hv-vm/kc/% ;oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/kc/%/kubeconfig"
   echo "$(date -u) :: Getting compact cluster kubeconfigs"
-  ls /root/hv-vm/compact/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/compact/manifests/%/kubeconfig"
+  ls /root/hv-vm/compact/manifests/ | xargs -I % sh -c "mkdir -p /root/hv-vm/kc/%; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/kc/%/kubeconfig"
   echo "$(date -u) :: Getting standard cluster kubeconfigs"
-  ls /root/hv-vm/standard/manifests/ | xargs -I % sh -c "oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/standard/manifests/%/kubeconfig"
+  ls /root/hv-vm/standard/manifests/ | xargs -I % sh -c "mkdir -p /root/hv-vm/kc/%; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/kc/%/kubeconfig"
 fi
 
 echo "$(date -u) :: Collecting namespaces, nodes and pod data"
@@ -72,76 +72,63 @@ oc get clustergroupupgrades -n ztp-install -o yaml > ${output_dir}/cgu.yaml
 cat ${output_dir}/cgu.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/cgu.status_count
 cat ${output_dir}/cgu.status | grep "TimedOut"  | awk '{print $1}' > ${output_dir}/cgu.TimedOut
 
-echo "$(date -u) :: Inspecting failed SNO installs"
-truncate -s 0 ${output_dir}/sno-install-failures
-
+echo "$(date -u) :: Inspecting failed cluster installs"
+truncate -s 0 ${output_dir}/cluster-install-failures
 for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
   echo "$(date -u) :: Checking cluster ${cluster}"
-  export KUBECONFIG=/root/hv-vm/sno/manifests/${cluster}/kubeconfig
+  export KUBECONFIG=/root/hv-vm/kc/${cluster}/kubeconfig
   if ! oc get pods 2>/dev/null >/dev/null; then
-    if ssh core@${cluster} sudo crictl logs $(ssh core@$cluster sudo crictl ps -a --name '^kube-apiserver$' -q 2>/dev/null | head -1) 2>&1 | grep "ca-bundle.crt: no such file or directory" -q; then
-        echo "CaBundleCrt-Bz2017860 $cluster" >> ${output_dir}/sno-install-failures
+    # needs adjustment for compact/standard
+    if ssh core@${cluster} uptime 2>/dev/null >/dev/null; then
+        echo "$cluster APIDown" | tee -a ${output_dir}/cluster-install-failures
         continue
     fi
-    if ssh core@${cluster} sudo journalctl -u kubelet 2>&1 | grep "unable to destroy cgroup paths"  -q; then
-        echo "SystemdTimeout-Bz2094952 $cluster" >> ${output_dir}/sno-install-failures
-        continue
-    fi
-    echo "Offline $cluster" >> ${output_dir}/sno-install-failures
+    echo "$cluster Offline" | tee -a ${output_dir}/cluster-install-failures
     continue
   fi
-  if oc get pods -n openshift-apiserver -oyaml | grep -q ContainerStatusUnknown; then
-      echo "ContainerStatusUnknown-bz2092940 $cluster" >> ${output_dir}/sno-install-failures
-      continue
+  if oc get clusterversion -o json version | jq '.status.conditions[] | select(.status=="True") | select(.type=="Progressing").message ' | egrep "Working towards|some cluster operators are not available|MultipleErrors" -q; then
+    echo "$cluster ManyOperatorsIncomplete" | tee -a ${output_dir}/cluster-install-failures
+    continue
   fi
-  if oc get pods -n openshift-oauth-apiserver -oyaml | grep -q ContainerStatusUnknown; then
-      echo "ContainerStatusUnknown-bz2092940 $cluster" >> ${output_dir}/sno-install-failures
-      continue
+  failure_found=false
+  echo -n "$cluster " | tee -a ${output_dir}/cluster-install-failures
+  ceo_available=$(oc get co etcd -o json | jq -r '.status.conditions[] | select(.type=="Available").status')
+  ceo_degraded=$(oc get co etcd -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
+  mco_degraded=$(oc get co machine-config -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
+  ks_degraded=$(oc get co kube-scheduler -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
+  olm_degraded=$(oc get co operator-lifecycle-manager -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
+  if [ $ceo_available == "False" ]; then
+    # https://issues.redhat.com/browse/OCPBUGS-12475
+    echo -n "EctdOperatorUnavailable " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
   fi
-  if oc get pods -A | grep -E '(openshift-apiserver|openshift-authentication|openshift-oauth-apiserver|package-server-manager|cluster-storage-operator-)' | grep -q Crash; then
-      echo "BadOVN-Bz2092907 $cluster" >> ${output_dir}/sno-install-failures
-      continue
+  if [ $ceo_degraded == "True" ]; then
+    echo -n "EctdOperatorDegraded " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
   fi
-  if oc get pods -A | grep openshift-authentication | grep -q Crash; then
-      echo "BadOVN-Bz2092907 $cluster" >> ${output_dir}/sno-install-failures
-      continue
+  if [ $mco_degraded == "True" ]; then
+    # https://issues.redhat.com/browse/OCPBUGS-12741
+    echo -n "MCODegraded " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
   fi
-  if oc get pods -n openshift-authentication 2>/dev/null | grep -q ContainerCreating; then
-      echo "AuthContainerCreating-BZ2016115 $cluster" >> ${output_dir}/sno-install-failures
-      continue
+  if [ $olm_degraded == "True" ]; then
+    echo -n "OLMDegraded " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
   fi
-  if oc get co monitoring -ojson  | jq '.status.conditions[] | select(.type == "Degraded").message' -r | grep 'Grafana Deployment failed' -q; then
-      echo "BadOVN $cluster" >> ${output_dir}/sno-install-failures
-      continue
+  if [ $ks_degraded == "True" ]; then
+    echo -n "KubeSchedulerDegraded " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
   fi
-  if oc get co machine-config  -ojson | jq '.status.conditions[]? | select(.type=="Degraded").message' | grep -q "waitForControllerConfigToBeCompleted"; then
-      echo "WeirdMCO $cluster" >> ${output_dir}/sno-install-failures
-      continue
+  if $failure_found ; then
+    echo "" | tee -a ${output_dir}/cluster-install-failures
+  else
+    # Sometimes a cluster is actually installed or seems installed by the time this script has completed
+    # Alternatively this could be a new install failure type
+    echo "Else" | tee -a ${output_dir}/cluster-install-failures
   fi
-  if oc get co machine-config  -ojson | jq '.status.conditions[]? | select(.type=="Degraded").message' | grep -q "waitForDeploymentRollout"; then
-      echo "WeirdMCO2 $cluster" >> ${output_dir}/sno-install-failures
-      continue
-  fi
-  if [[ $(oc get co -ojson | jq -r '[.items[] | select((.status.conditions[]? | select(.type == "Available").status) == "False").metadata.name] | length') == "1" && $(oc get co -ojson | jq -r '.items[] | select((.status.conditions[]? | select(.type == "Available").status) == "False").metadata.name') == "console" ]]; then
-      echo "BadConsole $cluster" >> ${output_dir}/sno-install-failures
-      continue
-  fi
-  if ! oc logs -n openshift-kube-controller-manager kube-controller-manager-$cluster kube-controller-manager 2>/dev/null 1>/dev/null; then
-      echo "DeadKubeControllerManager-Bz2082628 $cluster" >> ${output_dir}/sno-install-failures
-      continue
-  fi
-  if [[ $(oc get pods -A -ojson | jq '[.items[] | select(.status.phase == "Pending").metadata.name] | length') > 10 ]]; then
-      echo "LotsOfPending-bz2093013 $cluster" >> ${output_dir}/sno-install-failures
-      continue
-  fi
-  if [[ $(oc get co -ojson | jq -r '[.items[] | select((.status.conditions[]? | select(.type == "Available").status) == "False").metadata.name] | length') == "0" ]]; then
-      echo "EventuallyOkay $cluster" >> ${output_dir}/sno-install-failures
-      continue
-  fi
-  echo "Else $cluster" >> ${output_dir}/sno-install-failures
 done
+cat ${output_dir}/cluster-install-failures | awk '{$1=""; print $0}' | sort | uniq -c > ${output_dir}/cluster-install-failures.failure_count
 
-cat ${output_dir}/sno-install-failures | awk '{print $1}' | sort | uniq -c > ${output_dir}/sno-install-failures.failure_count
 
 echo "$(date -u) :: Inspecting TimedOut CGUs"
 mkdir -p ${output_dir}/cgu-failures
