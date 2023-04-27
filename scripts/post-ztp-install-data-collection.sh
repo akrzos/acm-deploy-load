@@ -103,6 +103,7 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
     failure_found=true
   fi
   if [ $ceo_degraded == "True" ]; then
+    # https://issues.redhat.com/browse/OCPBUGS-12853
     echo -n "EctdOperatorDegraded " | tee -a ${output_dir}/cluster-install-failures
     failure_found=true
   fi

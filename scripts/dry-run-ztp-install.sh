@@ -18,8 +18,8 @@ log_file="dr-${ts}.log"
 # acm_ver=$(cat /root/rhacm-deploy/deploy/snapshot.ver)
 # test_ver="ZTP Scale Run ${iteration}"
 # hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
-# cluster_ocp=$(grep "imageSetRef:" /root/hv-vm/*/manifests/*00001/manifest.yml -A 1 | grep "name" | awk '{print $NF}' | sed 's/openshift-//')
-# cluster_ocp=$(grep "clusterImageSetNameRef:" /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 1 | awk '{print $NF}' | sed 's/openshift-//')
+# grep will cause error code 141 since it prints only the first match
+# cluster_ocp=$(cat /root/hv-vm/*/siteconfigs/*-siteconfig.yml | grep "clusterImageSetNameRef:" -m 1 | awk '{print $NF}' | sed 's/openshift-//' || if [[ $? -eq 141 ]]; then true; else exit $?; fi)
 
 # Dry run "overrides"
 acm_ver="ACM Version Dry Run"
