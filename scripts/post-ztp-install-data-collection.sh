@@ -87,6 +87,7 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
     continue
   fi
   if oc get clusterversion -o json version | jq '.status.conditions[] | select(.status=="True") | select(.type=="Progressing").message ' | egrep "Working towards|some cluster operators are not available|MultipleErrors" -q; then
+    # https://issues.redhat.com/browse/OCPBUGS-12881
     echo "$cluster ManyOperatorsIncomplete" | tee -a ${output_dir}/cluster-install-failures
     continue
   fi
