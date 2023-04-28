@@ -56,7 +56,8 @@ directories = [
   "etcd",
   "ocp",
   "resource",
-  "acm"
+  "acm",
+  "talm"
 ]
 ocp_namespaces = [
   "openshift-apiserver",
@@ -148,6 +149,13 @@ acm_data = [
   "cpu-acm-search",
   "mem-acm-search"
 ]
+talm_data = [
+  "talm-cgu",
+  "cpu-talm",
+  "mem-talm",
+  # "net-rcv-talm",
+  # "net-xmt-talm"
+]
 
 
 def calculate_query_offset(end_ts):
@@ -183,7 +191,6 @@ def acm_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "ACM", token, end_ts, duration, sub_report_dir, "net-rcv-acm", "ACM Network Receive Throughput", "NET", w, h)
   q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace=~'open-cluster-management.*|multicluster-engine'}[5m]))"
   query_thanos(route, q, "ACM", token, end_ts, duration, sub_report_dir, "net-xmt-acm", "ACM Network Transmit Throughput", "NET", w, h)
-
 
   # ACM Open-cluster-management namespace CPU/Memory/Network
   q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management'})"
@@ -338,6 +345,23 @@ def resource_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "secrets", "Secrets", "Count", w, h)
 
 
+def talm_queries(report_dir, route, token, end_ts, duration, w, h):
+  sub_report_dir = os.path.join(report_dir, "talm")
+  q = "apiserver_storage_objects{resource='clustergroupupgrades.ran.openshift.io'}"
+  query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "talm-cgu", "ClusterGroupUpgrades Objects", "Count", w, h)
+
+  # TALM CPU/Memory/Network
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace=~'openshift-cluster-group-upgrades'})"
+  query_thanos(route, q, "TALM", token, end_ts, duration, sub_report_dir, "cpu-talm", "TALM CPU Cores Usage", "CPU", w, h)
+  q = "sum(container_memory_working_set_bytes{cluster='',container!='',namespace=~'openshift-cluster-group-upgrades'})"
+  query_thanos(route, q, "TALM", token, end_ts, duration, sub_report_dir, "mem-talm", "TALM Memory Usage", "MEM", w, h)
+  # network appears so minimal that it's nothing
+  # q = "sum(irate(container_network_receive_bytes_total{cluster='',namespace=~'openshift-cluster-group-upgrades'}[5m]))"
+  # query_thanos(route, q, "TALM", token, end_ts, duration, sub_report_dir, "net-rcv-talm", "TALM Network Receive Throughput", "NET", w, h)
+  # q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace=~'openshift-cluster-group-upgrades'}[5m]))"
+  # query_thanos(route, q, "TALM", token, end_ts, duration, sub_report_dir, "net-xmt-talm", "TALM Network Transmit Throughput", "NET", w, h)
+
+
 def query_thanos(route, query, series_label, token, end_ts, duration, directory, fname, g_title, y_unit, g_width, g_height, resolution="1m"):
   logger.info("Querying data")
 
@@ -437,6 +461,7 @@ def generate_report_html(report_dir):
   report_data["ocp"] = ocp_data
   report_data["resource"] = resource_data
   report_data["acm"] = acm_data
+  report_data["talm"] = talm_data
 
   logger.info("Generating report html file")
   with open("{}/report.html".format(report_dir), "w") as html_file:
@@ -577,6 +602,8 @@ def main():
   resource_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
   acm_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
+
+  talm_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 
   generate_report_html(report_dir)
 
