@@ -37,6 +37,7 @@ import time
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # TODO:
+# * 4.13 vs 4.12 queries? (Seems network usage query returning empty)
 # * Fix timeseries with coming and leaving pods
 # * Graph cluster/node disk (throughput, iops)
 # * Node kubelet, crio cpu/memory

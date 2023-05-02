@@ -139,6 +139,9 @@ class ZTPMonitor(Thread):
 
       # Parse clustergroupupgrades data
       for item in cgu_data["items"]:
+        if item["metadata"]["name"] == "local-cluster":
+          logger.debug("cgu: Skipping local-cluster")
+          continue
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
             if self.talm_minor >= 12:
@@ -195,6 +198,9 @@ class ZTPMonitor(Thread):
 
       # Parse managedcluster data
       for item in mc_data["items"]:
+        if item["metadata"]["name"] == "local-cluster":
+          logger.debug("cgu: Skipping local-cluster")
+          continue
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
             if "type" in condition:
