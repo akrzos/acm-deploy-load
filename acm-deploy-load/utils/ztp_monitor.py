@@ -104,7 +104,7 @@ class ZTPMonitor(Thread):
       cluster_install_failed = 0
       cluster_install_completed = 0
       cluster_managed = 0
-      cluster_policy_init = len(cgu_data["items"])
+      cluster_policy_init = 0
       cluster_policy_notstarted = 0
       cluster_policy_applying = 0
       cluster_policy_timedout = 0
@@ -142,6 +142,7 @@ class ZTPMonitor(Thread):
         if item["metadata"]["name"] == "local-cluster":
           logger.debug("cgu: Skipping local-cluster")
           continue
+        cluster_policy_init += 1
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
             if self.talm_minor >= 12:
