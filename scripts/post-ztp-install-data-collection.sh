@@ -100,12 +100,12 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
   olm_degraded=$(oc get co operator-lifecycle-manager -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
   if [ $ceo_available == "False" ]; then
     # https://issues.redhat.com/browse/OCPBUGS-12475
-    echo -n "EctdOperatorUnavailable " | tee -a ${output_dir}/cluster-install-failures
+    echo -n "EtcdOperatorUnavailable " | tee -a ${output_dir}/cluster-install-failures
     failure_found=true
   fi
   if [ $ceo_degraded == "True" ]; then
     # https://issues.redhat.com/browse/OCPBUGS-12853
-    echo -n "EctdOperatorDegraded " | tee -a ${output_dir}/cluster-install-failures
+    echo -n "EtcdOperatorDegraded " | tee -a ${output_dir}/cluster-install-failures
     failure_found=true
   fi
   if [ $mco_degraded == "True" ]; then
