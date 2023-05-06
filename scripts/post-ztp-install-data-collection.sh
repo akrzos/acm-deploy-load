@@ -137,7 +137,7 @@ mkdir -p ${output_dir}/cgu-failures
 
 for cluster in $(cat ${output_dir}/cgu.TimedOut); do
   echo "$(date -u) :: Checking cluster ${cluster}"
-  export KUBECONFIG=/root/hv-vm/sno/manifests/${cluster}/kubeconfig
+  export KUBECONFIG=/root/hv-vm/kc/${cluster}/kubeconfig
   mkdir -p ${output_dir}/cgu-failures/${cluster}
 
   oc get pods -A > ${output_dir}/cgu-failures/${cluster}/pods
