@@ -63,7 +63,8 @@ def main():
     sys.exit(1)
   cgu_data = json.loads(output)
 
-  cgus_total = len(cgu_data["items"])
+  cgus_total = 0
+  cgu_lc_skipped = False
   cgu_conditions = {}
   cgus_create_time = ""
   cgus_precache_done = ""
@@ -78,6 +79,11 @@ def main():
 
   for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
+    if cgu_name.lower() == "local-cluster":
+      logger.info("Skipping local-cluster")
+      cgu_lc_skipped = True
+      continue
+    cgus_total += 1
     cgu_status = "unknown"
 
     # Determine earliest creationTimestamp for the cgus in this namespace
@@ -190,6 +196,8 @@ def main():
     log_write(stats_file, "#############################################")
     log_write(stats_file, "Stats on clustergroupupgrades CRs in namespace {}".format(cliargs.namespace))
     log_write(stats_file, "Total CGUs - {}".format(cgus_total))
+    if cgu_lc_skipped:
+      log_write(stats_file, "Skipped local-cluster CGU")
     for condition in cgu_conditions:
       log_write(stats_file, "CGUs with {}: {} - {}%".format(condition, cgu_conditions[condition], round((cgu_conditions[condition] / cgus_total) * 100, 1)))
     log_write(stats_file, "Earliest CGU creationTimestamp: {}".format(cgus_create_time))
