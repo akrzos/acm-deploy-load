@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Graph time-series csv from analyze-sno-clusterversion script
+# Graph time-series csv from analyze-clusterversion.py script
 #
 #  Copyright 2022 Red Hat
 #
@@ -42,8 +42,8 @@ def main():
   start_time = time.time()
 
   parser = argparse.ArgumentParser(
-      description="Graph SNOs clusterversion data",
-      prog="graph-sno-clusterversion.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+      description="Graph deployed cluster's clusterversion data",
+      prog="graph-clusterversion.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # Graph size
   parser.add_argument("-w", "--width", type=int, default=1000, help="Sets width of all graphs")
@@ -53,11 +53,11 @@ def main():
                       help="Buffers start/end time stamps of graphs in minutes")
 
   # The path to the csv file to split into graphs
-  parser.add_argument("data_file", type=str, help="The path to the sno-clusterversion csv file to be graphed")
+  parser.add_argument("data_file", type=str, help="The path to the clusterversion csv file to be graphed")
 
   cliargs = parser.parse_args()
 
-  logger.info("Graph sno-clusterversion data")
+  logger.info("Graph analyzed clusterversion data")
   # logger.info("CLI Args: {}".format(cliargs))
   if not pathlib.Path(cliargs.data_file).is_file():
     logger.error("File not found: {}".format(cliargs.data_file))
@@ -71,11 +71,11 @@ def main():
   logger.info("Base graph name: {}".format(base_file_name))
 
   # Find start/end time for csv file and all recorded clusterversions
-  sno_clusterversions = OrderedDict()
+  clusterversions = OrderedDict()
   csv_start_time = ""
   csv_end_time = ""
-  with open(cliargs.data_file, "r") as sno_cv_csv:
-    csv_reader = reader(sno_cv_csv)
+  with open(cliargs.data_file, "r") as cluster_cv_csv:
+    csv_reader = reader(cluster_cv_csv)
     # Remove the csv header first
     header = next(csv_reader)
     if header != None:
@@ -98,13 +98,13 @@ def main():
               # The row end time is later than the saved end time
               csv_end_time = row_endtime
 
-          if row[1] not in sno_clusterversions:
-            sno_clusterversions[row[1]] = {"start": row_starttime, "end": row_endtime}
+          if row[1] not in clusterversions:
+            clusterversions[row[1]] = {"start": row_starttime, "end": row_endtime}
           else:
-            if row_starttime < sno_clusterversions[row[1]]["start"]:
-              sno_clusterversions[row[1]]["start"] = row_starttime
-            if row_endtime > sno_clusterversions[row[1]]["end"]:
-              sno_clusterversions[row[1]]["end"] = row_endtime
+            if row_starttime < clusterversions[row[1]]["start"]:
+              clusterversions[row[1]]["start"] = row_starttime
+            if row_endtime > clusterversions[row[1]]["end"]:
+              clusterversions[row[1]]["end"] = row_endtime
         else:
           logger.info("Partially updated cluster ({} :: {}) is not included in graphs".format(row[0], row[1]))
 
@@ -118,12 +118,12 @@ def main():
   for i in range(bucket_count):
     data_bk_ts = csv_start_time + timedelta(minutes=i)
     data_buckets[data_bk_ts] = OrderedDict()
-    for version in sno_clusterversions:
+    for version in clusterversions:
       data_buckets[data_bk_ts][version] = 0
 
   # Populate buckets by reading the original csv a 2nd time
-  with open(cliargs.data_file, "r") as sno_cv_csv:
-    csv_reader = reader(sno_cv_csv)
+  with open(cliargs.data_file, "r") as cluster_cv_csv:
+    csv_reader = reader(cluster_cv_csv)
     # Remove the csv header first
     header = next(csv_reader)
     if header != None:
@@ -143,13 +143,13 @@ def main():
   with open(samples_csv_file, "w") as csv_file:
     # Write the header first
     csv_file.write("datetime")
-    for version in sno_clusterversions:
+    for version in clusterversions:
       csv_file.write(",{}".format(version))
     csv_file.write("\n")
     # Write the row
     for sample in data_buckets:
       csv_file.write("{}".format(sample.strftime("%Y-%m-%dT%H:%M:%SZ")))
-      for version in sno_clusterversions:
+      for version in clusterversions:
         csv_file.write(",{}".format(data_buckets[sample][version]))
       csv_file.write("\n")
 
@@ -157,17 +157,17 @@ def main():
   df = pd.read_csv(samples_csv_file)
 
   title_upgrade = "Upgrade Graph - All clusterversions"
-  y_upgrade = [version for version in sno_clusterversions]
+  y_upgrade = [version for version in clusterversions]
   l = {"value" : "# clusters", "date" : ""}
 
   logger.info("Creating Graph - {}".format(upgrade_graph_file_path))
-  fig_sno = px.line(df, x="datetime", y=y_upgrade, labels=l, width=cliargs.width, height=cliargs.height)
-  fig_sno.update_layout(title=title_upgrade, legend_orientation="v")
-  fig_sno.write_image(upgrade_graph_file_path)
+  fig_graph = px.line(df, x="datetime", y=y_upgrade, labels=l, width=cliargs.width, height=cliargs.height)
+  fig_graph.update_layout(title=title_upgrade, legend_orientation="v")
+  fig_graph.write_image(upgrade_graph_file_path)
 
-  for version in sno_clusterversions:
-    version_st = sno_clusterversions[version]["start"] - timedelta(minutes=cliargs.buffer_minutes)
-    version_et = sno_clusterversions[version]["end"] + timedelta(minutes=cliargs.buffer_minutes)
+  for version in clusterversions:
+    version_st = clusterversions[version]["start"] - timedelta(minutes=cliargs.buffer_minutes)
+    version_et = clusterversions[version]["end"] + timedelta(minutes=cliargs.buffer_minutes)
 
     df['Datetime'] = pd.to_datetime(df['datetime'], format='%Y-%m-%dT%H:%M:%SZ')
     df = df.set_index(pd.DatetimeIndex(df['Datetime']))

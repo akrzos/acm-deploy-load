@@ -31,12 +31,12 @@ clustergroupupgrade custom resources
 * analyze-acm-deploy-time.py - Determine deployment duration metrics and peak concurrency from acm-deploy-load
 monitoring data
 * analyze-sno-upgrade.py - Summarize platform and operator upgrade success and timings from CGUs across upgraded SNOs
-* analyze-sno-clusterversion.py - Summarizes cluster upgrade success and timing as observed from the SNO's
-clusterversion resource and generates Time-series csv of upgrades to be consumed by graphing script
+* analyze-clusterversion.py - Summarizes cluster upgrade success and timing as observed from the SNO's
+clusterversion resource and generates csv of upgrades to be consumed by graphing script
 
 ## Graphing Scripts
 
-* graph-sno-clusterversion.py - Graph time-series csv from analyze-sno-clusterversion script
+* graph-clusterversion.py - Graph csv from analyze-clusterversion.py script
 * graph-acm-deploy.py - Graph monitor_data.csv from acm-deploy-load.py
 * graph-sno-upgrade.py - Graph time series csv from analyze-sno-upgrade script
 
