@@ -68,7 +68,7 @@
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ rhacm_install_directory }}/rhacm-deploy/rhacm-observability.yaml
 
-- name: Deploy Topology Aware Lifecycle Manager via Subscription
+- name: Deploy TALM via Subscription
   when: setup_talm_operator
   block:
   - name: Create TALM subscription file
@@ -76,7 +76,7 @@
       src: talm-operator.yaml.j2
       dest: "{{ rhacm_install_directory }}/rhacm-deploy/talm-operator.yaml"
 
-  - name: Deploy Topology Aware Lifecycle Manager
+  - name: Apply/Deploy TALM
     shell: |
       KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ rhacm_install_directory }}/rhacm-deploy/talm-operator.yaml
 
@@ -93,7 +93,7 @@
     shell: |
       KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch installPlan {{ installplan_name.stdout }} -n openshift-operators --type merge --patch '{"spec": {"approved": true }}'
 
-- name: Deploy Topology Aware Lifecycle Manager via Repo
+- name: Deploy TALM via Repo
   when: setup_talm
   block:
   - name: Create directory for TALM
@@ -101,14 +101,14 @@
       path: "{{ rhacm_install_directory }}/rhacm-deploy/cluster-group-upgrades-operator"
       state: directory
 
-  - name: Clone cluster-group-upgrades-operator (Topology Aware Lifecycle manager)
+  - name: Clone cluster-group-upgrades-operator (TALM)
     git:
       repo: "{{ talm_repo }}"
       dest: "{{ rhacm_install_directory }}/rhacm-deploy/cluster-group-upgrades-operator"
       force: true
       version: "{{ talm_repo_branch }}"
 
-  - name: Deploy Topology Aware Lifecycle Manager
+  - name: Deploy TALM
     shell: |
       cd {{ rhacm_install_directory }}/rhacm-deploy/cluster-group-upgrades-operator
       export KUBECONFIG={{ hub_cluster_kubeconfig }}

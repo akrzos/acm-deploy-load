@@ -7,7 +7,7 @@
 #
 
 - name: Setup downstream RHACM ICSP
-  hosts: orchestration
+  hosts: bastion
   vars_files:
   - vars/all.yml
   roles:
@@ -21,7 +21,7 @@
   - icsp-enable-tag-mirror
 
 - name: Install downstream RHACM
-  hosts: orchestration
+  hosts: bastion
   vars_files:
   - vars/all.yml
   roles:
