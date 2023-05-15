@@ -1,0 +1,207 @@
+---
+# rhacm-ztp-setup tasks
+
+- name: Clear old cnf-features-deploy clone
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy"
+
+- name: Create directories for rhacm-ztp
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ rhacm_install_directory }}/rhacm-ztp"
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy"
+  - "{{ rhacm_install_directory }}/rhacm-ztp/scripts"
+
+- name: Clone cnf-features-deploy
+  git:
+    repo: "{{ cnf_features_deploy_repo }}"
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy"
+    force: true
+    version: "{{ cnf_features_deploy_branch }}"
+
+# Perhaps we can detect if the repo exists already instead of ignoring errors
+- name: Create cnf-features-deploy repo in gogs
+  uri:
+    url: "http://{{ gogs_host }}:{{ gogs_port }}/api/v1/admin/users/{{ gogs_username }}/repos"
+    user: "{{ gogs_username }}"
+    password: "{{ gogs_password }}"
+    force_basic_auth: true
+    method: POST
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"name": "cnf-features-deploy", "description": "test repo", "private": false}
+    body_format: json
+    validate_certs: no
+    status_code: 201
+    return_content: yes
+  ignore_errors: true
+
+# The --force flag on the git push forces the gogs fork of the repo to be reset to the above "clone"
+- name: Push cnf-features-deploy into gogs
+  shell: |
+    cd {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy
+    git remote add origin-gogs http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/cnf-features-deploy.git
+    git push -u origin-gogs --all --force
+
+- name: Patches for cnf-features-deploy argocd-openshift-gitops-patch.json
+  replace:
+    path: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/deployment/argocd-openshift-gitops-patch.json"
+    replace: "{{ item.replace }}"
+    regexp: "{{ item.regexp }}"
+  loop:
+  - replace: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}"
+    regexp: "quay.io"
+  # - replace: "openshift-kni"
+  #   regexp: "redhat_emp1"
+  # release-4.11 cnf-features-deploy
+  - replace: "{{ ztp_site_generator_image_tag }}"
+    regexp: "latest"
+  # release-4.10 cnf-features-deploy
+  - replace: "{{ ztp_site_generator_image_tag }}"
+    regexp: "4.10.0"
+
+- name: Remove the examples/siteconfig directory from cnf-features-deploy
+  file:
+    state: absent
+    path: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/example/siteconfig"
+
+- name: Remove the cluster/policies app from cnf-features-deploy argocd deployment
+  file:
+    state: absent
+    path: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/deployment/{{ item }}"
+  loop:
+  - clusters-app.yaml
+  - policies-app.yaml
+
+- name: Remove clusters-app.yaml and policies-app.yaml from cnf-features-deploy argocd deployment kustomization.yaml
+  replace:
+    path: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/deployment/kustomization.yaml"
+    replace: ""
+    regexp: "{{ item }}"
+  loop:
+  - ".*- clusters-app.yaml"
+  - ".*- policies-app.yaml"
+
+- name: Create cluster and policy directories in cnf-features-deploy
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/"
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster-applications/"
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/"
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/"
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs"
+  - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy-applications/"
+
+- name: Create cluster application directories in cnf-features-deploy
+  shell: |
+    {% for item in range(1, cluster_applications_count + 1) %}
+    mkdir -p "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}"
+    {% endfor %}
+
+# ignore_errors because not all directories will exist
+- name: Copy siteconfigs
+  copy:
+    src: "{{ item }}"
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/"
+    remote_src: true
+  loop: "{{ siteconfigs_directories }}"
+  ignore_errors: true
+
+- name: Get siteconfig manifest names
+  find:
+    paths:
+    - "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs"
+    use_regex: true
+    patterns: ['.*-siteconfig.yml']
+  register: siteconfigs_find
+
+- name: Set siteconfig list
+  set_fact:
+    siteconfig_list: "{{ siteconfig_list + [item.path | basename | replace('-siteconfig.yml', '')] }}"
+  loop: "{{ siteconfigs_find.files }}"
+
+- name: Sort siteconfig list
+  set_fact:
+    siteconfig_list: "{{ siteconfig_list | sort }}"
+
+- name: Create override files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: KlusterletAddonConfigOverride.yaml.j2
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml"
+  - src: BareMetalHostOverride.yaml.j2
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml"
+
+- name: Create cluster kustomization files in cnf-features-deploy
+  template:
+    src: cluster-kustomization.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/kustomization.yaml"
+  loop: "{{ range(1, cluster_applications_count + 1) | list }}"
+
+# Similiar to the above kustomization file template, every cluster app's directoy must contain the actual siteconfig and not just a relative path "down" to the resource
+- name: Loop through copying correct siteconfigs into each cluster application directory
+  shell: |
+    {% for sc in range((item - 1) * siteconfigs_per_application, item * siteconfigs_per_application ) %}
+    {% if siteconfig_list | length > sc %}
+    cp {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/BareMetalHostOverride.yaml
+    cp {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/KlusterletAddonConfigOverride.yaml
+    cp {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs/{{ siteconfig_list[sc] }}-siteconfig.yml {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-siteconfig.yml
+    cp {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs/{{ siteconfig_list[sc] }}-resources.yml {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-resources.yml
+    {% endif %}
+    {% endfor %}
+  loop: "{{ range(1, cluster_applications_count + 1) | list }}"
+  when: siteconfig_list | length > ((item - 1) * siteconfigs_per_application)
+
+- name: Create cluster application files in cnf-features-deploy
+  template:
+    src: cluster-ns-application.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster-applications/ztp-clusters-{{ '%02d' | format(item) }}.yaml"
+  loop: "{{ range(1, cluster_applications_count + 1) | list }}"
+
+- name: Template the policy manifests into cnf-features-deploy
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: common-ranGen.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/common-ranGen.yaml"
+  - src: group-du-sno-ranGen.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-sno-ranGen.yaml"
+  - src: group-du-sno-validator-ranGen.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-sno-validator-ranGen.yaml"
+  - src: group-du-3node-ranGen.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-3node-ranGen.yaml"
+  - src: group-du-3node-validator-ranGen.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-3node-validator-ranGen.yaml"
+  - src: group-du-standard-ranGen.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-standard-ranGen.yaml"
+  - src: group-du-standard-validator-ranGen.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-standard-validator-ranGen.yaml"
+  - src: policy-kustomization.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/kustomization.yaml"
+  - src: ns.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/ns.yaml"
+  - src: ns-upgrade.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/ns-upgrade.yaml"
+  - src: policy-common-and-group.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy-applications/common-and-group.yaml"
+  - src: logging-openshift-io_elasticsearches.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/logging-openshift-io_elasticsearches.yaml"
+
+- name: Commit and push the above changes to cnf-features-deploy
+  shell: |
+    cd {{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy
+    git add ztp/gitops-subscriptions/argocd/cluster/ ztp/gitops-subscriptions/argocd/cluster-applications/
+    git add ztp/gitops-subscriptions/argocd/policy/ ztp/gitops-subscriptions/argocd/policy-applications/
+    git commit -a -m "Remove example clusters, add siteconfigs, add argocd cluster applications, and add common and group policies"
+    git push origin-gogs

@@ -1,0 +1,29 @@
+apiVersion: agent-install.openshift.io/v1beta1
+kind: AgentServiceConfig
+metadata:
+  annotations:
+    unsupported.agent-install.openshift.io/assisted-service-configmap: assisted-service-cpu-memory
+  name: agent
+spec:
+  databaseStorage:
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: localstorage-sc
+    resources:
+      requests:
+        storage: 20Gi
+  filesystemStorage:
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: localstorage-sc
+    resources:
+      requests:
+        storage: 100Gi
+  mirrorRegistryRef:
+    name: "assisted-mirror-config"
+  osImages:
+  - openshiftVersion: "{{ ocp_version_display_name.stdout.split('.')[0:2] | join('.') }}"
+    version: "{{ ocp_version_rhcos_version.stdout }}"
+    url: "http://{{ http_store_host }}:{{ http_store_port }}/{{ ocp_version_display_name.stdout }}/{{ ocp_version_disk_location.stdout | basename }}"
+    rootFSUrl: "http://{{ http_store_host }}:{{ http_store_port }}/{{ ocp_version_display_name.stdout }}/{{ ocp_version_rootfs_location.stdout | basename }}"
+    cpuArchitecture: x86_64

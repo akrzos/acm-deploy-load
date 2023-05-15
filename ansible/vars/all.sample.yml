@@ -1,0 +1,64 @@
+---
+# Common ACM/ZTP vars
+rhacm_install_directory: /root
+# Leave blank if not doing disconnected
+rhacm_disconnected_registry:
+rhacm_disconnected_registry_port: 5000
+
+
+# ZTP Vars - DU Profile Performance Profile Settings
+setup_ztp_enable_performanceprofile: false
+setup_ztp_perfprofile_isolated_cpus: "4-7"
+setup_ztp_perfprofile_reserved_cpus: "0-3"
+setup_ztp_perfprofile_hugepage_count: 1
+setup_ztp_perfprofile_realtime: true
+setup_ztp_searchcollector_enabled: false
+
+
+# Install ACM/ZTP vars
+rhacm_disableHubSelfManagement: true
+# hub_cluster_kubeconfig: /root/bm/kubeconfig
+
+# When installing RHACM or MCE in a connected environment this pull secret must be populated
+# RHACM 2.5 includes MCE, and MCE can be installed separately from RHACM
+# If installing RHACM, only populate rhacm_build, likewise if only installing MCE, only populate mce_build
+rhacm_quay_pullsecret: ''
+# Example: rhacm_build: '2.8.0-DOWNSTREAM-2023-04-25-22-18-13'
+rhacm_build:
+# Example: mce_build: '2.1.0-DOWNANDBACK-2022-07-05-06-55-15'
+mce_build:
+rhacm_icsp_enable_tag_mirror: false
+
+# RHACM search settings
+setup_rhacm_search_pv: false
+
+# RHACM observability settings
+setup_rhacm_observability: false
+
+# MCE Assisted-installer items
+mce_assisted_ocp_version: quay.io/openshift-release-dev/ocp-release:4.10.24-x86_64
+mce_assisted_service_namespace: multicluster-engine
+mce_clusterimagesets:
+- name: openshift-4.10.24
+  releaseImage: quay.io/openshift-release-dev/ocp-release:4.10.24-x86_64
+
+# Deploy Topology Aware Lifecycle Operator
+setup_talm_operator: false
+# redhat-operator-index = disconnected setup, redhat-operators = connected setup
+talm_operator_source: redhat-operator-index
+# Follow vars are used instead of setting up the talm operator from the operator catalog
+setup_talm: true
+talm_repo: https://github.com/openshift-kni/cluster-group-upgrades-operator.git
+talm_repo_branch: release-4.13
+talm_image: quay.io/openshift-kni/cluster-group-upgrades-operator:4.13.0
+talm_precache_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-precache:4.13.0"
+talm_recovery_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-recovery:4.13.0"
+
+
+# Apply ZTP argocd patches and create the argocd applications
+setup_rhacm_ztp_patches: true
+setup_ztp_cluster_applications: true
+setup_ztp_policy_application: true
+gitops_redis_mem_patch: true
+gitops_redis_mem_requests: 256Mi
+gitops_redis_mem_limits: 4Gi

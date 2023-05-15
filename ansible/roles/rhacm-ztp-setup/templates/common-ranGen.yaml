@@ -1,0 +1,116 @@
+---
+apiVersion: ran.openshift.io/v1
+kind: PolicyGenTemplate
+metadata:
+  name: "common"
+  namespace: "ztp-common"
+spec:
+  bindingRules:
+    # These policies will correspond to all clusters with this label:
+    common: "true"
+  sourceFiles:
+    # Create operators policies that will be installed in all clusters
+    - fileName: SriovSubscription.yaml
+      policyName: "subscriptions-policy"
+      spec:
+        source: {{ common_catalogsource_name }}
+    - fileName: SriovSubscriptionNS.yaml
+      policyName: "subscriptions-policy"
+    - fileName: SriovSubscriptionOperGroup.yaml
+      policyName: "subscriptions-policy"
+    - fileName: SriovOperatorStatus.yaml
+      policyName: "subscriptions-policy"
+    - fileName: PtpSubscription.yaml
+      policyName: "subscriptions-policy"
+      spec:
+        source: {{ common_catalogsource_name }}
+    - fileName: PtpSubscriptionNS.yaml
+      policyName: "subscriptions-policy"
+    - fileName: PtpSubscriptionOperGroup.yaml
+      policyName: "subscriptions-policy"
+    - fileName: PtpOperatorStatus.yaml
+      policyName: "subscriptions-policy"
+# Start PAO
+{% if disconnected_operator_index_tag == "v4.11" or disconnected_operator_index_tag == "v4.12" %}
+    # - fileName: PaoSubscription.yaml
+    #   policyName: "subscriptions-policy"
+    #   spec:
+    #     source: {{ common_catalogsource_name }}
+    #   # Changing the channel value will upgrade/downgrade the operator installed version.
+    #     channel: "{{ pao_subscription_channel }}"
+    # - fileName: PaoSubscriptionNS.yaml
+    #   policyName: "subscriptions-policy"
+    # - fileName: PaoSubscriptionOperGroup.yaml
+    #   policyName: "subscriptions-policy"
+    # - fileName: PaoOperatorStatus.yaml
+    #   policyName: "subscriptions-policy"
+{% else %}
+    - fileName: PaoSubscription.yaml
+      policyName: "subscriptions-policy"
+      spec:
+        source: {{ common_catalogsource_name }}
+      # Changing the channel value will upgrade/downgrade the operator installed version.
+        channel: "{{ pao_subscription_channel }}"
+    - fileName: PaoSubscriptionNS.yaml
+      policyName: "subscriptions-policy"
+    - fileName: PaoSubscriptionOperGroup.yaml
+      policyName: "subscriptions-policy"
+    - fileName: PaoOperatorStatus.yaml
+      policyName: "subscriptions-policy"
+{% endif %}
+# End PAO
+    - fileName: ClusterLogNS.yaml
+      policyName: "subscriptions-policy"
+    - fileName: ClusterLogOperGroup.yaml
+      policyName: "subscriptions-policy"
+    - fileName: ClusterLogSubscription.yaml
+      policyName: "subscriptions-policy"
+      spec:
+        source: {{ common_catalogsource_name }}
+    - fileName: ClusterLogOperatorStatus.yaml
+      policyName: "subscriptions-policy"
+{% if include_clo_fix %}
+    - fileName: logging-openshift-io_elasticsearches.yaml
+      policyName: "config-policy"
+{% else %}
+    #- fileName: logging-openshift-io_elasticsearches.yaml
+    #  policyName: "config-policy"
+{% endif %}
+    - fileName: StorageNS.yaml
+      policyName: "subscriptions-policy"
+    - fileName: StorageOperGroup.yaml
+      policyName: "subscriptions-policy"
+    - fileName: StorageSubscription.yaml
+      policyName: "subscriptions-policy"
+      spec:
+        source: {{ common_catalogsource_name }}
+    - fileName: StorageOperatorStatus.yaml
+      policyName: "subscriptions-policy"
+    - fileName: ReduceMonitoringFootprint.yaml
+      policyName: "config-policy"
+    #
+    # These CRs are in support of installation from a disconnected registry
+    #
+    - fileName: OperatorHub.yaml
+      policyName: "config-policy"
+    - fileName: DefaultCatsrc.yaml
+      policyName: "config-policy"
+      # The Subscriptions all point to redhat-operators. The OperatorHub CR
+      # disables the defaults and this CR replaces redhat-operators with a
+      # CatalogSource pointing to the disconnected registry. Including both of
+      # these in the same policy orders their application to the cluster.
+      metadata:
+        name: {{ common_catalogsource_name }}
+      spec:
+        displayName: disconnected-redhat-operators
+        image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:{{ disconnected_operator_index_tag }}
+      status:
+        connectionState:
+          lastObservedState: READY
+    - fileName: DisconnectedICSP.yaml
+      policyName: "config-policy"
+      spec:
+        repositoryDigestMirrors:
+        - mirrors:
+          - {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}
+          source: registry.redhat.io
