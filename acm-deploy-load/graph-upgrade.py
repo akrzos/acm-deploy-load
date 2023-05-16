@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Graph time-series csv from analyze-sno-upgrade script
+# Graph csv data as time-series from analyze-upgrade script
 #
 #  Copyright 2022 Red Hat
 #
@@ -42,8 +42,8 @@ def main():
   start_time = time.time()
 
   parser = argparse.ArgumentParser(
-      description="Graph SNOs upgrade data",
-      prog="graph-sno-upgrade.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+      description="Graph cluster upgrade data",
+      prog="graph-upgrade.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # Graph size
   parser.add_argument("-w", "--width", type=int, default=1000, help="Sets width of all graphs")
@@ -55,11 +55,11 @@ def main():
   parser.add_argument("-a", "--batches", nargs="*", default=['0', '1'], help="The batches to include in the graph")
 
   # The path to the csv file to split into graphs
-  parser.add_argument("data_file", type=str, help="The path to the sno-upgrade csv file to be graphed")
+  parser.add_argument("data_file", type=str, help="The path to the upgrade csv data file")
 
   cliargs = parser.parse_args()
 
-  logger.info("Graph sno-upgrade data")
+  logger.info("Graph upgrade data")
   logger.info("CLI Args: {}".format(cliargs))
   if not pathlib.Path(cliargs.data_file).is_file():
     logger.error("File not found: {}".format(cliargs.data_file))
@@ -72,12 +72,12 @@ def main():
   logger.info("Graphs will be placed in this directory: {}".format(results_directory))
   logger.info("Base graph name: {}".format(base_file_name))
 
-  # Find start/end time for csv file and all completed SNOs in the inspected batches
+  # Find start/end time for csv file and all completed clusters in the inspected batches
   batches = OrderedDict()
   csv_start_time = ""
   csv_end_time = ""
-  with open(cliargs.data_file, "r") as sno_cv_csv:
-    csv_reader = reader(sno_cv_csv)
+  with open(cliargs.data_file, "r") as cluster_cv_csv:
+    csv_reader = reader(cluster_cv_csv)
     # Remove the csv header first
     header = next(csv_reader)
     if header != None:
@@ -133,8 +133,8 @@ def main():
   #   logger.info("TS: {}, Data: {}".format(ts, data_buckets[ts]))
 
   # Populate buckets by reading the original csv a 2nd time
-  with open(cliargs.data_file, "r") as sno_cv_csv:
-    csv_reader = reader(sno_cv_csv)
+  with open(cliargs.data_file, "r") as cluster_cv_csv:
+    csv_reader = reader(cluster_cv_csv)
     # Remove the csv header first
     header = next(csv_reader)
     if header != None:
@@ -174,7 +174,7 @@ def main():
   # Have pandas read in the samples csv for graphs
   df = pd.read_csv(samples_csv_file)
 
-  title_upgrade = "SNO Upgrade Graph - Batches {}".format(",".join(batches.keys()))
+  title_upgrade = "Cluster Upgrade Graph - Batches {}".format(",".join(batches.keys()))
   y_upgrade = []
   for batch in batches:
     y_upgrade.append("batch_{}_platform".format(batch))
@@ -183,9 +183,9 @@ def main():
   l = {"value" : "# clusters", "date" : ""}
 
   logger.info("Creating Graph - {}".format(upgrade_graph_file_path))
-  fig_sno = px.area(df, x="datetime", y=y_upgrade, labels=l, width=cliargs.width, height=cliargs.height)
-  fig_sno.update_layout(title=title_upgrade, legend_orientation="v")
-  fig_sno.write_image(upgrade_graph_file_path)
+  fig_cluster = px.area(df, x="datetime", y=y_upgrade, labels=l, width=cliargs.width, height=cliargs.height)
+  fig_cluster.update_layout(title=title_upgrade, legend_orientation="v")
+  fig_cluster.write_image(upgrade_graph_file_path)
 
   for batch in batches:
     batch_st = batches[batch]["start"] - timedelta(minutes=cliargs.buffer_minutes)

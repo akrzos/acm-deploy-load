@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Graph time-series csv from analyze-clusterversion.py script
+# Graph csv data as time-series from analyze-clusterversion.py script
 #
 #  Copyright 2022 Red Hat
 #

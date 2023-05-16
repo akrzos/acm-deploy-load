@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #
 # Analyze "Upgrade" ClusterGroupUpgrades data on a hub cluster, clusterversion and clusterserviceversion data from the
-# SNOs to determine success/failure and timings of platform+operator upgrades of SNOs
+# deployed clusters to determine success/failure and timings of platform+operator upgrades of deployed clusters
 #
 #  Copyright 2022 Red Hat
 #
@@ -36,23 +36,14 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(
 logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
-# Latest defaults (2/21/2023)
+# Latest defaults (5/9/2023)
 default_operator_csvs = [
-  "local-storage-operator.v4.12.0-202301042354",
+  "local-storage-operator.v4.12.0-202304190215",
   # For reasons unknown, cluster-logging csv shows a status.lastUpdateTime much beyond the time expected
   # "cluster-logging.v5.6.1",
-  "ptp-operator.4.12.0-202301231836",
-  "sriov-network-operator.v4.12.0-202301062016"
+  "ptp-operator.4.12.0-202304211142",
+  "sriov-network-operator.v4.12.0-202304190215"
 ]
-
-# Old defaults
-# default_operator_csvs = [
-#   "local-storage-operator.4.11.0-202210251429",
-#   # For reasons unknown, cluster-logging csv shows a status.lastUpdateTime much beyond the time expected
-#   # "cluster-logging.5.5.3",
-#   "ptp-operator.4.11.0-202210250857",
-#   "sriov-network-operator.4.11.0-202210250857"
-# ]
 
 # TODO:
 # * Only check platform
@@ -63,12 +54,12 @@ def main():
   start_time = time.time()
 
   parser = argparse.ArgumentParser(
-      description="Analyze SNO clusters after ZTP upgrade",
-      prog="analyze-sno-upgrade.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-  parser.add_argument("-m", "--sno-manifests", type=str, default="/root/hv-vm/sno/manifests",
-                      help="The location of the SNO manifests, where kubeconfig is nested under each SNO directory")
+      description="Analyze clusters after ZTP upgrade",
+      prog="analyze-upgrade.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  parser.add_argument("-k", "--kubeconfigs", type=str, default="/root/hv-vm/kc",
+                      help="The location of the kubeconfigs, nested under each cluster's directory")
 
-  parser.add_argument("-p", "--platform-upgrade", type=str, default="4.12.2",
+  parser.add_argument("-p", "--platform-upgrade", type=str, default="4.12.16",
                       help="The version clusters are expected to have upgraded to")
 
   parser.add_argument("-o", "--operator-csvs", nargs="*", default=default_operator_csvs,
@@ -84,18 +75,18 @@ def main():
   if cliargs.debug:
     logger.setLevel(logging.DEBUG)
 
-  logger.info("Analyze sno-upgrade")
+  logger.info("Analyze upgrades")
   logger.info("Checking if clusters upgraded to {}".format(cliargs.platform_upgrade))
   logger.info("Checking if clusters have operator csvs {}".format(", ".join(cliargs.operator_csvs)))
-  raw_data_dir = "{}/sno-upgrade".format(cliargs.results_directory)
+  raw_data_dir = "{}/upgrade".format(cliargs.results_directory)
   Path(raw_data_dir).mkdir(parents=True, exist_ok=True)
   if cliargs.offline_process:
     logger.info("Reading raw data from: {}".format(raw_data_dir))
   else:
     logger.info("Storing raw data in: {}".format(raw_data_dir))
   ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-  upgrade_csv_file = "{}/sno-upgrade-{}.csv".format(cliargs.results_directory, ts)
-  upgrade_stats_file = "{}/sno-upgrade-{}.stats".format(cliargs.results_directory, ts)
+  upgrade_csv_file = "{}/upgrade-{}.csv".format(cliargs.results_directory, ts)
+  upgrade_stats_file = "{}/upgrade-{}.stats".format(cliargs.results_directory, ts)
 
   logger.info("Writing CSV: {}".format(upgrade_csv_file))
   with open(upgrade_csv_file, "w") as csv_file:
@@ -107,7 +98,7 @@ def main():
     oc_cmd = ["oc", "get", "clustergroupupgrade", "-n", "ztp-platform-upgrade", "-o", "json"]
     rc, output = command(oc_cmd, False, retries=3, no_log=True)
     if rc != 0:
-      logger.error("analyze-sno-upgrade, oc get clustergroupupgrade rc: {}".format(rc))
+      logger.error("analyze-upgrade, oc get clustergroupupgrade rc: {}".format(rc))
       sys.exit(1)
     with open("{}/cgus.json".format(raw_data_dir), "w") as cgu_data_file:
       cgu_data_file.write(output)
@@ -154,13 +145,13 @@ def main():
           csv_operator_last_update_time = ""
           csv_operator_duration = ""
           csv_upgrade_duration = ""
-          kubeconfig = "{}/{}/kubeconfig".format(cliargs.sno_manifests, cluster)
+          kubeconfig = "{}/{}/kubeconfig".format(cliargs.kubeconfigs, cluster)
 
           if not cliargs.offline_process:
             oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "clusterversion", "version", "-o", "json"]
             rc, output = command(oc_cmd, False, retries=2, no_log=True)
             if rc != 0:
-              logger.error("analyze-sno-upgrade, oc get clusterversion rc: {}".format(rc))
+              logger.error("analyze-upgrade, oc get clusterversion rc: {}".format(rc))
               output = ""
             with open("{}/{}-cv.json".format(raw_data_dir, cluster), "w") as cv_data_file:
               cv_data_file.write(output)
@@ -227,7 +218,7 @@ def main():
                 oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "clusterserviceversions", "-A", "-o", "json"]
                 rc, output = command(oc_cmd, False, retries=2, no_log=True)
                 if rc != 0:
-                  logger.error("analyze-sno-upgrade, oc get clusterserviceversions rc: {}".format(rc))
+                  logger.error("analyze-upgrade, oc get clusterserviceversions rc: {}".format(rc))
                   output = ""
                 with open("{}/{}-csv.json".format(raw_data_dir, cluster), "w") as csv_data_file:
                   csv_data_file.write(output)
