@@ -1,0 +1,23 @@
+{% for cgu in range(((operator_update_clusters.stdout_lines | length) / clusters_per_cgu) | round(0, 'ceil') | int) %}
+---
+apiVersion: ran.openshift.io/v1alpha1
+kind: ClusterGroupUpgrade
+metadata:
+  name: operator-upgrade-{{ disconnected_operator_index_tag | replace('.', '') }}-{{ '%04d' | format(cgu) }}
+  namespace: ztp-operator-upgrade
+spec:
+  managedPolicies:
+  - du-operator-upgrade-operator-catsrc-policy
+  - common-subscriptions-policy
+  preCaching: {{ operator_upgrade_precache }}
+  clusters:
+{% for cluster in range(cgu * clusters_per_cgu, (cgu + 1) * clusters_per_cgu) %}
+{% if operator_update_clusters.stdout_lines | length > cluster %}
+  - {{ operator_update_clusters.stdout_lines[cluster] }}
+{% endif %}
+{% endfor %}
+  remediationStrategy:
+    maxConcurrency: {{ operator_upgrade_concurrency }}
+    timeout: {{ operator_upgrade_timeout }}
+  enable: false
+{% endfor %}
