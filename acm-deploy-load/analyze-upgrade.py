@@ -67,6 +67,8 @@ def main():
 
   parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
   parser.add_argument("--offline-process", action="store_true", default=False, help="Uses previously stored raw data")
+  parser.add_argument("--raw-data-directory", type=str, default="",
+                    help="Set raw data directory for offline processing. Empty finds last directory")
   parser.add_argument("-s", "--display-summary", action="store_true", default=False, help="Display summerized data")
   parser.add_argument("-b", "--display-batch", action="store_true", default=False, help="Display CGU batch data")
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
@@ -78,13 +80,22 @@ def main():
   logger.info("Analyze upgrades")
   logger.info("Checking if clusters upgraded to {}".format(cliargs.platform_upgrade))
   logger.info("Checking if clusters have operator csvs {}".format(", ".join(cliargs.operator_csvs)))
-  raw_data_dir = "{}/upgrade".format(cliargs.results_directory)
-  Path(raw_data_dir).mkdir(parents=True, exist_ok=True)
+  ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+  raw_data_dir = "{}/upgrade-{}".format(cliargs.results_directory, ts)
   if cliargs.offline_process:
+    if cliargs.raw_data_directory == "":
+      # Detect last raw data directory
+      dir_scan = sorted([ f.path for f in os.scandir(cliargs.results_directory) if f.is_dir() and "upgrade" in f.path ])
+      if len(dir_scan) == 0:
+        logger.error("No previous offline directories found. Exiting")
+        sys.exit(1)
+      raw_data_dir = dir_scan[-1]
+    else:
+      raw_data_dir = cliargs.raw_data_directory
     logger.info("Reading raw data from: {}".format(raw_data_dir))
   else:
+    Path(raw_data_dir).mkdir(parents=True, exist_ok=True)
     logger.info("Storing raw data in: {}".format(raw_data_dir))
-  ts = datetime.now().strftime("%Y%m%d-%H%M%S")
   upgrade_csv_file = "{}/upgrade-{}.csv".format(cliargs.results_directory, ts)
   upgrade_stats_file = "{}/upgrade-{}.stats".format(cliargs.results_directory, ts)
 
