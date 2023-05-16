@@ -1,0 +1,22 @@
+---
+apiVersion: ran.openshift.io/v1alpha1
+kind: ClusterGroupUpgrade
+metadata:
+  name: platform-upgrade-{{ du_upgrade_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
+  namespace: ztp-platform-upgrade
+spec:
+  backup: {{ platform_upgrade_backup }}
+  managedPolicies:
+  - du-upgrade-platform-upgrade-prep
+  - du-upgrade-platform-upgrade
+  preCaching: {{ platform_upgrade_precache }}
+  clusters:
+{% for cluster in range(item * clusters_per_cgu, (item + 1) * clusters_per_cgu) %}
+{% if ztp_done_clusters.stdout_lines | length > cluster %}
+  - {{ ztp_done_clusters.stdout_lines[cluster] }}
+{% endif %}
+{% endfor %}
+  remediationStrategy:
+    maxConcurrency: {{ platform_upgrade_concurrency }}
+    timeout: {{ platform_upgrade_timeout }}
+  enable: {{ platform_upgrade_enable }}

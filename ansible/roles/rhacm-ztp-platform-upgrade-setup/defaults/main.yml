@@ -1,0 +1,31 @@
+---
+# rhacm-ztp-platform-upgrade-setup default vars
+
+http_store_path: /opt/http_store
+
+clusters_label: "ztp-done="
+
+du_upgrade_channel: "fast-4.12"
+
+du_upgrade_version: "4.12.16"
+
+# For 4.11 to 4.12, 4.12 to 4.13 Y-stream upgrade an admin ack is required to permit those upgrades
+include_admin_ack: true
+
+clusters_per_cgu: 1000
+
+platform_upgrade_backup: false
+platform_upgrade_precache: false
+platform_upgrade_concurrency: 1000
+# 480 = 8 hours, generally this timeout is used for the precache job pod timeout
+platform_upgrade_timeout: 480
+platform_upgrade_enable: false
+
+# Amount of time to sleep between applying CGUs for upgrade (that are not enabled)
+# Allows offsetting of the backup and precache steps before an actual upgrade
+platform_upgrade_apply_sleep: 0
+platform_upgrade_patch_sleep: 120
+
+# Extra minutes between timeout of platform upgrade CGUs during either apply or patch scripts
+platform_upgrade_apply_offset: 0
+platform_upgrade_patch_offset: 0
