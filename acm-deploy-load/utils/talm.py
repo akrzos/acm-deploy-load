@@ -27,7 +27,7 @@ def detect_talm_minor(default_talm_version, dry_run):
   oc_cmd = ["oc", "get", "deploy", "-n", "openshift-cluster-group-upgrades", "cluster-group-upgrades-controller-manager", "-o", "json"]
   rc, output = command(oc_cmd, dry_run, retries=3, no_log=True)
   if rc != 0:
-    logger.warn("talm, oc get deploy -n openshift-cluster-group-upgrades rc: {}".format(rc))
+    logger.warning("talm, oc get deploy -n openshift-cluster-group-upgrades rc: {}".format(rc))
   else:
     if not dry_run:
       td_data = json.loads(output)
@@ -41,5 +41,5 @@ def detect_talm_minor(default_talm_version, dry_run):
         logger.info("Detected TALM Version: {}".format(talm_image_ver))
         talm_version = talm_image_ver
       else:
-        logger.warn("Unable to detect TALM version, defaulting to: {}".format(talm_version))
+        logger.warning("Unable to detect TALM version, defaulting to: {}".format(talm_version))
   return talm_version.split(".")[1]

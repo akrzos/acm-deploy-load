@@ -130,12 +130,12 @@ class ZTPMonitor(Thread):
                     logger.info("aci: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
                   break
                 else:
-                  logger.warn("reason missing from condition: {}".format(condition))
+                  logger.warning("reason missing from condition: {}".format(condition))
             else:
-              logger.warn("aci: type missing from condition(item): {}".format(item))
-              logger.warn("aci: type missing from condition(condition): {}".format(condition))
+              logger.warning("aci: type missing from condition(item): {}".format(item))
+              logger.warning("aci: type missing from condition(condition): {}".format(condition))
         else:
-          logger.warn("status or conditions not found in clustergroupupgrades object: {}".format(item))
+          logger.warning("status or conditions not found in clustergroupupgrades object: {}".format(item))
 
       # Parse clustergroupupgrades data
       for item in cgu_data["items"]:
@@ -162,8 +162,8 @@ class ZTPMonitor(Thread):
                   cluster_policy_compliant += 1
                   break
               else:
-                logger.warn("cgu: type missing from condition(item): {}".format(item))
-                logger.warn("cgu: type missing from condition(condition): {}".format(condition))
+                logger.warning("cgu: type missing from condition(item): {}".format(item))
+                logger.warning("cgu: type missing from condition(condition): {}".format(condition))
             else:
               if "type" in condition:
                 if condition["type"] == "Ready":
@@ -181,12 +181,12 @@ class ZTPMonitor(Thread):
                       logger.info("cgu: {}: Unrecognized Completed Reason: {}".format(item["metadata"]["name"], condition["reason"]))
                     break
                   else:
-                    logger.warn("reason missing from condition: {}".format(condition))
+                    logger.warning("reason missing from condition: {}".format(condition))
               else:
-                logger.warn("cgu: type missing from condition(item): {}".format(item))
-                logger.warn("cgu: type missing from condition(condition): {}".format(condition))
+                logger.warning("cgu: type missing from condition(item): {}".format(item))
+                logger.warning("cgu: type missing from condition(condition): {}".format(condition))
         else:
-          logger.warn("status or conditions not found in clustergroupupgrades object: {}".format(item))
+          logger.warning("status or conditions not found in clustergroupupgrades object: {}".format(item))
 
       # Parse baremetalhost data
       for item in bmh_data["items"]:
@@ -195,7 +195,7 @@ class ZTPMonitor(Thread):
             logger.debug("BMH: {} is {}".format(item["metadata"]["name"], item["status"]["provisioning"]["state"]))
             node_booted += 1
         else:
-          logger.warn("missing status or elements under status in baremetalhost object: {}".format(item))
+          logger.warning("missing status or elements under status in baremetalhost object: {}".format(item))
 
       # Parse managedcluster data
       for item in mc_data["items"]:
@@ -212,10 +212,10 @@ class ZTPMonitor(Thread):
                   cluster_managed += 1
                 break
             else:
-              logger.warn("mc: type missing from condition(item): {}".format(item))
-              logger.warn("mc: type missing from condition(condition): {}".format(condition))
+              logger.warning("mc: type missing from condition(item): {}".format(item))
+              logger.warning("mc: type missing from condition(condition): {}".format(condition))
         else:
-          logger.warn("status or conditions not found in managedcluster object: {}".format(item))
+          logger.warning("status or conditions not found in managedcluster object: {}".format(item))
 
       self.monitor_data["cluster_init"] = cluster_init
       self.monitor_data["cluster_notstarted"] = cluster_notstarted
@@ -264,7 +264,7 @@ class ZTPMonitor(Thread):
       if time_to_sleep > 0:
         time.sleep(time_to_sleep)
       else:
-        logger.warn("Time to monitor exceeded monitor interval")
+        logger.warning("Time to monitor exceeded monitor interval")
     logger.info("Monitor Thread terminating")
 
   def run(self):

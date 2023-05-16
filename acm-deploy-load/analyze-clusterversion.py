@@ -107,7 +107,7 @@ def main():
       if cluster not in clusterversions_data[cv_version]["state"][cv_state]:
         # Do not add duplicated entry if a Completed entry already exists
         if "Completed" in clusterversions_data[cv_version]["state"] and cluster in clusterversions_data[cv_version]["state"]["Completed"]:
-          logger.warn("Cluster {} has entry for Completed {} and a duplicate entry for {}".format(cluster, cv_version, cv_state))
+          logger.warning("Cluster {} has entry for Completed {} and a duplicate entry for {}".format(cluster, cv_version, cv_state))
           if cluster not in clusters_dup_entries:
             clusters_dup_entries.append(cluster)
         else:
@@ -121,7 +121,7 @@ def main():
         clusterversions_data[cv_version]["completed_durations"].append(cv_duration)
         # Remove errornous partial upgrade history from stats
         if "Partial" in clusterversions_data[cv_version]["state"] and cluster in clusterversions_data[cv_version]["state"]["Partial"]:
-          logger.warn("Cluster {} has a duplicate Partial entry for version {}".format(cluster, cv_version))
+          logger.warning("Cluster {} has a duplicate Partial entry for version {}".format(cluster, cv_version))
           clusterversions_data[cv_version]["state"]["Partial"].remove(cluster)
           clusterversions_data[cv_version]["count"] -= 1
           if cluster not in clusters_dup_entries:

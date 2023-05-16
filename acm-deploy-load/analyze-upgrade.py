@@ -106,6 +106,10 @@ def main():
   with open("{}/cgus.json".format(raw_data_dir), "r") as cgu_data_file:
     cgu_data = json.load(cgu_data_file)
 
+  if len(cgu_data["items"]) == 0:
+    logger.error("No CGUs to analyze")
+    sys.exit(1)
+
   for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
     cgu_creation_ts = item["metadata"]["creationTimestamp"]
@@ -230,7 +234,7 @@ def main():
                   csv_data = json.load(csv_data_file)
 
               if csv_data == "":
-                logger.warn("No csv data found")
+                logger.warning("No csv data found")
               else:
                 operator_found = False
                 for operator in cliargs.operator_csvs:
@@ -289,6 +293,12 @@ def main():
               cgu_name, batch_index, cluster, csv_cluster_state, csv_platform_started_time, csv_platform_completion_time,
               csv_platform_duration, csv_operator_creation_timestamp, csv_operator_last_update_time, csv_operator_duration,
               csv_upgrade_duration))
+    else:
+      logger.warning("No startedAt field in CGU: {}".format(cgu_name))
+
+  if len(cgus) == 0:
+    logger.error("No CGUs had data to analyze")
+    sys.exit(1)
 
   # Produce the report card on the upgrade CGU and batches
   with open(upgrade_stats_file, "w") as stats_file:
