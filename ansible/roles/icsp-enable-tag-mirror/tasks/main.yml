@@ -1,15 +1,20 @@
 ---
 # icsp-enable-tag-mirror tasks
 #
-# Workaround to icsp only allowing mirror-by-digest
+# Workaround to icsp only allowing mirror-by-digest and pull-from-mirror = digest-only
 #
 
-- name: Set mirror-by-digest-only to false
+- name: Set mirror-by-digest-only to false or pull-from-mirror to all
   become: true
   replace:
     path: /etc/containers/registries.conf
-    regexp: "mirror-by-digest-only = true"
-    replace: "mirror-by-digest-only = false"
+    regexp: "{{ item.regexp }}"
+    replace: "{{ item.replace }}"
+  loop:
+  - regexp: 'mirror-by-digest-only = true'
+    replace: 'mirror-by-digest-only = false'
+  - regexp: 'pull-from-mirror = "digest-only"'
+    replace: 'pull-from-mirror = "all"'
 
 - name: Restart Kubelet and Crio
   become: true
