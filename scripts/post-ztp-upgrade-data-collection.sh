@@ -12,6 +12,7 @@ if [[ $(oc get cgu -n ztp-platform-upgrade-prep) ]]; then
   echo "$(date -u) :: Collecting ztp-platform-upgrade-prep data"
   oc get cgu -n ztp-platform-upgrade-prep > ${output_dir}/zpup.cgus
   oc get cgu -n ztp-platform-upgrade-prep -o yaml > ${output_dir}/zpup.cgus.yaml
+  oc get cgu -n ztp-platform-upgrade-prep -o json > ${output_dir}/zpup.cgus.json
   oc describe cgu -n ztp-platform-upgrade-prep > ${output_dir}/zpup.cgus.describe
 
   # 4.12 TALM
@@ -37,6 +38,7 @@ if [[ $(oc get cgu -n ztp-platform-upgrade) ]]; then
   echo "$(date -u) :: Collecting ztp-platform-upgrade data"
   oc get cgu -n ztp-platform-upgrade > ${output_dir}/zpu.cgus
   oc get cgu -n ztp-platform-upgrade -o yaml > ${output_dir}/zpu.cgus.yaml
+  oc get cgu -n ztp-platform-upgrade -o json > ${output_dir}/zpu.cgus.json
   oc describe cgu -n ztp-platform-upgrade > ${output_dir}/zpu.cgus.describe
 
   # 4.12 TALM
@@ -62,6 +64,7 @@ if [[ $(oc get cgu -n ztp-operator-upgrade-prep) ]]; then
   echo "$(date -u) :: Collecting ztp-operator-upgrade-prep data"
   oc get cgu -n ztp-operator-upgrade-prep > ${output_dir}/zoup.cgus
   oc get cgu -n ztp-operator-upgrade-prep -o yaml > ${output_dir}/zoup.cgus.yaml
+  oc get cgu -n ztp-operator-upgrade-prep -o json > ${output_dir}/zoup.cgus.json
   oc describe cgu -n ztp-operator-upgrade-prep > ${output_dir}/zoup.cgus.describe
 
   # 4.12 TALM
@@ -87,6 +90,7 @@ if [[ $(oc get cgu -n ztp-operator-upgrade) ]]; then
   echo "$(date -u) :: Collecting ztp-operator-upgrade data"
   oc get cgu -n ztp-operator-upgrade > ${output_dir}/zou.cgus
   oc get cgu -n ztp-operator-upgrade -o yaml > ${output_dir}/zou.cgus.yaml
+  oc get cgu -n ztp-operator-upgrade -o json > ${output_dir}/zou.cgus.json
   oc describe cgu -n ztp-operator-upgrade > ${output_dir}/zou.cgus.describe
 
   # 4.12 TALM
