@@ -6,6 +6,8 @@ metadata:
 data:
 {% if enable_converged_flow %}
   ALLOW_CONVERGED_FLOW: "true"
+{% else %}
+  ALLOW_CONVERGED_FLOW: "false"
 {% endif %}
   HW_VALIDATOR_REQUIREMENTS: |
     [{
