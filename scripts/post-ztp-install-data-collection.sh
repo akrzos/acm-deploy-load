@@ -15,7 +15,15 @@ if [ "$1" == "-k" ]; then
   ls /root/hv-vm/standard/manifests/ | xargs -I % sh -c "mkdir -p /root/hv-vm/kc/%; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/kc/%/kubeconfig"
 fi
 
-echo "$(date -u) :: Collecting namespaces, nodes and pod data"
+echo "$(date -u) :: Collecting clusterversion, csv, nodes, namespaces and pod/event data"
+
+oc get clusterversion > ${output_dir}/clusterversion
+oc get clusterversion -o yaml > ${output_dir}/clusterversion.yaml
+oc describe clusterversion > ${output_dir}/clusterversion.describe
+
+oc get csv -A > ${output_dir}/csv
+oc get csv -A -o yaml > ${output_dir}/csv.yaml
+oc describe csv -A > ${output_dir}/csv.describe
 
 oc get no > ${output_dir}/nodes
 oc get no -o yaml > ${output_dir}/nodes.yaml
