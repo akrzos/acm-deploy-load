@@ -49,52 +49,72 @@ class ZTPMonitor(Thread):
       # Get agentclusterinstall data
       oc_cmd = ["oc", "get", "agentclusterinstall", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
-      aci_data = {"items": []}
       if rc != 0:
         logger.error("acm-deploy-load, oc get agentclusterinstall rc: {}".format(rc))
       else:
-        if not self.dry_run:
-          aci_data = json.loads(output)
+        if self.dry_run:
+          aci_data = {"items": []}
+        else:
+          try:
+            aci_data = json.loads(output)
+          except json.decoder.JSONDecodeError:
+            logger.warning("aci JSONDecodeError: {}".format(output))
 
       # Get clustergroupupgrades data
       oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", "ztp-install", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
-      cgu_data = {"items": []}
       if rc != 0:
         logger.error("acm-deploy-load, oc get clustergroupupgrades rc: {}".format(rc))
       else:
-        if not self.dry_run:
-          cgu_data = json.loads(output)
+        if self.dry_run:
+          cgu_data = {"items": []}
+        else:
+          try:
+            cgu_data = json.loads(output)
+          except json.decoder.JSONDecodeError:
+            logger.warning("cgu JSONDecodeError: {}".format(output))
 
       # Get baremetalhost data
       oc_cmd = ["oc", "get", "baremetalhost", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
-      bmh_data = {"items": []}
       if rc != 0:
         logger.error("acm-deploy-load, oc get baremetalhost rc: {}".format(rc))
       else:
-        if not self.dry_run:
-          bmh_data = json.loads(output)
+        if self.dry_run:
+          bmh_data = {"items": []}
+        else:
+          try:
+            bmh_data = json.loads(output)
+          except json.decoder.JSONDecodeError:
+            logger.warning("bmh JSONDecodeError: {}".format(output))
 
       # Get agent data
       oc_cmd = ["oc", "get", "agent", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
-      agent_data = {"items": []}
       if rc != 0:
         logger.error("acm-deploy-load, oc get agent rc: {}".format(rc))
       else:
-        if not self.dry_run:
-          agent_data = json.loads(output)
+        if self.dry_run:
+          agent_data = {"items": []}
+        else:
+          try:
+            agent_data = json.loads(output)
+          except json.decoder.JSONDecodeError:
+            logger.warning("agent JSONDecodeError: {}".format(output))
 
       # Get managedcluster data
       oc_cmd = ["oc", "get", "managedcluster", "-A", "-o", "json"]
       rc, output = command(oc_cmd, self.dry_run, retries=3, no_log=True)
-      mc_data = {"items": []}
       if rc != 0:
         logger.error("acm-deploy-load, oc get managedcluster rc: {}".format(rc))
       else:
-        if not self.dry_run:
-          mc_data = json.loads(output)
+        if self.dry_run:
+          mc_data = {"items": []}
+        else:
+          try:
+            mc_data = json.loads(output)
+          except json.decoder.JSONDecodeError:
+            logger.warning("mc JSONDecodeError: {}".format(output))
 
       cluster_init = len(aci_data["items"])
       cluster_notstarted = 0
