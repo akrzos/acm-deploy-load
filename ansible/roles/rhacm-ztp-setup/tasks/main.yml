@@ -114,7 +114,6 @@
     src: "{{ item }}"
     dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/"
     remote_src: true
-  when: copy_siteconfigs
   loop: "{{ siteconfigs_directories }}"
   ignore_errors: true
 

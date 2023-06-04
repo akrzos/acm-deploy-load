@@ -7,7 +7,6 @@ cnf_features_deploy_branch: release-4.13
 # Pre-creates manifests for the desired number of argocd cluster applications
 cluster_applications_count: 35
 
-copy_siteconfigs: false
 siteconfigs_per_application: 100
 
 siteconfigs_directories:
