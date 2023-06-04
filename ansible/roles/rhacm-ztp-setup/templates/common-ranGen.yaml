@@ -47,7 +47,7 @@ spec:
     - fileName: PtpOperatorStatus.yaml
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
 # Start PAO
-{% if disconnected_operator_index_tag in ["v4.11", "v4.12", "v4.13"] %}
+{% if operator_index_tag in ["v4.11", "v4.12", "v4.13"] %}
     # - fileName: PaoSubscription.yaml
     #   policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
     #   spec:
@@ -133,6 +133,7 @@ spec:
     #
     - fileName: OperatorHub.yaml
       policyName: "config-policy"
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
     - fileName: DefaultCatsrc.yaml
       policyName: "config-policy"
       # The Subscriptions all point to redhat-operators. The OperatorHub CR
@@ -150,7 +151,7 @@ spec:
 {% endif %}
       spec:
         displayName: disconnected-redhat-operators
-        image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:{{ disconnected_operator_index_tag }}
+        image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:{{ operator_index_tag }}
       status:
         connectionState:
           lastObservedState: READY
@@ -161,3 +162,4 @@ spec:
         - mirrors:
           - {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}
           source: registry.redhat.io
+{% endif %}

@@ -54,9 +54,11 @@
     path: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/deployment/argocd-openshift-gitops-patch.json"
     replace: "{{ item.replace }}"
     regexp: "{{ item.regexp }}"
+  when: item.enabled | default(true)
   loop:
   - replace: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}"
     regexp: "quay.io"
+    enabled: "{{ rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 }}"
   # - replace: "openshift-kni"
   #   regexp: "redhat_emp1"
   # release-4.11 cnf-features-deploy
@@ -112,6 +114,7 @@
     src: "{{ item }}"
     dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/"
     remote_src: true
+  when: copy_siteconfigs
   loop: "{{ siteconfigs_directories }}"
   ignore_errors: true
 

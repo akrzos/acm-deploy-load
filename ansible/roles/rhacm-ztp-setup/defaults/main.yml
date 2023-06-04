@@ -6,6 +6,8 @@ cnf_features_deploy_branch: release-4.13
 
 # Pre-creates manifests for the desired number of argocd cluster applications
 cluster_applications_count: 35
+
+copy_siteconfigs: false
 siteconfigs_per_application: 100
 
 siteconfigs_directories:
@@ -19,7 +21,7 @@ gogs_username: testadmin
 gogs_password: testadmin
 
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
-disconnected_operator_index_tag: v4.12
+operator_index_tag: v4.12
 
 ztp_site_generator_image_tag: v4.13.0-42
 
