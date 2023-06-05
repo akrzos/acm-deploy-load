@@ -58,7 +58,7 @@ class ZTPMonitor(Thread):
           try:
             aci_data = json.loads(output)
           except json.decoder.JSONDecodeError:
-            logger.warning("aci JSONDecodeError: {}".format(output))
+            logger.warning("aci JSONDecodeError: {}".format(output[:2500]))
 
       # Get clustergroupupgrades data
       oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", "ztp-install", "-o", "json"]
@@ -72,7 +72,7 @@ class ZTPMonitor(Thread):
           try:
             cgu_data = json.loads(output)
           except json.decoder.JSONDecodeError:
-            logger.warning("cgu JSONDecodeError: {}".format(output))
+            logger.warning("cgu JSONDecodeError: {}".format(output[:2500]))
 
       # Get baremetalhost data
       oc_cmd = ["oc", "get", "baremetalhost", "-A", "-o", "json"]
@@ -86,7 +86,7 @@ class ZTPMonitor(Thread):
           try:
             bmh_data = json.loads(output)
           except json.decoder.JSONDecodeError:
-            logger.warning("bmh JSONDecodeError: {}".format(output))
+            logger.warning("bmh JSONDecodeError: {}".format(output[:2500]))
 
       # Get agent data
       oc_cmd = ["oc", "get", "agent", "-A", "-o", "json"]
@@ -100,7 +100,7 @@ class ZTPMonitor(Thread):
           try:
             agent_data = json.loads(output)
           except json.decoder.JSONDecodeError:
-            logger.warning("agent JSONDecodeError: {}".format(output))
+            logger.warning("agent JSONDecodeError: {}".format(output[:2500]))
 
       # Get managedcluster data
       oc_cmd = ["oc", "get", "managedcluster", "-A", "-o", "json"]
@@ -114,7 +114,7 @@ class ZTPMonitor(Thread):
           try:
             mc_data = json.loads(output)
           except json.decoder.JSONDecodeError:
-            logger.warning("mc JSONDecodeError: {}".format(output))
+            logger.warning("mc JSONDecodeError: {}".format(output[:2500]))
 
       cluster_init = len(aci_data["items"])
       cluster_notstarted = 0
