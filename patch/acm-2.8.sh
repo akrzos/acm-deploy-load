@@ -3,6 +3,14 @@
 
 export KUBECONFIG=/root/bm/kubeconfig
 
+echo "Patching MCE ocm-proxyserver memory limits to 16Gi"
+oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+oc annotate multiclusterengine multiclusterengine pause=true
+oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[0].resources.limits.memory = "16Gi"' | oc replace -f -
+oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+echo "Sleep 45"
+sleep 45
+
 echo "Applying ACM search-v2-operator collector resources bump"
 oc patch search -n open-cluster-management search-v2-operator --type json -p '[{"op": "add", "path": "/spec/deployments/collector/resources", "value": {"limits": {"memory": "8Gi"}, "requests": {"memory": "64Mi", "cpu": "25m"}}}]'
 echo "Sleep 10"
