@@ -20,8 +20,10 @@ spec:
           scale-test-label-2: '{{hub fromConfigMap "" "common-template-map" "key2" hub}}'
           {%- endraw +%}
 {% endif %}
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
       spec:
         source: {{ common_catalogsource_name }}
+{% endif %}
     - fileName: SriovSubscriptionNS.yaml
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: SriovSubscriptionOperGroup.yaml
@@ -38,8 +40,10 @@ spec:
           scale-test-label-2: '{{hub fromConfigMap "" "common-template-map" "key4" hub}}'
           {%- endraw +%}
 {% endif %}
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
       spec:
         source: {{ common_catalogsource_name }}
+{% endif %}
     - fileName: PtpSubscriptionNS.yaml
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: PtpSubscriptionOperGroup.yaml
@@ -71,10 +75,12 @@ spec:
           scale-test-label-2: '{{hub fromConfigMap "" "common-template-map" "key2" hub}}'
           {%- endraw +%}
 {% endif %}
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
       spec:
         source: {{ common_catalogsource_name }}
       # Changing the channel value will upgrade/downgrade the operator installed version.
         channel: "{{ pao_subscription_channel }}"
+{% endif %}
     - fileName: PaoSubscriptionNS.yaml
       policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: PaoSubscriptionOperGroup.yaml
@@ -97,8 +103,10 @@ spec:
           scale-test-label-2: '{{hub fromConfigMap "" "common-template-map" "key4" hub}}'
           {%- endraw +%}
 {% endif %}
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
       spec:
         source: {{ common_catalogsource_name }}
+{% endif %}
     - fileName: ClusterLogOperatorStatus.yaml
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
 {% if include_clo_fix %}
@@ -122,18 +130,20 @@ spec:
           scale-test-label-2: '{{hub fromConfigMap "" "common-template-map" "key2" hub}}'
           {%- endraw +%}
 {% endif %}
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
       spec:
         source: {{ common_catalogsource_name }}
+{% endif %}
     - fileName: StorageOperatorStatus.yaml
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: ReduceMonitoringFootprint.yaml
       policyName: "{{ 'monitoring-config' if manyPolicies else 'config' }}-policy"
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
     #
     # These CRs are in support of installation from a disconnected registry
     #
     - fileName: OperatorHub.yaml
       policyName: "config-policy"
-{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
     - fileName: DefaultCatsrc.yaml
       policyName: "config-policy"
       # The Subscriptions all point to redhat-operators. The OperatorHub CR
