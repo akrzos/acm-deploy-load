@@ -58,14 +58,14 @@ oc adm must-gather --dest-dir="${results_dir}/must-gather-${ts}" 2>&1 | tee -a $
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-# meta=$(kubectl promdump meta -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus </dev/null 2>&1 | tee -a ${log_file})
-# kubectl promdump -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus --min-time "$(echo $meta | cut -d \| -f 5 | cut -d \  -f 2,3)" --max-time "$(echo $meta | cut -d \| -f 6 | cut -d \  -f 2,3)" > ${results_dir}/promdump-${ts}.tar.gz
-
-echo "################################################################################" 2>&1 | tee -a ${log_file}
-
 start_time=$(grep "Start Time:" ${results_dir}/report.txt | awk '{print $4}')
 end_time=$(grep "End Time:" ${results_dir}/report.txt | awk '{print $4}')
 time ./acm-deploy-load/analyze-prometheus.py -p "deploy-pa" -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+# meta=$(kubectl promdump meta -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus </dev/null 2>&1 | tee -a ${log_file})
+# kubectl promdump -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus --min-time "$(echo $meta | cut -d \| -f 5 | cut -d \  -f 2,3)" --max-time "$(echo $meta | cut -d \| -f 6 | cut -d \  -f 2,3)" > ${results_dir}/promdump-${ts}.tar.gz
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
