@@ -36,7 +36,6 @@ logging.Formatter.converter = time.gmtime
 
 
 # TODO:
-# * Get Policy timings
 # * Get BMH timings?
 
 def main():
@@ -74,7 +73,7 @@ def main():
   report_stats_file = "{}/cluster-time-{}-{}.stats".format(cliargs.results_directory, cliargs.cluster, ts)
   report_csv_file = "{}/cluster-time-{}-{}.csv".format(cliargs.results_directory, cliargs.cluster, ts)
 
-  # Get ACI data
+  # Get AgentClusterInstall data
   oc_cmd = ["oc", "get", "agentclusterinstalls", "-n", cliargs.cluster, cliargs.cluster, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
@@ -84,7 +83,7 @@ def main():
     data_file.write(output)
   aci_data = json.loads(output)
 
-  # Get ACI events url
+  # Get AgentClusterInstall events url and data
   aci_eventsurl = aci_data["status"]["debugInfo"]["eventsURL"]
   logger.info("Getting ACI Events Data: {}".format(aci_eventsurl))
   response = requests.get(aci_eventsurl, verify=False)
@@ -92,7 +91,17 @@ def main():
   with open("{}/aci_events.json".format(raw_data_dir), "w") as data_file:
     data_file.write(str(response.json()))
 
-  # Get managedcluster data
+  # Get BareMetalHost data
+  oc_cmd = ["oc", "get", "baremetalhost", "-n", cliargs.cluster, cliargs.cluster, "-o", "json"]
+  rc, output = command(oc_cmd, False, retries=3, no_log=True)
+  if rc != 0:
+    logger.error("analyze-cluster-time, oc get baremetalhost rc: {}".format(rc))
+    sys.exit(1)
+  with open("{}/bmh.json".format(raw_data_dir), "w") as data_file:
+    data_file.write(output)
+  bmh_data = json.loads(output)
+
+  # Get ManagedCluster data
   oc_cmd = ["oc", "get", "managedcluster", cliargs.cluster, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
@@ -102,7 +111,7 @@ def main():
     data_file.write(output)
   mc_data = json.loads(output)
 
-  # Get CGU data
+  # Get ClusterGroupUpgrade data
   oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", "ztp-install", cliargs.cluster, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
@@ -112,8 +121,8 @@ def main():
     data_file.write(output)
   cgu_data = json.loads(output)
 
-  # Get policy data
-  oc_cmd = ["oc", "get", "policies", "-n", cliargs.cluster, "-o", "json"]
+  # Get Policy data
+  oc_cmd = ["oc", "get", "policy", "-n", cliargs.cluster, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
     logger.error("analyze-cluster-time, oc get policies rc: {}".format(rc))
