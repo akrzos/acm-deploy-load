@@ -56,9 +56,9 @@ def main():
   report_data = OrderedDict()
   report_data["aci_created"] = {"ts": "", "duration": 0, "total_duration": 0}
   report_data["aci_validations_passing"] = {"ts": "", "duration": 0, "total_duration": 0}
-  report_data["aci_cluster_installing"] = {"ts": "", "duration": 0, "total_duration": 0}
+  report_data["aci_cluster_prepared"] = {"ts": "", "duration": 0, "total_duration": 0}
+  report_data["aci_cluster_host_installed"] = {"ts": "", "duration": 0, "total_duration": 0}
   report_data["aci_cluster_finalized"] = {"ts": "", "duration": 0, "total_duration": 0}
-  report_data["aci_cluster_installed"] = {"ts": "", "duration": 0, "total_duration": 0}
   report_data["aci_completed"] = {"ts": "", "duration": 0, "total_duration": 0}
 
   report_data["mc_imported"] = {"ts": "", "duration": 0, "total_duration": 0}
@@ -66,13 +66,13 @@ def main():
 
   report_data["cgu_created"] = {"ts": "", "duration": 0, "total_duration": 0}
   report_data["cgu_started"] = {"ts": "", "duration": 0, "total_duration": 0}
-  report_data["cgu_completed"] = {"ts": "", "duration": 0, "total_duration": 0}
 
   # Create results directory and save raw data
-  raw_data_dir = "{}/cluster-time-{}".format(cliargs.results_directory, cliargs.cluster)
+  raw_data_dir = "{}/cluster-time-{}-{}".format(cliargs.results_directory, cliargs.cluster, ts)
   Path(raw_data_dir).mkdir(parents=True, exist_ok=True)
   logger.info("Storing results in: {}".format(raw_data_dir))
-  report_stats_file = "{}/cluster-time-{}.stats".format(cliargs.results_directory, cliargs.cluster)
+  report_stats_file = "{}/cluster-time-{}-{}.stats".format(cliargs.results_directory, cliargs.cluster, ts)
+  report_csv_file = "{}/cluster-time-{}-{}.csv".format(cliargs.results_directory, cliargs.cluster, ts)
 
   # Get ACI data
   oc_cmd = ["oc", "get", "agentclusterinstalls", "-n", cliargs.cluster, cliargs.cluster, "-o", "json"]
@@ -143,15 +143,21 @@ def main():
   last_ts = ""
   for event in aci_event_data:
     event_time = datetime.strptime(event["event_time"], "%Y-%m-%dT%H:%M:%S.%fZ")
+    # if last_ts == "":
+    #   duration = 0
+    # else:
+    #   duration = round((event_time - last_ts).total_seconds())
+    # last_ts = event_time
+    # print("{},{},{},{},{}".format(event["event_time"],duration,event["severity"],event["name"],event["message"]))
     if event["message"].lower() == "updated status of the cluster to installing":
       # logger.info("ACI Event detected: Cluster installing - {}".format(event_time.strftime("%Y-%m-%dT%H:%M:%SZ")))
-      report_data["aci_cluster_installing"]["ts"] = event_time
+      report_data["aci_cluster_prepared"]["ts"] = event_time
     elif event["message"].lower() == "updated status of the cluster to finalizing":
       # logger.info("ACI Event detected: Cluster finalizing - {}".format(event_time.strftime("%Y-%m-%dT%H:%M:%SZ")))
-      report_data["aci_cluster_finalized"]["ts"] = event_time
+      report_data["aci_cluster_host_installed"]["ts"] = event_time
     if "operator cvo status: available message: done applying" in event["message"].lower():
       # logger.info("ACI Event detected: Cluster installed - {}".format(event_time.strftime("%Y-%m-%dT%H:%M:%SZ")))
-      report_data["aci_cluster_installed"]["ts"] = event_time
+      report_data["aci_cluster_finalized"]["ts"] = event_time
 
 
   # mc_creation_timestamp = mc_data["metadata"]["creationTimestamp"]
@@ -168,9 +174,33 @@ def main():
       report_data["mc_imported"]["ts"] = datetime.strptime(cond_ltt, "%Y-%m-%dT%H:%M:%SZ")
 
 
+  # Process Policy Data
+  for policy in policy_data["items"]:
+    policy_name = policy["metadata"]["name"]
+    # policy_creation_timestamp = policy["metadata"]["creationTimestamp"]
+    logger.info("Examining Policy: {}".format(policy_name))
+    for detail in policy["status"]["details"]:
+      compliant_detail = detail["compliant"]
+      logger.info("Policy Detail compliance: {}".format(compliant_detail))
+      for event in detail["history"]:
+        event_noncompliant = True
+        event_name = event["eventName"]
+        event_last_timestamp = datetime.strptime(event["lastTimestamp"], "%Y-%m-%dT%H:%M:%SZ")
+        event_message = event["message"]
+        logger.info("Examining event: {}".format(event_name))
+        if "NonCompliant" not in event_message:
+          event_noncompliant = False
+        if not event_noncompliant:
+          # Policy found compliant, record timing
+          report_data[policy_name] = {"ts": "", "duration": 0, "total_duration": 0}
+          report_data[policy_name]["ts"] = event_last_timestamp
+          break;
+
+
   # Process CGU Data
   report_data["cgu_created"]["ts"] = datetime.strptime(cgu_data["metadata"]["creationTimestamp"], "%Y-%m-%dT%H:%M:%SZ")
   report_data["cgu_started"]["ts"] = datetime.strptime(cgu_data["status"]["status"]["startedAt"], "%Y-%m-%dT%H:%M:%SZ")
+  report_data["cgu_completed"] = {"ts": "", "duration": 0, "total_duration": 0}
   report_data["cgu_completed"]["ts"] = datetime.strptime(cgu_data["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
   cgu_duration = 0
 
@@ -196,12 +226,17 @@ def main():
   # Output the report on the cluster
   logger.info("################################################################################")
 
+  with open(report_csv_file, "w") as csv_file:
+    csv_file.write("step,timestamp,duration,total\n")
+    for step in report_data:
+      csv_file.write("{},{},{},{}\n".format(step, report_data[step]["ts"].strftime("%Y-%m-%dT%H:%M:%SZ"), report_data[step]["duration"], report_data[step]["total_duration"]))
+
   with open(report_stats_file, "w") as stats_file:
     log_write(stats_file, "Install times on {}".format(cliargs.cluster))
 
-    log_write(stats_file, "{:25} {:20} {:8} {:5}".format("Step", "Timestamp", "Duration", "Total"))
+    log_write(stats_file, "{:50} {:20} {:8} {:5}".format("Step", "Timestamp", "Duration", "Total"))
     for step in report_data:
-      log_write(stats_file, "{:25} {:20} {:8} {:5}".format(step, report_data[step]["ts"].strftime("%Y-%m-%dT%H:%M:%SZ"), report_data[step]["duration"], report_data[step]["total_duration"]))
+      log_write(stats_file, "{:50} {:20} {:8} {:5}".format(step, report_data[step]["ts"].strftime("%Y-%m-%dT%H:%M:%SZ"), report_data[step]["duration"], report_data[step]["total_duration"]))
 
     log_write(stats_file, "################################################################################")
 
