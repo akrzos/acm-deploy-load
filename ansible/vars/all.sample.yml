@@ -13,7 +13,7 @@ setup_ztp_perfprofile_reserved_cpus: "0-3"
 setup_ztp_perfprofile_hugepage_count: 1
 setup_ztp_perfprofile_realtime: true
 setup_ztp_searchcollector_enabled: false
-
+setup_ztp_sno_site_policy: false
 
 # Install ACM/ZTP vars
 rhacm_disableHubSelfManagement: true

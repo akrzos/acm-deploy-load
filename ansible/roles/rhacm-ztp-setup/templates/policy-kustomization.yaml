@@ -11,6 +11,12 @@ generators:
 {% else %}
 # - group-du-sno-validator-ranGen.yaml
 {% endif %}
+# This site policy is for all clusters with the label scalelab
+{% if setup_ztp_sno_site_policy %}
+- sno-site.yaml
+{% else %}
+# - sno-site.yaml
+{% endif %}
 # This group policy is for all compressed 3-node cluster deployments:
 - group-du-3node-ranGen.yaml
 # This group validator policy is for all compressed 3-node cluster deployments:

@@ -181,6 +181,8 @@
     dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-sno-ranGen.yaml"
   - src: group-du-sno-validator-ranGen.yaml
     dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-sno-validator-ranGen.yaml"
+  - src: sno-site.yaml
+    dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/sno-site.yaml"
   - src: group-du-3node-ranGen.yaml
     dest: "{{ rhacm_install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-3node-ranGen.yaml"
   - src: group-du-3node-validator-ranGen.yaml
