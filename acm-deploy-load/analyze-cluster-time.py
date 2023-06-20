@@ -184,6 +184,7 @@ def main():
 
 
   # Process Policy Data
+  policy_report_data = {}
   for policy in policy_data["items"]:
     policy_name = policy["metadata"]["name"]
     # policy_creation_timestamp = policy["metadata"]["creationTimestamp"]
@@ -201,9 +202,14 @@ def main():
           event_noncompliant = False
         if not event_noncompliant:
           # Policy found compliant, record timing
-          report_data[policy_name] = {"ts": "", "duration": 0, "total_duration": 0}
-          report_data[policy_name]["ts"] = event_last_timestamp
+          policy_report_data[event_last_timestamp] = {"name": policy_name}
           break;
+
+  # Correctly order policy items by datetime stamp sorting
+  for key, value in sorted(policy_report_data.items()):
+    logger.info("Sorted: {}".format(item))
+    report_data[value["name"]] = {"ts": "", "duration": 0, "total_duration": 0}
+    report_data[value["name"]]["ts"] = key
 
 
   # Process CGU Data
@@ -212,7 +218,6 @@ def main():
   report_data["cgu_completed"] = {"ts": "", "duration": 0, "total_duration": 0}
   report_data["cgu_completed"]["ts"] = datetime.strptime(cgu_data["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
   cgu_duration = 0
-
 
   # Calculate durations between steps
   last_ts = ""
@@ -243,9 +248,9 @@ def main():
   with open(report_stats_file, "w") as stats_file:
     log_write(stats_file, "Install times on {}".format(cliargs.cluster))
 
-    log_write(stats_file, "{:50} {:20} {:8} {:5}".format("Step", "Timestamp", "Duration", "Total"))
+    log_write(stats_file, "{:60} {:20} {:8} {:5}".format("Step", "Timestamp", "Duration", "Total"))
     for step in report_data:
-      log_write(stats_file, "{:50} {:20} {:8} {:5}".format(step, report_data[step]["ts"].strftime("%Y-%m-%dT%H:%M:%SZ"), report_data[step]["duration"], report_data[step]["total_duration"]))
+      log_write(stats_file, "{:60} {:20} {:8} {:5}".format(step, report_data[step]["ts"].strftime("%Y-%m-%dT%H:%M:%SZ"), report_data[step]["duration"], report_data[step]["total_duration"]))
 
     log_write(stats_file, "################################################################################")
 
