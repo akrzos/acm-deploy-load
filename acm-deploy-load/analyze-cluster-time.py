@@ -207,7 +207,6 @@ def main():
 
   # Correctly order policy items by datetime stamp sorting
   for key, value in sorted(policy_report_data.items()):
-    logger.info("Sorted: {}".format(item))
     report_data[value["name"]] = {"ts": "", "duration": 0, "total_duration": 0}
     report_data[value["name"]]["ts"] = key
 
