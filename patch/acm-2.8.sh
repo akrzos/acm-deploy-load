@@ -3,13 +3,23 @@
 
 export KUBECONFIG=/root/bm/kubeconfig
 
-echo "Patching MCE ocm-proxyserver memory limits to 16Gi"
-oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+# https://issues.redhat.com/browse/ACM-5791
+echo "Patching MCE ocm-controller image"
+oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
 oc annotate multiclusterengine multiclusterengine pause=true
-oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[0].resources.limits.memory = "16Gi"' | oc replace -f -
-oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
-echo "Sleep 45"
-sleep 45
+# oc image mirror -a /opt/registry/sync/pull-secret-disconnected.acm_d.txt quay.io/qiujian/multicloud-manager:scale3 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03 --keep-manifest-list --continue-on-error=true
+oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03")' | oc replace -f -
+oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
+echo "Sleep 15"
+sleep 15
+
+# echo "Patching MCE ocm-proxyserver memory limits to 16Gi"
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+# oc annotate multiclusterengine multiclusterengine pause=true
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[0].resources.limits.memory = "16Gi"' | oc replace -f -
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+# echo "Sleep 45"
+# sleep 45
 
 echo "Applying ACM search-v2-operator collector resources bump"
 oc patch search -n open-cluster-management search-v2-operator --type json -p '[{"op": "add", "path": "/spec/deployments/collector/resources", "value": {"limits": {"memory": "8Gi"}, "requests": {"memory": "64Mi", "cpu": "25m"}}}]'
