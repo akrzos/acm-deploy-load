@@ -46,7 +46,7 @@ group_policy_storage_name: "config-storage-policy"
 # group_policy_logforwarder_name: "config-policy"
 # group_policy_storage_name: "config-policy"
 
-# When set this organizes the CRs into a larger number of policies
-manyPolicies: true
+# When set this organizes the CRs into a larger number of policies (13 total instead of the default of 5 policies)
+manyPolicies: false
 # When set this creates extra annotations which use hub side templating
 extraHubTemplates: true
