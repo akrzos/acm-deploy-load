@@ -7,7 +7,7 @@ export KUBECONFIG=/root/bm/kubeconfig
 echo "Patching MCE ocm-controller image"
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
 oc annotate multiclusterengine multiclusterengine pause=true
-# oc image mirror -a /opt/registry/sync/pull-secret-disconnected.acm_d.txt quay.io/qiujian/multicloud-manager:scale3 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03 --keep-manifest-list --continue-on-error=true
+# oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/qiujian/multicloud-manager:scale3 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03 --keep-manifest-list --continue-on-error=true
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03")' | oc replace -f -
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
 echo "Sleep 15"

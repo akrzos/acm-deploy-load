@@ -23,7 +23,7 @@ export KUBECONFIG=/root/bm/kubeconfig
 
 # https://issues.redhat.com/browse/ACM-3065
 echo "Patching ACM search-v2-operator indexer image"
-oc image mirror -a /opt/registry/sync/pull-secret-disconnected.acm_d.txt quay.io/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 --keep-manifest-list
+oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 --keep-manifest-list
 oc patch search -n open-cluster-management search-v2-operator --type merge -p '{"spec":{"deployments":{"indexer": {"imageOverride": "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12" }}}}'
 echo "Sleep 10"
 sleep 10
