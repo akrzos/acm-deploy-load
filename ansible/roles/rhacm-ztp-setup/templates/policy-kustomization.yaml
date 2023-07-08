@@ -18,6 +18,7 @@ generators:
 # - sno-site.yaml
 {% endif %}
 # This group policy is for all compressed 3-node cluster deployments:
+{% if setup_ztp_compact_policy %}
 - group-du-3node-ranGen.yaml
 # This group validator policy is for all compressed 3-node cluster deployments:
 {% if setup_ztp_enable_performanceprofile %}
@@ -25,7 +26,13 @@ generators:
 {% else %}
 # - group-du-3node-validator-ranGen.yaml
 {% endif %}
+{% else %}
+# - group-du-3node-ranGen.yaml
+# This group validator policy is for all compressed 3-node cluster deployments:
+# - group-du-3node-validator-ranGen.yaml
+{% endif %}
 # This group policy is for all standard cluster deployments:
+{% if setup_ztp_standard_policy %}
 - group-du-standard-ranGen.yaml
 # This group validator policy is for all standard cluster deployments:
 {% if setup_ztp_enable_performanceprofile %}
@@ -33,6 +40,12 @@ generators:
 {% else %}
 # - group-du-standard-validator-ranGen.yaml
 {% endif %}
+{% else %}
+# - group-du-standard-ranGen.yaml
+# This group validator policy is for all standard cluster deployments:
+# - group-du-standard-validator-ranGen.yaml
+{% endif %}
+
 # Commented out by default for now
 # - du-upgrade.yaml
 # - du-operator-upgrade.yaml

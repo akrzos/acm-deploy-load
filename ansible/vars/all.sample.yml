@@ -5,7 +5,8 @@ rhacm_install_directory: /root
 rhacm_disconnected_registry:
 rhacm_disconnected_registry_port: 5000
 
-
+setup_ztp_compact_policy: true
+setup_ztp_standard_policy: true
 # ZTP Setup Vars - DU Profile Performance Profile Settings
 setup_ztp_enable_performanceprofile: false
 setup_ztp_perfprofile_isolated_cpus: "4-7"
