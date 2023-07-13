@@ -3,24 +3,30 @@
 
 export KUBECONFIG=/root/bm/kubeconfig
 
+# Addresses both:
 # https://issues.redhat.com/browse/ACM-5791
-echo "Patching MCE ocm-controller image"
+# https://issues.redhat.com/browse/ACM-6288
+echo "Patching MCE ocm-controller and ocm-proxyserver image"
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
+oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-proxyserver").image'
 oc annotate multiclusterengine multiclusterengine pause=true
-# oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/qiujian/multicloud-manager:scale3 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03 --keep-manifest-list --continue-on-error=true
+# oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/zhiweiyin/multicloud-manager:2.3.1 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1 --keep-manifest-list --continue-on-error=true
+oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
+oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-proxyserver").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03")' | oc replace -f -
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
+oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-proxyserver").image'
 echo "Sleep 15"
 sleep 15
 
 # https://issues.redhat.com/browse/ACM-6288
-echo "Patching MCE ocm-proxyserver memory limits to 16Gi"
-oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
-oc annotate multiclusterengine multiclusterengine pause=true
-oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[0].resources.limits.memory = "16Gi"' | oc replace -f -
-oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
-echo "Sleep 45"
-sleep 45
+# echo "Patching MCE ocm-proxyserver memory limits to 16Gi"
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+# oc annotate multiclusterengine multiclusterengine pause=true
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[0].resources.limits.memory = "16Gi"' | oc replace -f -
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+# echo "Sleep 45"
+# sleep 45
 
 echo "Applying ACM search-v2-operator collector resources bump"
 oc patch search -n open-cluster-management search-v2-operator --type json -p '[{"op": "add", "path": "/spec/deployments/collector/resources", "value": {"limits": {"memory": "8Gi"}, "requests": {"memory": "64Mi", "cpu": "25m"}}}]'
