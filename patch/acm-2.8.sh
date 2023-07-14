@@ -13,7 +13,6 @@ oc annotate multiclusterengine multiclusterengine pause=true
 # oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/zhiweiyin/multicloud-manager:2.3.1 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1 --keep-manifest-list --continue-on-error=true
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
 oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-proxyserver").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
-oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/qiujian/multicloud-manager:scale03")' | oc replace -f -
 oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
 oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-proxyserver").image'
 echo "Sleep 15"
