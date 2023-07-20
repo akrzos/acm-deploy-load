@@ -6,17 +6,18 @@ export KUBECONFIG=/root/bm/kubeconfig
 # Addresses both:
 # https://issues.redhat.com/browse/ACM-5791
 # https://issues.redhat.com/browse/ACM-6288
-echo "Patching MCE ocm-controller and ocm-proxyserver image"
-oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
-oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-proxyserver").image'
-oc annotate multiclusterengine multiclusterengine pause=true
-# oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/zhiweiyin/multicloud-manager:2.3.1 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1 --keep-manifest-list --continue-on-error=true
-oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
-oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-proxyserver").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
-oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
-oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-proxyserver").image'
-echo "Sleep 15"
-sleep 15
+# Fixed in 2.8.1-DOWNSTREAM-2023-07-14-22-34-17 and newer
+# echo "Patching MCE ocm-controller and ocm-proxyserver image"
+# oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-proxyserver").image'
+# oc annotate multiclusterengine multiclusterengine pause=true
+# # oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/zhiweiyin/multicloud-manager:2.3.1 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1 --keep-manifest-list --continue-on-error=true
+# oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-controller").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="ocm-proxyserver").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/zhiweiyin/multicloud-manager:2.3.1")' | oc replace -f -
+# oc get deploy -n multicluster-engine ocm-controller -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
+# oc get deploy -n multicluster-engine ocm-proxyserver -o json |  jq '.spec.template.spec.containers[] | select(.name=="ocm-proxyserver").image'
+# echo "Sleep 15"
+# sleep 15
 
 # https://issues.redhat.com/browse/ACM-6288
 # echo "Patching MCE ocm-proxyserver memory limits to 16Gi"
