@@ -140,11 +140,13 @@ done
 cat ${output_dir}/cluster-install-failures | awk '{$1=""; print $0}' | sort | uniq -c > ${output_dir}/cluster-install-failures.failure_count
 
 
-echo "$(date -u) :: Inspecting TimedOut CGUs"
+echo "$(date -u) :: Inspecting 40 TimedOut CGUs"
 mkdir -p ${output_dir}/cgu-failures
+examined_cgu_failures=0
 
 for cluster in $(cat ${output_dir}/cgu.TimedOut); do
-  echo "$(date -u) :: Checking cluster ${cluster}"
+  examined_cgu_failures=$((examined_cgu_failures+1))
+  echo "$(date -u) :: Checking cluster ($examined_cgu_failures) - ${cluster}"
   export KUBECONFIG=/root/hv-vm/kc/${cluster}/kubeconfig
   mkdir -p ${output_dir}/cgu-failures/${cluster}
 
@@ -182,6 +184,9 @@ for cluster in $(cat ${output_dir}/cgu.TimedOut); do
   oc get catalogsources -A -o yaml > ${output_dir}/cgu-failures/${cluster}/catalogsources.yaml
   oc describe catalogsources -A > ${output_dir}/cgu-failures/${cluster}/catalogsources.describe
 
+  if [ "$examined_cgu_failures" -ge "40" ]; then
+    break
+  fi
 done
 
 echo "$(date -u) :: Done collecting data"
