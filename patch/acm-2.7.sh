@@ -22,11 +22,11 @@ export KUBECONFIG=/root/bm/kubeconfig
 
 
 # https://issues.redhat.com/browse/ACM-3065
-echo "Patching ACM search-v2-operator indexer image"
-oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 --keep-manifest-list
-oc patch search -n open-cluster-management search-v2-operator --type merge -p '{"spec":{"deployments":{"indexer": {"imageOverride": "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12" }}}}'
-echo "Sleep 10"
-sleep 10
+# echo "Patching ACM search-v2-operator indexer image"
+# oc image mirror -a /opt/registry/sync/pull-secret-bastion.acm_d.txt quay.io/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12 --keep-manifest-list
+# oc patch search -n open-cluster-management search-v2-operator --type merge -p '{"spec":{"deployments":{"indexer": {"imageOverride": "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/search-indexer:2.8.0-SNAPSHOT-2023-02-08-17-27-12" }}}}'
+# echo "Sleep 10"
+# sleep 10
 
 echo "Create searchscale configmap"
 oc create cm -n open-cluster-management searchscale --from-literal POSTGRESQL_SHARED_BUFFERS=512MB --from-literal POSTGRESQL_EFFECTIVE_CACHE_SIZE=1024MB --from-literal WORK_MEM=128MB
@@ -49,11 +49,11 @@ echo "Sleep 10"
 sleep 10
 
 # https://issues.redhat.com/browse/ACM-2774
-echo "Patching ACM grc-policy-propagator image"
-oc annotate mch -n open-cluster-management multiclusterhub mch-pause=True
-oc get deploy -n open-cluster-management grc-policy-propagator -o json |  jq '.spec.template.spec.containers[] | select(.name=="governance-policy-propagator").image'
-oc get deploy -n open-cluster-management grc-policy-propagator -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="governance-policy-propagator").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/governance-policy-propagator:perf_fix_1")' | oc replace -f -
-oc get deploy -n open-cluster-management grc-policy-propagator -o json |  jq '.spec.template.spec.containers[] | select(.name=="governance-policy-propagator").image'
+# echo "Patching ACM grc-policy-propagator image"
+# oc annotate mch -n open-cluster-management multiclusterhub mch-pause=True
+# oc get deploy -n open-cluster-management grc-policy-propagator -o json |  jq '.spec.template.spec.containers[] | select(.name=="governance-policy-propagator").image'
+# oc get deploy -n open-cluster-management grc-policy-propagator -o json |  jq '.spec.template.spec.containers[] |= (select(.name=="governance-policy-propagator").image = "e27-h01-000-r650.rdu2.scalelab.redhat.com:5000/stolostron/governance-policy-propagator:perf_fix_1")' | oc replace -f -
+# oc get deploy -n open-cluster-management grc-policy-propagator -o json |  jq '.spec.template.spec.containers[] | select(.name=="governance-policy-propagator").image'
 # echo "Sleep 45"
 
 # Fixed - https://issues.redhat.com/browse/ACM-2336
