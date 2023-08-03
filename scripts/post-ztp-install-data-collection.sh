@@ -21,6 +21,9 @@ oc get clusterversion > ${output_dir}/clusterversion
 oc get clusterversion -o yaml > ${output_dir}/clusterversion.yaml
 oc describe clusterversion > ${output_dir}/clusterversion.describe
 
+# Get hub cluster install config
+oc get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/cluster-config-v1
+
 oc get csv -A > ${output_dir}/csv
 oc get csv -A -o yaml > ${output_dir}/csv.yaml
 oc describe csv -A > ${output_dir}/csv.describe
@@ -46,6 +49,9 @@ cat ${output_dir}/aci.status | awk '{print $2}' | sort | uniq -c > ${output_dir}
 cat ${output_dir}/aci.status | grep "InstallationFailed" | awk '{print $1}' > ${output_dir}/aci.InstallationFailed
 cat ${output_dir}/aci.status | grep "InstallationNotStarted" | awk '{print $1}' > ${output_dir}/aci.InstallationNotStarted
 cat ${output_dir}/aci.status | grep "InstallationInProgress" | awk '{print $1}' > ${output_dir}/aci.InstallationInProgress
+
+# Get 2 Deployed cluster's install-configs
+cat ${output_dir}/aci.status | grep InstallationCompleted | head -n 2 | awk '{print $1}' | xargs -I % sh -c 'oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1'
 
 echo "$(date -u) :: Collecting managedcluster data"
 
