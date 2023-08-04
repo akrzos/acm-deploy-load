@@ -14,6 +14,7 @@
 #  limitations under the License.
 
 from utils.command import command
+import base64
 import json
 import logging
 import time
@@ -74,8 +75,8 @@ def get_prometheus_token(kubeconfig, ocp_version):
     prom_secret_data = json.loads(output)
 
     token = (base64.b64decode(prom_secret_data["data"]["token"])).decode("utf-8")
-    if prom_token_data == "":
-      logger.error("Unable to identify prometheus token name")
+    if token == "":
+      logger.error("Unable to obtain prometheus token")
       return ""
   return token
 
