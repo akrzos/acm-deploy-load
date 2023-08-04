@@ -146,9 +146,11 @@ acm_data = [
   "mem-acm-obs-rcv-total",
   "mem-acm-obs-rcv-pod",
   "net-rcv-acm-obs",
-  "net-xmt-acm-mce",
+  "net-xmt-acm-obs",
   "cpu-acm-search",
-  "mem-acm-search"
+  "mem-acm-search",
+  "net-rcv-acm-search",
+  "net-xmt-acm-search"
 ]
 talm_data = [
   "talm-cgu",
@@ -162,7 +164,9 @@ talm_data = [
 def calculate_query_offset(end_ts):
   cur_utc_unix_time = time.mktime(datetime.utcnow().timetuple())
   offset_minutes = (int(cur_utc_unix_time) - end_ts) / 60
-  return "{}m".format(int(offset_minutes))
+  if offset_minutes < 0:
+    offset_minutes = 0
+  return offset_minutes
 
 
 def acm_queries(report_dir, route, token, end_ts, duration, w, h):
@@ -232,7 +236,7 @@ def acm_queries(report_dir, route, token, end_ts, duration, w, h):
   q = "sum(irate(container_network_receive_bytes_total{cluster='',namespace='open-cluster-management-observability'}[5m]))"
   query_thanos(route, q, "ACM - Observability", token, end_ts, duration, sub_report_dir, "net-rcv-acm-obs", "ACM Observability Network Receive Throughput", "NET", w, h)
   q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace='open-cluster-management-observability'}[5m]))"
-  query_thanos(route, q, "ACM - Observability", token, end_ts, duration, sub_report_dir, "net-xmt-acm-mce", "ACM Observability Network Transmit Throughput", "NET", w, h)
+  query_thanos(route, q, "ACM - Observability", token, end_ts, duration, sub_report_dir, "net-xmt-acm-obs", "ACM Observability Network Transmit Throughput", "NET", w, h)
 
   # ACM Search CPU/Memory/Network
   q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='open-cluster-management',pod=~'search.*'})"
@@ -240,9 +244,9 @@ def acm_queries(report_dir, route, token, end_ts, duration, w, h):
   q = "sum(container_memory_working_set_bytes{cluster='',container!='',namespace='open-cluster-management',pod=~'search.*'})"
   query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "mem-acm-search", "ACM Search Memory Usage", "MEM", w, h)
   q = "sum(irate(container_network_receive_bytes_total{cluster='',namespace='open-cluster-management',pod=~'search.*'}[5m]))"
-  query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "net-rcv-acm-obs", "ACM Search Network Receive Throughput", "NET", w, h)
+  query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "net-rcv-acm-search", "ACM Search Network Receive Throughput", "NET", w, h)
   q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace='open-cluster-management',pod=~'search.*'}[5m]))"
-  query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "net-xmt-acm-mce", "ACM Search Network Transmit Throughput", "NET", w, h)
+  query_thanos(route, q, "ACM - Search", token, end_ts, duration, sub_report_dir, "net-xmt-acm-search", "ACM Search Network Transmit Throughput", "NET", w, h)
 
 
 def cluster_queries(report_dir, route, token, end_ts, duration, w, h):
@@ -380,7 +384,10 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
   # Determine query offset from end timestamp
   offset = calculate_query_offset(end_ts)
 
-  query_complete = query + "[" + duration + ":" + resolution + "] offset " + offset
+  if offset == 0:
+    query_complete = query + "[" + duration + ":" + resolution + "]"
+  else:
+    query_complete = query + "[" + duration + ":" + resolution + "] offset " + int(offset) + "m"
   logger.info("Query: {}".format(query_complete))
   query_endpoint = "{}/api/v1/query?query={}".format(route, query_complete)
   headers = {"Authorization": "Bearer {}".format(token)}
