@@ -387,7 +387,7 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
   if offset == 0:
     query_complete = query + "[" + duration + ":" + resolution + "]"
   else:
-    query_complete = query + "[" + duration + ":" + resolution + "] offset " + int(offset) + "m"
+    query_complete = query + "[" + duration + ":" + resolution + "] offset " + str(int(offset)) + "m"
   logger.info("Query: {}".format(query_complete))
   query_endpoint = "{}/api/v1/query?query={}".format(route, query_complete)
   headers = {"Authorization": "Bearer {}".format(token)}
