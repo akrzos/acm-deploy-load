@@ -24,7 +24,8 @@ logger = logging.getLogger("acm-deploy-load")
 def detect_talm_minor(default_talm_version, dry_run):
   talm_version = default_talm_version
   logger.info("Detecting TALM version by image tag")
-  oc_cmd = ["oc", "get", "deploy", "-n", "openshift-cluster-group-upgrades", "cluster-group-upgrades-controller-manager", "-o", "json"]
+  # Try cluster-group-upgrades-controller-manager-v2 first, perhaps try cluster-group-upgrades-controller-manager afterwards
+  oc_cmd = ["oc", "get", "deploy", "-n", "openshift-cluster-group-upgrades", "cluster-group-upgrades-controller-manager-v2", "-o", "json"]
   rc, output = command(oc_cmd, dry_run, retries=3, no_log=True)
   if rc != 0:
     logger.warning("talm, oc get deploy -n openshift-cluster-group-upgrades rc: {}".format(rc))
