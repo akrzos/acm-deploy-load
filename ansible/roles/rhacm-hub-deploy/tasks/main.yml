@@ -68,7 +68,7 @@
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ rhacm_install_directory }}/rhacm-deploy/rhacm-observability.yaml
 
-- name: Deploy TALM via Subscription
+- name: Deploy TALM via Operator Subscription
   when: setup_talm_operator
   block:
   - name: Create TALM subscription file
@@ -94,7 +94,7 @@
       KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch installPlan {{ installplan_name.stdout }} -n openshift-operators --type merge --patch '{"spec": {"approved": true }}'
 
 - name: Deploy TALM via Repo
-  when: setup_talm
+  when: setup_talm_repo
   block:
   - name: Create directory for TALM
     file:
@@ -108,7 +108,7 @@
       force: true
       version: "{{ talm_repo_branch }}"
 
-  - name: Deploy TALM
+  - name: Make Deploy TALM
     shell: |
       cd {{ rhacm_install_directory }}/rhacm-deploy/cluster-group-upgrades-operator
       export KUBECONFIG={{ hub_cluster_kubeconfig }}

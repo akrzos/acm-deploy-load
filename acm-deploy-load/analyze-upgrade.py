@@ -36,13 +36,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(
 logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
-# Latest defaults (5/9/2023)
+# Latest defaults (9/7/2023)
 default_operator_csvs = [
-  "local-storage-operator.v4.12.0-202304190215",
+  "local-storage-operator.v4.13.0-202308281305",
   # For reasons unknown, cluster-logging csv shows a status.lastUpdateTime much beyond the time expected
-  # "cluster-logging.v5.6.1",
-  "ptp-operator.4.12.0-202304211142",
-  "sriov-network-operator.v4.12.0-202304190215"
+  # "cluster-logging.v5.7.5"
+  "ptp-operator.v4.13.0-202308281305",
+  "sriov-network-operator.v4.13.0-202308281305",
 ]
 
 # TODO:
@@ -58,7 +58,7 @@ def main():
   parser.add_argument("-k", "--kubeconfigs", type=str, default="/root/hv-vm/kc",
                       help="The location of the kubeconfigs, nested under each cluster's directory")
 
-  parser.add_argument("-p", "--platform-upgrade", type=str, default="4.12.16",
+  parser.add_argument("-p", "--platform-upgrade", type=str, default="4.13.9",
                       help="The version clusters are expected to have upgraded to")
 
   parser.add_argument("-o", "--operator-csvs", nargs="*", default=default_operator_csvs,

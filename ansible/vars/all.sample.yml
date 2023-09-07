@@ -17,27 +17,28 @@ setup_ztp_searchcollector_enabled: false
 setup_ztp_sno_site_policy: false
 
 # Install ACM/ZTP vars
-rhacm_disableHubSelfManagement: true
+rhacm_disableHubSelfManagement: false
 hub_cluster_kubeconfig: /root/bm/kubeconfig
 rhacm_icsp_enable_tag_mirror: false
 # When installing RHACM or MCE in a connected environment this pull secret must be populated
 rhacm_quay_pullsecret: ''
-# Example: rhacm_build: '2.8.0-DOWNSTREAM-2023-04-25-22-18-13'
+# Example: rhacm_build: '2.9.0-DOWNSTREAM-2023-09-05-07-27-22'
 rhacm_build:
 setup_rhacm_search_pv: false
 setup_rhacm_observability: false
 
-# Deploy TALM - Topology Aware Lifecycle Manager
+# Deploy Topology Aware Lifecycle Manager (TALM)
+# Deploy TALM via Operator Subscription
 setup_talm_operator: false
 # redhat-operator-index = disconnected setup, redhat-operators = connected setup
 talm_operator_source: redhat-operator-index
-# Follow vars are used instead of setting up the talm operator from the operator catalog
-setup_talm: true
+# Deploy TALM via Repo
+setup_talm_repo: true
 talm_repo: https://github.com/openshift-kni/cluster-group-upgrades-operator.git
-talm_repo_branch: release-4.13
-talm_image: quay.io/openshift-kni/cluster-group-upgrades-operator:4.13.0
-talm_precache_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-precache:4.13.0"
-talm_recovery_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-recovery:4.13.0"
+talm_repo_branch: release-4.14
+talm_image: quay.io/openshift-kni/cluster-group-upgrades-operator:4.14.0
+talm_precache_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-precache:4.14.0"
+talm_recovery_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-recovery:4.14.0"
 
 # Apply ZTP argocd patches and create the argocd applications
 setup_rhacm_ztp_patches: true
@@ -46,8 +47,8 @@ setup_ztp_policy_application: true
 gitops_redis_mem_patch: true
 
 # MCE Assisted-installer items (Installed with RHACM)
-mce_assisted_ocp_version: quay.io/openshift-release-dev/ocp-release:4.12.16-x86_64
+mce_assisted_ocp_version: quay.io/openshift-release-dev/ocp-release:4.13.10-x86_64
 mce_assisted_service_namespace: multicluster-engine
 mce_clusterimagesets:
 - name: openshift-4.12.16
-  releaseImage: quay.io/openshift-release-dev/ocp-release:4.12.16-x86_64
+  releaseImage: quay.io/openshift-release-dev/ocp-release:4.13.10-x86_64
