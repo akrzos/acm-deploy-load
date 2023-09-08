@@ -140,6 +140,7 @@ echo "$(date -u) :: Collecting policy data"
 
 oc get policy -A > ${output_dir}/policy
 oc get policy -A -o yaml > ${output_dir}/policy.yaml
-oc describe policy -A > ${output_dir}/policy.describe
+# Takes up too much disk space
+# oc describe policy -A > ${output_dir}/policy.describe
 
 echo "$(date -u) :: Done collecting data"

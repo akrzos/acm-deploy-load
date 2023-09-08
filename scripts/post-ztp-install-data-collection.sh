@@ -25,8 +25,9 @@ oc describe clusterversion > ${output_dir}/clusterversion.describe
 oc get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/cluster-config-v1
 
 oc get csv -A > ${output_dir}/csv
-oc get csv -A -o yaml > ${output_dir}/csv.yaml
-oc describe csv -A > ${output_dir}/csv.describe
+# Takes too much space:
+# oc get csv -A -o yaml > ${output_dir}/csv.yaml
+# oc describe csv -A > ${output_dir}/csv.describe
 
 oc get no > ${output_dir}/nodes
 oc get no -o yaml > ${output_dir}/nodes.yaml
@@ -75,7 +76,8 @@ echo "$(date -u) :: Collecting policy data"
 
 oc get policy -A > ${output_dir}/policy
 oc get policy -A -o yaml > ${output_dir}/policy.yaml
-oc describe policy -A > ${output_dir}/policy.describe
+# Also takes too much space
+# oc describe policy -A > ${output_dir}/policy.describe
 
 echo "$(date -u) :: Collecting clustergroupupgrades data"
 
