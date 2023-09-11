@@ -218,7 +218,7 @@ def main():
   parser.add_argument("-i", "--monitor-interval", type=int, default=60,
                       help="Interval to collect monitoring data (seconds)")
   # The version of talm determines how we monitor for du profile applying/compliant/timeout
-  parser.add_argument("--talm-version", type=str, default="4.12",
+  parser.add_argument("--talm-version", type=str, default="4.14",
                       help="The version of talm to fall back on in event we can not detect the talm version")
 
   # Report options

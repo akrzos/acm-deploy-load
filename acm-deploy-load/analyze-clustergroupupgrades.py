@@ -43,7 +43,7 @@ def main():
   parser.add_argument("results_directory", type=str, help="The location to place analyzed data")
   parser.add_argument("-n", "--namespace", type=str, default="ztp-install", help="Namespace of the CGUs to analyze")
   parser.add_argument("-p", "--display-precache", action="store_true", default=False, help="Display CGU precache duration")
-  parser.add_argument("--talm-version", type=str, default="4.12",
+  parser.add_argument("--talm-version", type=str, default="4.14",
                       help="The version of talm to fall back on in event we can not detect the talm version")
   cliargs = parser.parse_args()
 
@@ -124,7 +124,8 @@ def main():
             if (condition["type"] == "Progressing" and condition["status"] == "False"
                 and condition["reason"] != "Completed" and condition["reason"] != "TimedOut"):
               cgu_status = "NotStarted"
-            if condition["type"] == "PrecachingSuceeded" and condition["status"] == "True" and condition["reason"] == "PrecachingCompleted":
+            if (condition["type"] == "PrecachingSuceeded" and condition["status"] == "True" and
+                (condition["reason"] == "PrecachingCompleted" or condition["reason"] == "PartiallyDone")):
               precache_ltt = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
               if cgus_precache_done == "":
                 cgus_precache_done = precache_ltt
