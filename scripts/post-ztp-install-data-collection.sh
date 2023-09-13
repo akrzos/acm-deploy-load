@@ -109,11 +109,18 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
   fi
   failure_found=false
   echo -n "$cluster " | tee -a ${output_dir}/cluster-install-failures
+  autoscaler_degraded=$(oc get co cluster-autoscaler -o json | jq -r '.status.conditions==null')
   ceo_available=$(oc get co etcd -o json | jq -r '.status.conditions[] | select(.type=="Available").status')
   ceo_degraded=$(oc get co etcd -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
+  image_registry_degraded=$(oc get co image-registry -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
   mco_degraded=$(oc get co machine-config -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
   ks_degraded=$(oc get co kube-scheduler -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
   olm_degraded=$(oc get co operator-lifecycle-manager -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
+  if [ $autoscaler_degraded == "true" ]; then
+    # https://issues.redhat.com/browse/OCPBUGS-18954
+    echo -n "ClusterAutoScalerDegraded " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
+  fi
   if [ $ceo_available == "False" ]; then
     # https://issues.redhat.com/browse/OCPBUGS-12475
     echo -n "EtcdOperatorUnavailable " | tee -a ${output_dir}/cluster-install-failures
@@ -124,8 +131,14 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
     echo -n "EtcdOperatorDegraded " | tee -a ${output_dir}/cluster-install-failures
     failure_found=true
   fi
+  if [ $image_registry_degraded == "True" ]; then
+    # https://issues.redhat.com/browse/OCPBUGS-18969
+    echo -n "ImageRegistryDegraded " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
+  fi
   if [ $mco_degraded == "True" ]; then
     # https://issues.redhat.com/browse/OCPBUGS-12741
+    # https://issues.redhat.com/browse/OCPBUGS-18964 (Also detected as this)
     echo -n "MCODegraded " | tee -a ${output_dir}/cluster-install-failures
     failure_found=true
   fi
