@@ -113,6 +113,7 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
   ceo_available=$(oc get co etcd -o json | jq -r '.status.conditions[] | select(.type=="Available").status')
   ceo_degraded=$(oc get co etcd -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
   image_registry_degraded=$(oc get co image-registry -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
+  machine_api_notready=$(oc get co machine-api -o json | jq -r '.status.conditions==null')
   mco_degraded=$(oc get co machine-config -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
   ks_degraded=$(oc get co kube-scheduler -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
   olm_degraded=$(oc get co operator-lifecycle-manager -o json | jq -r '.status.conditions[] | select(.type=="Degraded").status')
@@ -134,6 +135,11 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
   if [ $image_registry_degraded == "True" ]; then
     # https://issues.redhat.com/browse/OCPBUGS-18969
     echo -n "ImageRegistryDegraded " | tee -a ${output_dir}/cluster-install-failures
+    failure_found=true
+  fi
+  if [ $machine_api_notready == "true" ]; then
+    # https://issues.redhat.com/browse/OCPBUGS-19505
+    echo -n "MachineAPINotReady " | tee -a ${output_dir}/cluster-install-failures
     failure_found=true
   fi
   if [ $mco_degraded == "True" ]; then
