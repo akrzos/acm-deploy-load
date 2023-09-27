@@ -47,8 +47,12 @@ time ./acm-deploy-load/analyze-clustergroupupgrades.py ${results_dir} 2>&1 | tee
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-oc adm must-gather --dest-dir="${results_dir}/must-gather-${ts}" 2>&1 | tee -a ${log_file}
-tar caf ${results_dir}/must-gather-${ts}.tar.gz --remove-files ${results_dir}/must-gather-${ts} 2>&1 | tee -a ${log_file}
+time ./scripts/post-ztp-gen-day1-csv.sh ${results_dir} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile combined --writegraph ${results_dir}/graph-combined-per-cluster.png 2>&1 | tee -a ${log_file}
+time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile all_stages --writegraph ${results_dir}/graph-per-cluster-stage_breakdown.png 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
@@ -61,6 +65,23 @@ echo "##########################################################################
 
 meta=$(kubectl promdump meta -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus </dev/null 2>&1 | tee -a ${log_file})
 kubectl promdump -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus --min-time "$(echo $meta | cut -d \| -f 5 | cut -d \  -f 2,3)" --max-time "$(echo $meta | cut -d \| -f 6 | cut -d \  -f 2,3)" > ${results_dir}/promdump-${ts}.tar.gz
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+# Moved the must-gather to last since it can occassionally fail and exit this script
+oc adm must-gather --dest-dir="${results_dir}/must-gather-${ts}" 2>&1 | tee -a ${log_file}
+tar caf ${results_dir}/must-gather-${ts}.tar.gz --remove-files ${results_dir}/must-gather-${ts} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+echo "Running ACM-inspector"  2>&1 | tee -a ${log_file}
+
+acm_inspector_token=$(oc create token kubeburner -n default)
+acm_inspector_url=$(oc whoami --show-server)
+acm_inspector_output_dir="$(pwd)/${results_dir}/acm-inspector-$(date -u +%Y%m%d-%H%M%S)"
+mkdir -p ${acm_inspector_output_dir}
+
+podman run --network host -e OC_CLUSTER_URL=${acm_inspector_url} -e OC_TOKEN=${acm_inspector_token} -v ${acm_inspector_output_dir}:/acm-inspector/output quay.io/bjoydeep/acm-inspector  2>&1 | tee -a ${log_file}
+tar czf ${acm_inspector_output_dir}.tar.gz -C ${acm_inspector_output_dir} .
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
