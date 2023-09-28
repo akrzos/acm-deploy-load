@@ -62,7 +62,7 @@ oc get managedcluster -A --no-headers -o custom-columns=NAME:'.metadata.name',AV
 
 cat ${output_dir}/managedcluster.available | grep "Unknown" > ${output_dir}/mc.Unknown
 
-echo "$(date -u) :: Collecting mch/mce data"
+echo "$(date -u) :: Collecting mch/mce/mco data"
 
 oc get mch -A > ${output_dir}/mch
 oc get mch -A -o yaml > ${output_dir}/mch.yaml
@@ -71,6 +71,10 @@ oc describe mch -A > ${output_dir}/mch.describe
 oc get mce > ${output_dir}/mce
 oc get mce -o yaml > ${output_dir}/mce.yaml
 oc describe mce > ${output_dir}/mce.describe
+
+oc get mco > ${output_dir}/mco
+oc get mco -o yaml > ${output_dir}/mco.yaml
+oc describe mco > ${output_dir}/mco.describe
 
 echo "$(date -u) :: Collecting policy data"
 
