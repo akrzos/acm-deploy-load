@@ -53,3 +53,7 @@ specific versions.
   * Check if all nodes are ready, unknown or under memory/disk/pid pressure
   * Check if all machineconfigpools updated and/or degraded
   * Check for etcd leader elections
+* acm-health.py - Check if ACM is healthy/stable
+  * Check if multiclusterhub is available
+  * Check if multiclusterengine is available
+  * Check if multiclusterobservability is available
