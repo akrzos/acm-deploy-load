@@ -213,7 +213,7 @@ def check_machineconfigpools(kubeconfig):
 
 
 def check_etcd_leader_elections(kubeconfig, version, hours):
-  logger.info("Checking for etcd leader elections")
+  logger.debug("Checking for etcd leader elections")
   success = True
   messages = []
 
@@ -223,7 +223,7 @@ def check_etcd_leader_elections(kubeconfig, version, hours):
     success = False
     messages.append("EtcdLeaderElections: Could not obtain the thanos querier route")
   else:
-    logger.info("Route to Query: {}".format(querier_route))
+    logger.debug("Route to Query: {}".format(querier_route))
 
     prom_token_data = get_prometheus_token(kubeconfig, version)
     if prom_token_data == "":
@@ -236,20 +236,24 @@ def check_etcd_leader_elections(kubeconfig, version, hours):
       headers = {"Authorization": "Bearer {}".format(prom_token_data)}
       query_data = requests.post(query_endpoint, headers=headers, verify=False).json()
 
-      logger.debug("Length of returned data: {}".format(len(query_data["data"]["result"])))
+      if "data" in query_data:
+        logger.debug("Length of returned data: {}".format(len(query_data["data"]["result"])))
 
-      for result in query_data["data"]["result"]:
-        if float(result["value"][1]) > 0:
-          logger.debug("Pod: {}, Instance: {}, Result: {}".format(result["metric"]["pod"],result["metric"]["instance"], float(result["value"][1])))
-          logger.debug("etcd encountered leader election(s) in the {} hour(s)".format(hours))
-          success = False
-          messages.append("EtcdLeaderElections: Pod: {}, Election Count: {}, Hours Queried: {}".format(result["metric"]["pod"], float(result["value"][1]), hours))
+        for result in query_data["data"]["result"]:
+          if float(result["value"][1]) > 0:
+            logger.debug("Pod: {}, Instance: {}, Result: {}".format(result["metric"]["pod"],result["metric"]["instance"], float(result["value"][1])))
+            logger.debug("etcd encountered leader election(s) in the {} hour(s)".format(hours))
+            success = False
+            messages.append("EtcdLeaderElections: Pod: {}, Election Count: {}, Hours Queried: {}".format(result["metric"]["pod"], float(result["value"][1]), hours))
+      else:
+        logger.error("No data returned from query: {}".format(query))
+        success = False
+        messages.append("EtcdLeaderElections: No data returned from prometheus query: {}".format(query))
   return success, messages
 
 
 def main():
   start_time = time.time()
-  healthy = 0
 
   parser = argparse.ArgumentParser(
       description="Check that an OpenShift cluster is healthy and stable",
