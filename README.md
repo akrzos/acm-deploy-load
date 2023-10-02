@@ -47,9 +47,9 @@ specific versions.
 
 ## Other Scripts
 
-* cluster-health.py - Check if a cluster is healthy/stable
-  * Check if clusterversion is available
-  * Check if all clusteroperators available
-  * Check if all nodes are ready
-  * Check if all machineconfigpools updated
-  * Check for etcd leader elections in the last hour
+* ocp-health.py - Check if a cluster is healthy/stable
+  * Check if clusterversion is available and/or failing
+  * Check if all clusteroperators are available and/or degraded
+  * Check if all nodes are ready, unknown or under memory/disk/pid pressure
+  * Check if all machineconfigpools updated and/or degraded
+  * Check for etcd leader elections
