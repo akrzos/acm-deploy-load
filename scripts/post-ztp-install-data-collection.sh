@@ -53,6 +53,9 @@ cat ${output_dir}/aci.status | grep "InstallationInProgress" | awk '{print $1}' 
 
 # Get 2 Deployed cluster's install-configs
 cat ${output_dir}/aci.status | grep InstallationCompleted | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
+# Copy two SiteConfigs
+ls  /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
+
 
 echo "$(date -u) :: Collecting managedcluster data"
 
@@ -177,7 +180,7 @@ done
 cat ${output_dir}/cluster-install-failures | awk '{$1=""; print $0}' | sort | uniq -c > ${output_dir}/cluster-install-failures.failure_count
 
 
-echo "$(date -u) :: Inspecting 40 TimedOut CGUs"
+echo "$(date -u) :: Inspecting up to 40 TimedOut CGUs"
 mkdir -p ${output_dir}/cgu-failures
 examined_cgu_failures=0
 
