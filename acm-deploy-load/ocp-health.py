@@ -22,11 +22,8 @@
 #  limitations under the License.
 
 import argparse
-import base64
-from datetime import datetime
 import json
 import logging
-import numpy as np
 import requests
 import sys
 import time
