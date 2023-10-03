@@ -75,12 +75,13 @@ tar caf ${results_dir}/must-gather-${ts}.tar.gz --remove-files ${results_dir}/mu
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 echo "Running ACM-inspector"  2>&1 | tee -a ${log_file}
 
+acm_inspector_image="quay.io/bjoydeep/acm-inspector:2.9.0-SNAPSHOT-2023-10-02-16-51-40"
 acm_inspector_token=$(oc create token kubeburner -n default)
 acm_inspector_url=$(oc whoami --show-server)
 acm_inspector_output_dir="$(pwd)/${results_dir}/acm-inspector-$(date -u +%Y%m%d-%H%M%S)"
 mkdir -p ${acm_inspector_output_dir}
 
-podman run --network host -e OC_CLUSTER_URL=${acm_inspector_url} -e OC_TOKEN=${acm_inspector_token} -v ${acm_inspector_output_dir}:/acm-inspector/output quay.io/bjoydeep/acm-inspector  2>&1 | tee -a ${log_file}
+podman run --network host -e OC_CLUSTER_URL=${acm_inspector_url} -e OC_TOKEN=${acm_inspector_token} -v ${acm_inspector_output_dir}:/acm-inspector/output ${acm_inspector_image} 2>&1 | tee -a ${log_file}
 tar czf ${acm_inspector_output_dir}.tar.gz -C ${acm_inspector_output_dir} .
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
