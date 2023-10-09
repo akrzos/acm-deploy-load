@@ -52,7 +52,7 @@ cat ${output_dir}/aci.status | grep "InstallationNotStarted" | awk '{print $1}' 
 cat ${output_dir}/aci.status | grep "InstallationInProgress" | awk '{print $1}' > ${output_dir}/aci.InstallationInProgress
 
 # Get 2 Deployed cluster's install-configs
-cat ${output_dir}/aci.status | grep InstallationCompleted | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
 # Copy two SiteConfigs
 ls  /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
 
