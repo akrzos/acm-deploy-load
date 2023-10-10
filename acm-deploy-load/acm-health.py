@@ -4,7 +4,7 @@
 # * Check MCH, MCE, and MCO
 # * Check for crashlooping pods in namespaces
 #
-#  Copyright 2022 Red Hat
+#  Copyright 2023 Red Hat
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
