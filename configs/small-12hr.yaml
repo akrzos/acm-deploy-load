@@ -1,0 +1,26 @@
+steps:
+# 10 clusters
+- clusters: 10
+  batch: 40
+  interval: 600
+  sleep: 43200
+# 30 clusters
+- clusters: 20
+  batch: 40
+  interval: 600
+  sleep: 43200
+# 50 clusters
+- clusters: 20
+  batch: 40
+  interval: 600
+  sleep: 43200
+# 100 clusters
+- clusters: 50
+  batch: 40
+  interval: 600
+  sleep: 43200
+# 300 clusters
+- clusters: 200
+  batch: 40
+  interval: 600
+  sleep: 43200

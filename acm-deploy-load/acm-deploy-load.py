@@ -243,11 +243,22 @@ def main():
                                help="Time in seconds between deploying clusters")
   parser_interval.add_argument("-z", "--skip-wait-install", action="store_true", default=False,
                                help="Skips waiting for cluster install completion phase")
+
+  parser_file = subparsers.add_parser("file", help="Config file defined method of deploying clusters",
+                                          formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+  parser_file.add_argument("configuration", type=str, help="The config file to follow for rates")
+
   subparsers_interval = parser_interval.add_subparsers(dest="method")
   subparsers_interval.add_parser("manifests")
   subparsers_interval.add_parser("ztp")
 
+  subparsers_file = parser_file.add_subparsers(dest="method")
+  subparsers_file.add_parser("manifests")
+  subparsers_file.add_parser("ztp")
+
   parser_interval.set_defaults(method="ztp")
+  parser_file.set_defaults(method="ztp")
   parser.set_defaults(rate="interval", method="ztp", batch=100, interval=7200, start=0, end=0, skip_wait_install=False)
   cliargs = parser.parse_args()
 
@@ -304,6 +315,11 @@ def main():
         logger.info(" * Wait for cluster install completion (Max {}s)".format(cliargs.wait_cluster_max))
       else:
         logger.info(" * Wait for cluster install completion (Infinite wait)")
+  elif cliargs.rate == "file":
+    logger.info(" * Using configuration file: {}".format(cliargs.configuration))
+    # Check file exists
+    # Read file in
+    # Check file for structure
   if not cliargs.wait_du_profile:
     logger.info(" * Skip waiting for DU Profile completion")
   else:
@@ -379,6 +395,10 @@ def main():
     if max_ztp_clusters < available_clusters:
       logger.error("There are more clusters than expected capacity of clusters per ZTP cluster application")
       sys.exit(1)
+
+
+  logger.info("AKRZOS not finished")
+  sys.exit(0)
 
   # Now shuffle the list of siteconfigs
   if not cliargs.no_shuffle:

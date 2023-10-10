@@ -1,0 +1,9 @@
+steps:
+- clusters: 2
+  batch: 40
+  interval: 300
+  sleep: 1200
+- clusters: 10
+  batch: 40
+  interval: 300
+  sleep: 1200
