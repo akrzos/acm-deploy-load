@@ -47,16 +47,16 @@ spec:
   replicas: {{ replicas }}
   selector:
     matchLabels:
-      app: mc-load-{{ name }}
+      app: mc-workload-{{ name }}
   strategy:
     resources: {}
   template:
     metadata:
       labels:
-        app: mc-load-{{ name }}
+        app: mc-workload-{{ name }}
     spec:
       containers:
-      - name: mc-load
+      - name: mc-workload
         image: {{ image }}
       {%- if (configmaps|length > 0) or (secrets|length > 0) %}
         volumeMounts:
@@ -113,7 +113,7 @@ def main():
 
   parser = argparse.ArgumentParser(
       description="Tool to load a managedcluster with namespaces, deployments, pods, and configmaps",
-      prog="mc-load.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+      prog="mc-workload.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument("-n", "--namespaces", type=int, default=1, help="Number of namespaces to create")
   parser.add_argument("-d", "--deployments", type=int, default=1, help="Number of deployments per namespace to create")
@@ -127,7 +127,7 @@ def main():
                       # default="quay.io/redhat-performance/test-gohttp-probe:v0.0.2", help="The container image to use")
                       default="e38-h01-000-r650.rdu2.scalelab.redhat.com:5000/redhat-performance/test-gohttp-probe:v0.0.2", help="The container image to use")
 
-  parser.add_argument("-m", "--manifests-directory", type=str, help="The location to place mc-load manifests")
+  parser.add_argument("-m", "--manifests-directory", type=str, help="The location to place mc-workload manifests")
 
   cliargs = parser.parse_args()
 
@@ -146,7 +146,7 @@ def main():
     base_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
     base_dir_down = os.path.dirname(base_dir)
     base_dir_manifests = os.path.join(base_dir_down, "manifests")
-    manifests_dir_name = "mc-load-{}".format(datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S"))
+    manifests_dir_name = "mc-workload-{}".format(datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S"))
     manifests_dir = os.path.join(base_dir_manifests, manifests_dir_name)
     os.mkdir(manifests_dir)
     logger.info("Using generated manifests directory: {}".format(manifests_dir))
@@ -155,7 +155,7 @@ def main():
 
   # Generate Manifests
   for ns in range(0, cliargs.namespaces):
-    ns_name = "mc-load-{:04d}".format(ns)
+    ns_name = "mc-workload-{:04d}".format(ns)
     ns_fname = "01-ns-{}.yml".format(ns_name)
     logger.info("Templating Namespace: {}".format(ns_name))
     t = Template(namespace_template)

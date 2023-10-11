@@ -326,7 +326,10 @@ def main():
   logger.info("################################################################################")
   logger.info("Report:\n{}".format("\n".join(report)))
   logger.info("################################################################################")
-  logger.info("Details:\n{}".format("\n".join(details)))
+  if len(details) > 0:
+    logger.info("Details:\n{}".format("\n".join(details)))
+  else:
+    logger.info("Details: None")
   logger.info("################################################################################")
   if unhealthy > 0:
     logger.warning("Cluster failed {} out of {} checks".format(unhealthy, healthy + unhealthy))

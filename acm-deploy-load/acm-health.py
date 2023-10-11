@@ -149,10 +149,9 @@ def main():
   logger.info("################################################################################")
   if len(details) > 0:
     logger.info("Details:\n{}".format("\n".join(details)))
-    logger.info("################################################################################")
   else:
     logger.info("Details: None")
-    logger.info("################################################################################")
+  logger.info("################################################################################")
   if unhealthy > 0:
     logger.warning("ACM failed {} out of {} checks".format(unhealthy, healthy + unhealthy))
   else:
