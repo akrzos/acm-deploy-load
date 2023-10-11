@@ -36,7 +36,7 @@ logging.Formatter.converter = time.gmtime
 
 
 # TODO:
-# * Get BMH timings?
+# * Process BMH for timings
 
 def main():
   start_time = time.time()
@@ -91,8 +91,8 @@ def main():
   with open("{}/aci_events.json".format(raw_data_dir), "w") as data_file:
     data_file.write(str(response.json()))
 
-  # Get BareMetalHost data
-  oc_cmd = ["oc", "get", "baremetalhost", "-n", cliargs.cluster, cliargs.cluster, "-o", "json"]
+  # Get All BareMetalHost data
+  oc_cmd = ["oc", "get", "baremetalhost", "-n", cliargs.cluster, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
     logger.error("analyze-cluster-time, oc get baremetalhost rc: {}".format(rc))
