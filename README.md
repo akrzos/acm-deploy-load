@@ -3,7 +3,7 @@
 Tools and scripts to load and analyze ACM with cluster deployments and upgrades. Clusters are deployed via manifests or
 GitOps using Zero Touch Provisioning (ZTP).
 
-## Workload Script
+## Workload Scripts
 
 ### acm-deploy-load.py
 
@@ -19,6 +19,10 @@ Phases of the Workload
 2. Wait for Cluster Install Completion
 3. Wait for DU Profile Completion
 4. Report Card / Graphing
+
+### mc-workload.py
+
+Tool to load a managed cluster with namespaces, deployments, pods, configmaps, and secrets.
 
 ## Analysis Scripts
 

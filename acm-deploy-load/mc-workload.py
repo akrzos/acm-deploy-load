@@ -29,6 +29,7 @@ import time
 # * Apply manifests
 # * Option to clean up manifests
 # * Separate option to remove workload (cleanup)
+# * Maybe add cpu/memory requests/limits
 
 namespace_template = """---
 apiVersion: v1
