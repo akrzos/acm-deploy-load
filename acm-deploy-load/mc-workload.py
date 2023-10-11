@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Tool to load a managed cluster with a number of namespaces, deployments, configmaps, secrets, and pods.
+# Tool to load a managed cluster with a number of namespaces, deployments, services, configmaps, secrets, and pods.
 #
 #  Copyright 2023 Red Hat
 #
@@ -59,6 +59,9 @@ spec:
       containers:
       - name: mc-workload
         image: {{ image }}
+        env:
+        - name: PORT
+          value: "{{ container_port }}"
       {%- if (configmaps|length > 0) or (secrets|length > 0) %}
         volumeMounts:
         {%- for cm in configmaps %}
@@ -90,7 +93,7 @@ metadata:
   name: {{ name }}
   namespace: {{ namespace }}
 data:
-  mc_load: "{{ name }} - Random data"
+  mc_workload: "{{ name }} - Random data"
 """
 
 secret_template = """---
@@ -100,7 +103,23 @@ metadata:
   name: {{ name }}
   namespace: {{ namespace }}
 data:
-  mc_load: UmFuZG9tIGRhdGEK
+  mc_workload: UmFuZG9tIGRhdGEK
+"""
+
+service_template = """---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace }}
+spec:
+  selector:
+    app: mc-workload-{{ deploy_name }}
+  ports:
+    - protocol: TCP
+      name: port
+      port: 8080
+      targetPort: {{ container_port }}
 """
 
 
@@ -120,9 +139,11 @@ def main():
   parser.add_argument("-d", "--deployments", type=int, default=1, help="Number of deployments per namespace to create")
   parser.add_argument("-p", "--pods", type=int, default=1, help="Number of pod replicas per deployment to create")
 
-  # Per Pod config
+  # Per Deployment config
   parser.add_argument("-c", "--configmaps", type=int, default=1, help="Number of configmaps per deployment")
   parser.add_argument("-s", "--secrets", type=int, default=1, help="Number of secrets per deployment")
+  parser.add_argument("-l", "--service", action="store_true", default=False, help="Include service per deployment")
+  parser.add_argument("--container-port", type=int, default=8000, help="The container port to expose (PORT Env Var)")
 
   parser.add_argument("-i", "--container-image", type=str,
                       # default="quay.io/redhat-performance/test-gohttp-probe:v0.0.2", help="The container image to use")
@@ -176,7 +197,7 @@ def main():
         configmaps.append({"name": cm_name, "v_name": "cm-{}".format(cm)})
         logger.info("Templating Configmap: {}".format(cm_name))
         t = Template(configmap_template)
-        cm_template_rendered = t.render(namespace=ns_name, name=cm_name)
+        cm_template_rendered = t.render(name=cm_name, namespace=ns_name)
         with open("{}/{}".format(manifests_dir, cm_fname), "w") as file1:
           file1.writelines(cm_template_rendered)
 
@@ -187,17 +208,31 @@ def main():
         secrets.append({"name": secret_name, "v_name": "s-{}".format(secret)})
         logger.info("Templating Secret: {}".format(secret_name))
         t = Template(secret_template)
-        secret_template_rendered = t.render(namespace=ns_name, name=secret_name)
+        secret_template_rendered = t.render(name=secret_name, namespace=ns_name)
         with open("{}/{}".format(manifests_dir, secret_fname), "w") as file1:
           file1.writelines(secret_template_rendered)
+
+      if cliargs.service:
+        service_name = "service-{:04d}".format(deploy)
+        service_fname = "04-{}-service-{}.yml".format(ns_name, service_name)
+        logger.info("Templating Service: {}".format(service_name))
+        t = Template(service_template)
+        service_template_rendered = t.render(
+            name=service_name,
+            namespace=ns_name,
+            deploy_name=deploy_name,
+            container_port=cliargs.container_port)
+        with open("{}/{}".format(manifests_dir, service_fname), "w") as file1:
+          file1.writelines(service_template_rendered)
 
       logger.info("Templating Deployment: {}".format(deploy_name))
       t = Template(deployment_template)
       deploy_template_rendered = t.render(
-          namespace=ns_name,
           name=deploy_name,
+          namespace=ns_name,
           replicas=cliargs.pods,
           image=cliargs.container_image,
+          container_port=cliargs.container_port,
           configmaps=configmaps,
           secrets=secrets)
       with open("{}/{}".format(manifests_dir, deploy_fname), "w") as file1:
