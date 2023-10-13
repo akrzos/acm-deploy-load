@@ -132,6 +132,9 @@ class ZTPMonitor(Thread):
 
       # Parse agentclusterinstall data
       for item in aci_data["items"]:
+        if item["metadata"]["name"] == "local-agent-cluster-cluster-deployment":
+          logger.debug("aci: Skipping local-agent-cluster-cluster-deployment")
+          continue
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
             if "type" in condition:
@@ -220,7 +223,7 @@ class ZTPMonitor(Thread):
       # Parse managedcluster data
       for item in mc_data["items"]:
         if item["metadata"]["name"] == "local-cluster":
-          logger.debug("cgu: Skipping local-cluster")
+          logger.debug("mc: Skipping local-cluster")
           continue
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
