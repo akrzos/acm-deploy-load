@@ -75,7 +75,9 @@ def main():
       start = datetime.strptime(aci_creationTimestamp, "%Y-%m-%dT%H:%M:%SZ")
       end = datetime.strptime(aci_completed_ltt, "%Y-%m-%dT%H:%M:%SZ")
       aci_duration = (end - start).total_seconds()
-      aci_installcompleted_values.append(aci_duration)
+      # Exclude values of 0
+      if aci_duration > 0:
+        aci_installcompleted_values.append(aci_duration)
 
     # logger.info("{},{},{},{},{}".format(aci_name, aci_status, aci_creationTimestamp, aci_completed_ltt, aci_duration))
 
