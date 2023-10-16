@@ -38,8 +38,10 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # TODO:
 # * 4.13 vs 4.12 queries? (Seems network usage query returning empty)
+# * Better report creation during queries
 # * Fix timeseries with coming and leaving pods
 # * Graph cluster/node disk (throughput, iops)
+# * ACM Policy Engine Pods CPU/Memory, work queue?
 # * Node kubelet, crio cpu/memory
 # * OCP CPU, Memory, split on pods?
 # * Total pod count??, total object count?
@@ -392,72 +394,82 @@ def query_thanos(route, query, series_label, token, end_ts, duration, directory,
   query_endpoint = "{}/api/v1/query?query={}".format(route, query_complete)
   headers = {"Authorization": "Bearer {}".format(token)}
   # logger.debug("Query Endpoint: {}".format(query_endpoint))
-  query_data = requests.post(query_endpoint, headers=headers, verify=False).json()
-  # print("query_data: {}".format(json.dumps(query_data, indent=4)))
-  logger.debug("Length of returned result data: {}".format(len(query_data["data"]["result"])))
+  query_data = requests.post(query_endpoint, headers=headers, verify=False)
 
-  if len(query_data["data"]["result"]) == 0:
-    logger.warning("Empty data returned from query")
-  else:
-    frame = {}
-    series = []
-    for metric in query_data["data"]["result"]:
-      # Get/set the datetime series
-      if len(frame) == 0:
-        frame["datetime"] = pd.Series([datetime.utcfromtimestamp(x[0]) for x in metric["values"]], name="datetime")
-      # Need to rework how datetime series is generated and how series are merged together.  Pods come and go and their
-      # series of data is shorter and not paded, so we need some sort of "merge" method instead of picking the largest.
-      # Also not all series start at the same datetime. ugh
-      # else:
-      #   logger.debug("length of metrics: {}, length of previous datetime: {}".format(len(metric["values"]), len(frame["datetime"])))
-      #   if len(metric["values"]) > len(frame["datetime"]):
-      #     frame["datetime"] = pd.Series([datetime.utcfromtimestamp(x[0]) for x in metric["values"]], name="datetime")
-      # Get the metrics series
-      if series_label not in metric["metric"]:
-        logger.debug("Num of values: {}".format(len(metric["values"])))
-        if y_unit == "MEM":
-          bytes_to_gib = 1024 * 1024 * 1024
-          frame[series_label] = pd.Series([float(x[1]) / bytes_to_gib for x in metric["values"]], name=series_label)
-        elif y_unit == "NET":
-          bytes_to_mib = 1024 * 1024
-          frame[series_label] = pd.Series([float(x[1]) / bytes_to_mib for x in metric["values"]], name=series_label)
-        elif y_unit == "DISK":
-          bytes_to_gb = 1000 * 1000 * 1000
-          frame[series_label] = pd.Series([float(x[1]) / bytes_to_gb for x in metric["values"]], name=series_label)
-        else:
-          frame[series_label] = pd.Series([float(x[1]) for x in metric["values"]], name=series_label)
-        series.append(series_label)
+  if query_data.status_code == 200:
+    qd_json = query_data.json()
+    # print("qd_json: {}".format(json.dumps(qd_json, indent=4)))
+    if ("data" in qd_json) and ("result" in qd_json["data"]):
+      logger.debug("Length of returned result data: {}".format(len(qd_json["data"]["result"])))
+
+      if len(qd_json["data"]["result"]) == 0:
+        logger.warning("Empty data returned from query")
       else:
-        logger.debug("{}: {}, Num of values: {}".format(series_label, metric["metric"][series_label], len(metric["values"])))
-        if y_unit == "MEM":
-          bytes_to_gib = 1024 * 1024 * 1024
-          frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_gib for x in metric["values"]], name=metric["metric"][series_label])
-        elif y_unit == "NET":
-          bytes_to_mib = 1024 * 1024
-          frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_mib for x in metric["values"]], name=metric["metric"][series_label])
-        elif y_unit == "DISK":
-          bytes_to_gb = 1000 * 1000 * 1000
-          frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_gb for x in metric["values"]], name=metric["metric"][series_label])
-        else:
-          frame[metric["metric"][series_label]] = pd.Series([float(x[1]) for x in metric["values"]], name=metric["metric"][series_label])
-        series.append(metric["metric"][series_label])
+        frame = {}
+        series = []
+        for metric in qd_json["data"]["result"]:
+          # Get/set the datetime series
+          if len(frame) == 0:
+            frame["datetime"] = pd.Series([datetime.utcfromtimestamp(x[0]) for x in metric["values"]], name="datetime")
+          # Need to rework how datetime series is generated and how series are merged together.  Pods come and go and their
+          # series of data is shorter and not paded, so we need some sort of "merge" method instead of picking the largest.
+          # Also not all series start at the same datetime. ugh
+          # else:
+          #   logger.debug("length of metrics: {}, length of previous datetime: {}".format(len(metric["values"]), len(frame["datetime"])))
+          #   if len(metric["values"]) > len(frame["datetime"]):
+          #     frame["datetime"] = pd.Series([datetime.utcfromtimestamp(x[0]) for x in metric["values"]], name="datetime")
+          # Get the metrics series
+          if series_label not in metric["metric"]:
+            logger.debug("Num of values: {}".format(len(metric["values"])))
+            if y_unit == "MEM":
+              bytes_to_gib = 1024 * 1024 * 1024
+              frame[series_label] = pd.Series([float(x[1]) / bytes_to_gib for x in metric["values"]], name=series_label)
+            elif y_unit == "NET":
+              bytes_to_mib = 1024 * 1024
+              frame[series_label] = pd.Series([float(x[1]) / bytes_to_mib for x in metric["values"]], name=series_label)
+            elif y_unit == "DISK":
+              bytes_to_gb = 1000 * 1000 * 1000
+              frame[series_label] = pd.Series([float(x[1]) / bytes_to_gb for x in metric["values"]], name=series_label)
+            else:
+              frame[series_label] = pd.Series([float(x[1]) for x in metric["values"]], name=series_label)
+            series.append(series_label)
+          else:
+            logger.debug("{}: {}, Num of values: {}".format(series_label, metric["metric"][series_label], len(metric["values"])))
+            if y_unit == "MEM":
+              bytes_to_gib = 1024 * 1024 * 1024
+              frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_gib for x in metric["values"]], name=metric["metric"][series_label])
+            elif y_unit == "NET":
+              bytes_to_mib = 1024 * 1024
+              frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_mib for x in metric["values"]], name=metric["metric"][series_label])
+            elif y_unit == "DISK":
+              bytes_to_gb = 1000 * 1000 * 1000
+              frame[metric["metric"][series_label]] = pd.Series([float(x[1]) / bytes_to_gb for x in metric["values"]], name=metric["metric"][series_label])
+            else:
+              frame[metric["metric"][series_label]] = pd.Series([float(x[1]) for x in metric["values"]], name=metric["metric"][series_label])
+            series.append(metric["metric"][series_label])
 
-    df = pd.DataFrame(frame)
+        df = pd.DataFrame(frame)
 
-    csv_dir = os.path.join(directory, "csv")
-    stats_dir = os.path.join(directory, "stats")
+        csv_dir = os.path.join(directory, "csv")
+        stats_dir = os.path.join(directory, "stats")
 
-    # Write graph and stats file
-    with open("{}/{}.stats".format(stats_dir, fname), "a") as stats_file:
-      stats_file.write(str(df.describe()))
-    df.to_csv("{}/{}.csv".format(csv_dir, fname))
+        # Write graph and stats file
+        with open("{}/{}.stats".format(stats_dir, fname), "a") as stats_file:
+          stats_file.write(str(df.describe()))
+        df.to_csv("{}/{}.csv".format(csv_dir, fname))
 
-    l = {"value" : y_title, "date" : ""}
-    fig_cluster_node = px.line(df, x="datetime", y=series, labels=l, width=g_width, height=g_height)
-    fig_cluster_node.update_layout(title=g_title, legend_orientation="v")
-    fig_cluster_node.write_image("{}/{}.png".format(directory, fname))
+        l = {"value" : y_title, "date" : ""}
+        fig_cluster_node = px.line(df, x="datetime", y=series, labels=l, width=g_width, height=g_height)
+        fig_cluster_node.update_layout(title=g_title, legend_orientation="v")
+        fig_cluster_node.write_image("{}/{}.png".format(directory, fname))
 
-  logger.info("Completed querying and graphing data")
+      logger.info("Completed querying and graphing data")
+
+    else:
+      logger.error("Missing data/results field(s) from query result: {}".format(qd_json))
+  else:
+    logger.error("Query Post status returned: {}".format(query_data.status_code))
+    logger.error("Query response: \n{}".format(query_data.text.rstrip()))
 
 
 def generate_report_html(report_dir):
