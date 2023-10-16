@@ -583,6 +583,11 @@ def main():
   version = get_ocp_version(cliargs.kubeconfig)
   logger.info("oc version reports cluster is {}.{}.{}".format(version["major"], version["minor"], version["patch"]))
 
+  # Get node count
+  # Determine if SNO, Compact, or Standard
+  # Determine if ACM, TALM, Gitops, and LSO are installed
+  # Vary queries based on what is installed/analyzed
+
   route = get_thanos_querier_route(cliargs.kubeconfig)
   if route == "":
     logger.error("Could not obtain the thanos querier route")
@@ -610,6 +615,14 @@ def main():
       os.mkdir(csv_dir)
     if not os.path.exists(stats_dir):
       os.mkdir(stats_dir)
+
+  with open("{}/analysis".format(report_dir), "a") as report_file:
+    report_file.write("Analyzed Cluster Version: {}.{}.{}\n".format(version["major"], version["minor"], version["patch"]))
+    report_file.write("Start Time: {}\n".format(cliargs.start_ts))
+    report_file.write("End Time: {}\n".format(cliargs.end_ts))
+    report_file.write("Examining duration: {}s :: {}\n".format(analyze_duration, str(timedelta(seconds=analyze_duration))))
+    report_file.write("Query duration: {}\n".format(q_duration))
+    report_file.write("Query route: {}\n".format(route))
 
   cluster_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
 

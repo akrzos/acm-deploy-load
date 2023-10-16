@@ -36,7 +36,7 @@ def get_ocp_version(kubeconfig):
   version["major"] = int(version_data["openshiftVersion"].split(".")[0])
   version["minor"] = int(version_data["openshiftVersion"].split(".")[1])
   # Sometimes patch version includes string data (Ex 4.14.0-rc.0)
-  version["patch"] = version_data["openshiftVersion"].split(".")[2]
+  version["patch"] = ".".join(version_data["openshiftVersion"].split(".")[2:])
   return version
 
 
