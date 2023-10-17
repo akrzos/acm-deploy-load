@@ -116,7 +116,7 @@ class ZTPMonitor(Thread):
           except json.decoder.JSONDecodeError:
             logger.warning("mc JSONDecodeError: {}".format(output[:2500]))
 
-      cluster_init = len(aci_data["items"])
+      cluster_init = 0
       cluster_notstarted = 0
       node_booted = 0
       node_discovered = len(agent_data["items"])
@@ -135,6 +135,7 @@ class ZTPMonitor(Thread):
         if item["metadata"]["name"] == "local-agent-cluster-cluster-install":
           logger.debug("aci: Skipping local-agent-cluster-cluster-install")
           continue
+        cluster_init += 1
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
             if "type" in condition:
