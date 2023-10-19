@@ -8,12 +8,12 @@
 
 - name: Create directory for MCE assisted-installer
   file:
-    path: "{{ rhacm_install_directory }}/mce-assisted-installer"
+    path: "{{ install_directory }}/mce-assisted-installer"
     state: directory
 
 - name: Extract/Download the openshift-install binary for the specific release
   shell: |
-    cd {{ rhacm_install_directory }}/mce-assisted-installer
+    cd {{ install_directory }}/mce-assisted-installer
     rm -rf openshift-install-linux-*.tar.gz openshift-client-linux-*.tar.gz
     oc.latest adm release extract --tools {{ mce_assisted_ocp_version }}
     tar -xvf openshift-install-linux-*.tar.gz openshift-install
@@ -21,22 +21,22 @@
 
 - name: Get display/release name/version
   shell: |
-    {{ rhacm_install_directory }}/mce-assisted-installer/oc version -o json | jq -r .releaseClientVersion
+    {{ install_directory }}/mce-assisted-installer/oc version -o json | jq -r .releaseClientVersion
   register: ocp_version_display_name
 
 - name: Get rhcos version
   shell: |
-    {{ rhacm_install_directory }}/mce-assisted-installer/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.release
+    {{ install_directory }}/mce-assisted-installer/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.release
   register: ocp_version_rhcos_version
 
 - name: Get iso disk image location
   shell: |
-    {{ rhacm_install_directory }}/mce-assisted-installer/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.formats.iso.disk.location
+    {{ install_directory }}/mce-assisted-installer/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.formats.iso.disk.location
   register: ocp_version_disk_location
 
 - name: Get rootfs image location
   shell: |
-    {{ rhacm_install_directory }}/mce-assisted-installer/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.formats.pxe.rootfs.location
+    {{ install_directory }}/mce-assisted-installer/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.formats.pxe.rootfs.location
   register: ocp_version_rootfs_location
 
 - name: Make directory for image and rootfs for bastion http server
@@ -67,16 +67,16 @@
   when: item.enabled | default(true)
   loop:
   - src: configmap-cpumemory.yml
-    dest: "{{ rhacm_install_directory }}/mce-assisted-installer/configmap-cpumemory.yml"
+    dest: "{{ install_directory }}/mce-assisted-installer/configmap-cpumemory.yml"
   - src: agentserviceconfig.yml
-    dest: "{{ rhacm_install_directory }}/mce-assisted-installer/agentserviceconfig.yml"
+    dest: "{{ install_directory }}/mce-assisted-installer/agentserviceconfig.yml"
   - src: assisted-mirror-config.yml
-    dest: "{{ rhacm_install_directory }}/mce-assisted-installer/assisted-mirror-config.yml"
+    dest: "{{ install_directory }}/mce-assisted-installer/assisted-mirror-config.yml"
   - src: agent-install.openshift.io_agentclassifications-crd.yaml
-    dest: "{{ rhacm_install_directory }}/mce-assisted-installer/agent-install.openshift.io_agentclassifications-crd.yaml"
+    dest: "{{ install_directory }}/mce-assisted-installer/agent-install.openshift.io_agentclassifications-crd.yaml"
     enabled: "{{ mce_2_1_patch }}"
   - src: clusterrole-patch.yaml
-    dest: "{{ rhacm_install_directory }}/mce-assisted-installer/clusterrole-patch.yaml"
+    dest: "{{ install_directory }}/mce-assisted-installer/clusterrole-patch.yaml"
     enabled: "{{ mce_2_1_patch }}"
 
 - name: Patch provisioning configuration
@@ -92,10 +92,10 @@
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ item.manifest }}
   when: item.enabled | default(true)
   loop:
-  - manifest: "{{ rhacm_install_directory }}/mce-assisted-installer/configmap-cpumemory.yml"
-  - manifest: "{{ rhacm_install_directory }}/mce-assisted-installer/agentserviceconfig.yml"
-  - manifest: "{{ rhacm_install_directory }}/mce-assisted-installer/assisted-mirror-config.yml"
-  - manifest: "{{ rhacm_install_directory }}/mce-assisted-installer/agent-install.openshift.io_agentclassifications-crd.yaml"
+  - manifest: "{{ install_directory }}/mce-assisted-installer/configmap-cpumemory.yml"
+  - manifest: "{{ install_directory }}/mce-assisted-installer/agentserviceconfig.yml"
+  - manifest: "{{ install_directory }}/mce-assisted-installer/assisted-mirror-config.yml"
+  - manifest: "{{ install_directory }}/mce-assisted-installer/agent-install.openshift.io_agentclassifications-crd.yaml"
     enabled: "{{ mce_2_1_patch }}"
   register: result
   until: result.failed == false
@@ -104,7 +104,7 @@
 
 - name: Apply clusterroles patch for MCE 2.1
   shell: |
-    KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch clusterrole open-cluster-management:assisted-service:assisted-service --type=json --patch "$(cat {{ rhacm_install_directory }}/mce-assisted-installer/clusterrole-patch.yaml)"
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch clusterrole open-cluster-management:assisted-service:assisted-service --type=json --patch "$(cat {{ install_directory }}/mce-assisted-installer/clusterrole-patch.yaml)"
   when: mce_2_1_patch
 
 - name: Wait for assisted-service pod exists

@@ -1,6 +1,6 @@
 ---
-# Common ACM/ZTP vars
-rhacm_install_directory: /root
+# Common AAP/ACM/ZTP vars
+install_directory: /root
 # Leave blank if not doing disconnected
 rhacm_disconnected_registry:
 rhacm_disconnected_registry_port: 5000

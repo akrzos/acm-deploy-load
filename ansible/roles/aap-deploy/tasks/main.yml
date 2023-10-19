@@ -1,0 +1,26 @@
+---
+# aap-deploy tasks - Install and configure Ansible Automation Platform
+
+- name: Create directory for aap deployment
+  file:
+    path: "{{ install_directory }}/aap-deploy"
+    state: directory
+
+- name: Template files for aap
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  when: item.enabled | default(true)
+  loop:
+  - src: automationhub.yml.j2
+    dest: "{{ install_directory }}/aap-deploy/automationhub.yml"
+  - src: automationcontroller.yml.j2
+    dest: "{{ install_directory }}/aap-deploy/automationcontroller.yml"
+
+- name: Deploy automationhub to cluster
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f "{{ install_directory }}/aap-deploy/automationhub.yml"
+
+- name: Deploy automationcontroller to cluster
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f "{{ install_directory }}/aap-deploy/automationcontroller.yml"
