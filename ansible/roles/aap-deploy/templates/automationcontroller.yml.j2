@@ -15,7 +15,7 @@ spec:
   image_pull_policy: IfNotPresent
   projects_storage_size: 8Gi
   task_privileged: false
-  postgres_storage_class: {{ automationhub_postgres_storage_class }}
+  postgres_storage_class: {{ automationcontroller_postgres_storage_class }}
   projects_storage_access_mode: ReadWriteOnce
   projects_persistence: false
   replicas: 1

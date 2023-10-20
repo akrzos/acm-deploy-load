@@ -1,12 +1,23 @@
 ---
-# aap-deploy tasks - Install and configure Ansible Automation Platform
+# aap-deploy tasks
+
+- name: Install awx cli repo
+  template:
+    src: ansible-tower-cli-el8.repo
+    dest: /etc/yum.repos.d/ansible-tower-cli-el8.repo
+
+- name: Install awx cli
+  dnf:
+    name: ansible-tower-cli
+    state: present
+    update_cache: true
 
 - name: Create directory for aap deployment
   file:
     path: "{{ install_directory }}/aap-deploy"
     state: directory
 
-- name: Template files for aap
+- name: Template files for aap deployment
   template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
@@ -24,3 +35,19 @@
 - name: Deploy automationcontroller to cluster
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f "{{ install_directory }}/aap-deploy/automationcontroller.yml"
+
+- name: Wait until automationhub completely deployed
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get automationhub -n ansible-automation-platform automationhub -o json | jq '.status.conditions[] | select(.type=="Automationhub-Routes-Ready").status' -r
+  register: result
+  until: result.stdout == "True"
+  retries: 60
+  delay: 2
+
+- name: Wait until automationcontroller completely deployed
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get automationcontroller -n ansible-automation-platform automationcontroller -o json | jq '.status.conditions[] | select(.type=="Successful").status' -r
+  register: result
+  until: result.stdout == "False" or result.stdout == "True"
+  retries: 120
+  delay: 2

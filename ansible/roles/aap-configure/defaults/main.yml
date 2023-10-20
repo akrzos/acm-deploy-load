@@ -1,0 +1,8 @@
+---
+# aap-configure default vars
+
+stolostron_ansible_collection_core_repo: https://github.com/stolostron/ansible-collection.core.git
+stolostron_ansible_collection_core_repo_branch: main
+
+acm_ansible_collection_demo_repo: https://github.com/leo8a/acm-ansible-collection-demo.git
+# acm_ansible_collection_demo_repo: https://github.com/stolostron/acm-ansible-collection-demo.git

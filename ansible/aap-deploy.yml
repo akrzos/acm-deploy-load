@@ -1,14 +1,16 @@
 ---
-# Playbook to install Ansible Automation Platform and configure for ZTP day2 automations
+# Playbook to deploy and configure Ansible Automation Platform for ACM/ZTP day2 automations
 #
 # Example Usage:
 #
 # time ansible-playbook -i ansible/inventory/cloud30.local ansible/aap-deploy.yml
 #
 
-- name: Install ansible-automation-platform
+- name: Deploy and configure ansible-automation-platform with hooks for ACM/ZTP day2 automations
   hosts: bastion
   vars_files:
   - vars/all.yml
   roles:
   - aap-deploy
+  - aap-configure
+  # - aap-acm-setup

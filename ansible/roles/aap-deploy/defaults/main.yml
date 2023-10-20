@@ -5,4 +5,4 @@ automationhub_file_storage_storage_class: localstorage-sc
 automationhub_postgres_storage_class: localstorage-sc
 automationhub_redis_storage_class: localstorage-sc
 
-automationhub_postgres_storage_class: localstorage-sc
+automationcontroller_postgres_storage_class: localstorage-sc
