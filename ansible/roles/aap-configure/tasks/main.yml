@@ -14,6 +14,11 @@
   - src: template_extra_vars.json
     dest: "{{ install_directory }}/aap-deploy/template_extra_vars.json"
 
+- name: Copy aap license manifest file to aap-deploy directory
+  copy:
+    dest: "{{ install_directory }}/aap-deploy/aap_manifest.zip"
+    content: "{{ aap_license_manifest }}"
+
 - name: Get the automation hub admin password
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n ansible-automation-platform automationhub-admin-password -o jsonpath='{.data.password}' | base64 -d
@@ -53,14 +58,17 @@
   register: create_automationhub_galaxy_token
 
 - name: Create automation controller token
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure login | jq .token
+  awx.awx.token:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
   register: create_automationcontroller_token
 
 - name: Set token vars
   set_fact:
     automationhub_galaxy_token: "{{ create_automationhub_galaxy_token.json.token }}"
-    automationcontroller_token: "{{ create_automationcontroller_token.stdout }}"
+    automationcontroller_token: "{{ create_automationcontroller_token.ansible_facts.controller_token.token }}"
 
 # Configure automation hub
 - name: Create automation hub galaxy namespace
@@ -135,11 +143,6 @@
     }
 
 # Configure automation controller
-- name: Copy aap license manifest file to aap-deploy directory
-  copy:
-    dest: "{{ install_directory }}/aap-deploy/aap_manifest.zip"
-    content: "{{ aap_license_manifest }}"
-
 - name: Set automation controller subscription manifest (license zip file)
   awx.awx.license:
     controller_host: "{{ automationcontroller_url }}"
