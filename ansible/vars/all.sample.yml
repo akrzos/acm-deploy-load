@@ -52,3 +52,8 @@ mce_assisted_service_namespace: multicluster-engine
 mce_clusterimagesets:
 - name: openshift-4.12.16
   releaseImage: quay.io/openshift-release-dev/ocp-release:4.13.10-x86_64
+
+# AAP deploy/configure vars
+# Place the license file in the base directory of the cloned acm-deploy-load repo, Example:
+# (.venv) [user@fedora acm-deploy-load]$ ls aap_manifest.zip
+aap_license_manifest: "{{ lookup('file', '../aap_manifest.zip') }}"

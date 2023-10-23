@@ -130,3 +130,6 @@ dmypy.json
 
 # CSV files
 *.csv
+
+# Prevent manifest file upload
+aap_manifest.zip

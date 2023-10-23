@@ -135,6 +135,19 @@
     }
 
 # Configure automation controller
+- name: Copy aap license manifest file to aap-deploy directory
+  copy:
+    dest: "{{ install_directory }}/aap-deploy/aap_manifest.zip"
+    content: "{{ aap_license_manifest }}"
+
+- name: Set automation controller subscription manifest (license zip file)
+  awx.awx.license:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    manifest: "{{ install_directory }}/aap-deploy/aap_manifest.zip"
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+
 - name: Configure awx credential_types authentication
   shell: |
     awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure credential_types create --name 'kubeconfig' --kind cloud --inputs '@{{ install_directory }}/aap-deploy/credential_inputs_kubeconfig.json' --injectors '@{{ install_directory }}/aap-deploy/credential_injector_kubeconfig.json'
