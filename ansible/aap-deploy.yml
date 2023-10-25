@@ -13,4 +13,4 @@
   roles:
   - aap-deploy
   - aap-configure
-  # - aap-acm-setup
+  - aap-acm-setup

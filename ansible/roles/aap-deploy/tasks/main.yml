@@ -21,7 +21,6 @@
   template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
-  when: item.enabled | default(true)
   loop:
   - src: automationhub.yml.j2
     dest: "{{ install_directory }}/aap-deploy/automationhub.yml"

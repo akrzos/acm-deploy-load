@@ -229,7 +229,11 @@
     inputs: "{{ lookup('file', 'credential_inputs_kubeconfig.json') }}"
     injectors: "{{ lookup('file', 'credential_injector_kubeconfig.json') }}"
 
-# I think we need to slurp the kubeconfig and then use it as a var instead of @/file/location
+- name: Fetch the hub kubeconfig for awx credential
+  slurp:
+    src: "{{ hub_cluster_kubeconfig }}"
+  register: fetched_hub_kubeconfig
+
 - name: Instantiate hub kubeconfig awx credential
   awx.awx.credential:
     controller_host: "{{ automationcontroller_url }}"
@@ -240,7 +244,9 @@
     organization: Default
     credential_type: kubeconfig
     state: present
-    inputs: "{'kube_config':'@{{ hub_cluster_kubeconfig }}'}"
+    inputs: "{'kube_config':'{{ fetched_hub_kubeconfig.content | b64decode | to_json }}'}"
+    # inputs:
+    #   kube_config: "{{ fetched_hub_kubeconfig.content | b64decode }}"
 
 - name: Configure automation controller authentication to automation hub
   awx.awx.credential:
@@ -323,19 +329,3 @@
     allow_simultaneous: true
     extra_vars: "{{ lookup('file', 'template_extra_vars.json') }}"
     credentials: hub-acm-kubeconfig
-
-# - name: Automation controller create template
-#   shell: |
-#     awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure job_templates create --name 'ztp-day2-automation-template' --project 'aap-for-ran-ztp-project' --playbook 'playbooks/cluster-mgmt.yml' --inventory 'hub-acm-inventory' --ask_variables_on_launch true --allow_simultaneous true --extra_vars '@{{ install_directory }}/aap-deploy/template_extra_vars.json'
-#   register: awx_ac_create_template
-#
-# - debug:
-#     msg: "{{ awx_ac_create_template }}"
-#
-# - name: Automation controller template associate credentials
-#   shell: |
-#     awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure job_templates associate 'ztp-day2-automation-template' --credential 'hub-acm-kubeconfig'
-#   register: awx_ac_associate_creds
-#
-# - debug:
-#     msg: "{{ awx_ac_associate_creds }}"

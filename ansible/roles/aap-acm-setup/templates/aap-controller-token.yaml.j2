@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: aap-controller-token
+  namespace: ztp-day2-automation
+  labels:
+    cluster.open-cluster-management.io/type: ans
+    cluster.open-cluster-management.io/credentials: ""
+stringData:
+  host: {{ automationcontroller_url }}
+  token: {{ automationcontroller_token }}
