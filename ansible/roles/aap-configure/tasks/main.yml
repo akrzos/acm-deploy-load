@@ -1,23 +1,40 @@
 ---
 # aap-configure tasks
 
-- name: Template files for configuring aap
-  template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-  when: item.enabled | default(true)
-  loop:
-  - src: credential_inputs_kubeconfig.json
-    dest: "{{ install_directory }}/aap-deploy/credential_inputs_kubeconfig.json"
-  - src: credential_injector_kubeconfig.json
-    dest: "{{ install_directory }}/aap-deploy/credential_injector_kubeconfig.json"
-  - src: template_extra_vars.json
-    dest: "{{ install_directory }}/aap-deploy/template_extra_vars.json"
-
 - name: Copy aap license manifest file to aap-deploy directory
   copy:
     dest: "{{ install_directory }}/aap-deploy/aap_manifest.zip"
     content: "{{ aap_license_manifest }}"
+
+- name: Clone acm-ansible-collection-demo to bastion
+  git:
+    repo: "{{ acm_ansible_collection_demo_repo }}"
+    dest: "{{ install_directory }}/aap-deploy/acm-ansible-collection-demo"
+    force: true
+    version: "{{ acm_ansible_collection_demo_repo_branch }}"
+
+- name: Create acm-ansible-collection-demo repo in gogs
+  uri:
+    url: "http://{{ gogs_host }}:{{ gogs_port }}/api/v1/admin/users/{{ gogs_username }}/repos"
+    user: "{{ gogs_username }}"
+    password: "{{ gogs_password }}"
+    force_basic_auth: true
+    method: POST
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"name": "acm-ansible-collection-demo", "description": "test repo", "private": false}
+    body_format: json
+    validate_certs: no
+    status_code: 201
+    return_content: yes
+  ignore_errors: true
+
+- name: Push acm-ansible-collection-demo into gogs
+  shell: |
+    cd {{ install_directory }}/aap-deploy/acm-ansible-collection-demo
+    git remote add origin-gogs http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/acm-ansible-collection-demo.git
+    git push -u origin-gogs --all --force
 
 - name: Get the automation hub admin password
   shell: |
@@ -71,7 +88,7 @@
     automationcontroller_token: "{{ create_automationcontroller_token.ansible_facts.controller_token.token }}"
 
 # Configure automation hub
-- name: Create automation hub galaxy namespace
+- name: Create automation hub galaxy namespaces
   uri:
     url: "{{ automationhub_url }}/api/galaxy/_ui/v1/namespaces/"
     user: admin
@@ -83,9 +100,14 @@
     status_code: [201, 409]
     return_content: true
     body: {
-        "name": "stolostron",
+        "name": "{{ item }}",
         "groups": []
     }
+  loop:
+  - amazon
+  - awx
+  - kubernetes
+  - stolostron
 
 - name: Checkout the latest stolostron ansible-collection.core
   git:
@@ -107,7 +129,7 @@
 
 - name: Setup stolostron ansible-collection.core virtual environment
   shell: |
-    cd "{{ install_directory }}/aap-deploy/ansible-collection.core"
+    cd {{ install_directory }}/aap-deploy/ansible-collection.core
     python3 -m venv .venv
     source .venv/bin/activate
     pip3 install --upgrade pip
@@ -115,20 +137,51 @@
 
 - name: Build stolostron ansible-collection.core collection
   shell: |
-    cd "{{ install_directory }}/aap-deploy/ansible-collection.core"
+    cd {{ install_directory }}/aap-deploy/ansible-collection.core
     source .venv/bin/activate
     rm -f stolostron-core-{{ ansible_collection_git_tag.stdout }}.tar.gz
     ansible-galaxy collection build
 
 - name: Publish stolostron ansible-collection.core collection
   shell: |
-    cd "{{ install_directory }}/aap-deploy/ansible-collection.core"
+    cd {{ install_directory }}/aap-deploy/ansible-collection.core
     source .venv/bin/activate
     ansible-galaxy collection publish stolostron-core-{{ ansible_collection_git_tag.stdout }}.tar.gz --ignore-certs
 
-- name: Approve stolostron ansible-collection.core collection
+# ansible-galaxy command needed by sourcing the venv however need to cd out to reach external galaxy
+- name: Download additional required ansible collections
+  shell: |
+    cd {{ install_directory }}/aap-deploy/ansible-collection.core
+    source .venv/bin/activate
+    cd {{ install_directory }}/aap-deploy
+    ansible-galaxy collection download {{ item }}
+  loop:
+  # - amazon.aws
+  - awx.awx
+  - kubernetes.core
+
+# For unknown reasons the ansible-galaxy collection download command does not seem to work with amazon.aws collection,
+# Thus lets download it manually
+- name: Download amazon.aws collection via url
+  get_url:
+    validate_certs: false
+    force: true
+    url: https://galaxy.ansible.com/api/v3/plugin/ansible/content/published/collections/artifacts/amazon-aws-6.5.0.tar.gz
+    dest: "{{ install_directory }}/aap-deploy/collections"
+
+- name: Publish additional collections
+  shell: |
+    cd {{ install_directory }}/aap-deploy/ansible-collection.core
+    source .venv/bin/activate
+    ansible-galaxy collection publish ../collections/{{ item }}-* --ignore-certs
+  loop:
+  - amazon-aws
+  - awx-awx
+  - kubernetes-core
+
+- name: Approve automation hub collections
   uri:
-    url: "{{ automationhub_url }}/api/galaxy/v3/collections/stolostron/core/versions/{{ ansible_collection_git_tag.stdout }}/move/staging/published/"
+    url: "{{ automationhub_url }}/api/galaxy/v3/collections/{{ item.name }}/{{ item.suffix }}/versions/{{ item.version }}/move/staging/published/"
     user: admin
     password: "{{ automationhub_admin_pw }}"
     force_basic_auth: true
@@ -138,9 +191,22 @@
     status_code: [202]
     return_content: true
     body: {
-        "name": "stolostron",
+        "name": "{{ item.name }}",
         "groups": []
     }
+  loop:
+  - name: amazon
+    suffix: aws
+    version: 6.5.0
+  - name: awx
+    suffix: awx
+    version: 23.2.0
+  - name: kubernetes
+    suffix: core
+    version: 2.4.0
+  - name: stolostron
+    suffix: core
+    version: "{{ ansible_collection_git_tag.stdout }}"
 
 # Configure automation controller
 - name: Set automation controller subscription manifest (license zip file)
@@ -152,53 +218,124 @@
     controller_password: "{{ automationcontroller_admin_pw }}"
 
 - name: Configure awx credential_types authentication
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure credential_types create --name 'kubeconfig' --kind cloud --inputs '@{{ install_directory }}/aap-deploy/credential_inputs_kubeconfig.json' --injectors '@{{ install_directory }}/aap-deploy/credential_injector_kubeconfig.json'
+  awx.awx.credential_type:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: kubeconfig
+    kind: cloud
+    state: present
+    inputs: "{{ lookup('file', 'credential_inputs_kubeconfig.json') }}"
+    injectors: "{{ lookup('file', 'credential_injector_kubeconfig.json') }}"
 
+# I think we need to slurp the kubeconfig and then use it as a var instead of @/file/location
 - name: Instantiate hub kubeconfig awx credential
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure credentials create --name 'hub-acm-kubeconfig' --organization 'Default' --credential_type 'kubeconfig' --inputs "{'kube_config':'@{{ hub_cluster_kubeconfig }}'}"
+  awx.awx.credential:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: hub-acm-kubeconfig
+    organization: Default
+    credential_type: kubeconfig
+    state: present
+    inputs: "{'kube_config':'@{{ hub_cluster_kubeconfig }}'}"
 
 - name: Configure automation controller authentication to automation hub
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure credentials create --name 'hub-galaxy-token' --organization 'Default' --credential_type 'Ansible Galaxy/Automation Hub API Token' --inputs "{'url':'{{ automationhub_url }}/api/galaxy/content/published/','token':'{{ automationhub_galaxy_token }}'}"
+  awx.awx.credential:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: hub-galaxy-token
+    organization: Default
+    credential_type: Ansible Galaxy/Automation Hub API Token
+    state: present
+    inputs: "{'url':'{{ automationhub_url }}/api/galaxy/content/published/','token':'{{ automationhub_galaxy_token }}'}"
 
 - name: Disable SSL verfication due to self-signed certificates
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure settings modify GALAXY_IGNORE_CERTS true
+  awx.awx.settings:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: GALAXY_IGNORE_CERTS
+    value: "true"
 
-- name: Remove automation controller default organization
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure organizations disassociate --organization 'Default' --galaxy_credential 'Ansible Galaxy'
-
-- name: Add automation hub as default organization
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure organizations associate --organization 'Default' --galaxy_credential 'hub-galaxy-token'
+- name: Add automation hub as default galaxy credentials for automation controller
+  awx.awx.organization:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: Default
+    galaxy_credentials: hub-galaxy-token
+    state: present
 
 - name: Automation controller create a project
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure projects create --name 'aap-for-ran-ztp-project' --organization 'Default' --wait --scm_type git --scm_url {{ acm_ansible_collection_demo_repo }}
+  awx.awx.project:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: aap-for-ran-ztp-project
+    organization: Default
+    scm_type: git
+    scm_branch: "{{ acm_ansible_collection_demo_repo_branch }}"
+    scm_url: "http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/acm-ansible-collection-demo.git"
 
 - name: Automation controller create inventory
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure inventory create --name 'hub-acm-inventory' --organization 'Default'
+  awx.awx.inventory:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: hub-acm-inventory
+    organization: Default
 
 - name: Automation controller create inventory-source
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure inventory_sources create --name 'acm-dynamic-inventory' --organization 'Default' --inventory 'hub-acm-inventory' --update_on_launch true --credential 3 --source scm --source_project 'aap-for-ran-ztp-project' --source_path 'inventories/cluster-inventory-example.yml'
+  awx.awx.inventory_source:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: acm-dynamic-inventory
+    organization: Default
+    inventory: hub-acm-inventory
+    update_on_launch: true
+    credential: 3
+    source: scm
+    source_project: aap-for-ran-ztp-project
+    source_path: inventories/cluster-inventory-example.yml
 
 - name: Automation controller create template
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure job_templates create --name 'ztp-day2-automation-template' --project 'aap-for-ran-ztp-project' --playbook 'playbooks/cluster-mgmt.yml' --inventory 'hub-acm-inventory' --ask_variables_on_launch true --allow_simultaneous true --extra_vars '@{{ install_directory }}/aap-deploy/template_extra_vars.json'
-  register: awx_ac_create_template
+  awx.awx.job_template:
+    controller_host: "{{ automationcontroller_url }}"
+    validate_certs: false
+    controller_username: admin
+    controller_password: "{{ automationcontroller_admin_pw }}"
+    name: ztp-day2-automation-template
+    project: aap-for-ran-ztp-project
+    playbook: playbooks/cluster-mgmt.yml
+    inventory: hub-acm-inventory
+    ask_variables_on_launch: true
+    allow_simultaneous: true
+    extra_vars: "{{ lookup('file', 'template_extra_vars.json') }}"
+    credentials: hub-acm-kubeconfig
 
-- debug:
-    msg: "{{ awx_ac_create_template }}"
-
-- name: Automation controller template associate credentials
-  shell: |
-    awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure job_templates associate 'ztp-day2-automation-template' --credential 'hub-acm-kubeconfig'
-  register: awx_ac_associate_creds
-
-- debug:
-    msg: "{{ awx_ac_associate_creds }}"
+# - name: Automation controller create template
+#   shell: |
+#     awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure job_templates create --name 'ztp-day2-automation-template' --project 'aap-for-ran-ztp-project' --playbook 'playbooks/cluster-mgmt.yml' --inventory 'hub-acm-inventory' --ask_variables_on_launch true --allow_simultaneous true --extra_vars '@{{ install_directory }}/aap-deploy/template_extra_vars.json'
+#   register: awx_ac_create_template
+#
+# - debug:
+#     msg: "{{ awx_ac_create_template }}"
+#
+# - name: Automation controller template associate credentials
+#   shell: |
+#     awx --conf.host {{ automationcontroller_url }} --conf.username admin --conf.password "{{ automationcontroller_admin_pw }}" --conf.insecure job_templates associate 'ztp-day2-automation-template' --credential 'hub-acm-kubeconfig'
+#   register: awx_ac_associate_creds
+#
+# - debug:
+#     msg: "{{ awx_ac_associate_creds }}"
