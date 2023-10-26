@@ -1,0 +1,9 @@
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: gogs-repo
+  namespace: gogs-repo-ns
+spec:
+  pathname: http://{{ gogs_host }}:{{ gogs_port }}/testadmin/aap-for-ztp.git
+  type: Git

@@ -1,0 +1,63 @@
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: monitor-ztp-done
+  namespace: ztp-day2-automation
+  annotations:
+    policy.open-cluster-management.io/standards: NIST 800-53
+    policy.open-cluster-management.io/categories: CM Configuration Management
+    policy.open-cluster-management.io/controls: CM-2 Baseline Configuration
+spec:
+  disabled: false
+  remediationAction: enforce
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: monitor-ztp-done
+        spec:
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: v1
+                data:
+                  clusterid: '{{ fromClusterClaim "id.openshift.io" }} '
+                  clustername: '{{ fromClusterClaim "name" }}'
+                  ocpversion: '{{ fromClusterClaim "version.openshift.io" }}'
+                  platform: '{{ fromClusterClaim "platform.open-cluster-management.io" }}'
+                  product: '{{ fromClusterClaim "product.open-cluster-management.io" }}'
+                kind: ConfigMap
+                metadata:
+                  name: '{{ fromClusterClaim "name" }}'
+                  namespace: ztp-day2-automation
+          remediationAction: inform
+          severity: low
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: monitor-ztp-done-placement
+  namespace: ztp-day2-automation
+placementRef:
+  apiGroup: apps.open-cluster-management.io
+  kind: PlacementRule
+  name: monitor-ztp-done-placement
+subjects:
+  - apiGroup: policy.open-cluster-management.io
+    kind: Policy
+    name: monitor-ztp-done
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: monitor-ztp-done-placement
+  namespace: ztp-day2-automation
+spec:
+  clusterConditions:
+    - status: "True"
+      type: ManagedClusterConditionAvailable
+  clusterSelector:
+    matchExpressions:
+      - {key: ztp-done, operator: Exists}

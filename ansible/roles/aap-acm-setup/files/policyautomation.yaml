@@ -1,0 +1,15 @@
+---
+apiVersion: policy.open-cluster-management.io/v1beta1
+kind: PolicyAutomation
+metadata:
+  name: ztp-day2-automation
+  namespace: ztp-day2-automation
+spec:
+  policyRef: monitor-ztp-done
+  mode: once
+  automationDef:
+    name: ztp-day2-automation-template
+    secret: aap-controller-token
+    type: AnsibleJob
+#    extra_vars:
+#      target_clusters: {{ list.of.clusters }}     <-- array provided by ACM with an entry for each managed cluster that is affected

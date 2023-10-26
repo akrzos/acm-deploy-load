@@ -5,7 +5,6 @@
 stolostron_ansible_collection_core_repo: https://github.com/stolostron/ansible-collection.core.git
 stolostron_ansible_collection_core_repo_branch: main
 
-# Gogs, place to store acm ansible collection demo repo reachable by hub cluster
 gogs_host: "[fc00:1000::1]"
 gogs_port: 10880
 gogs_username: testadmin

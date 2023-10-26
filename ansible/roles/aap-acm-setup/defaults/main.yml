@@ -1,0 +1,7 @@
+---
+# aap-acm-setup default vars
+
+gogs_host: "[fc00:1000::1]"
+gogs_port: 10880
+gogs_username: testadmin
+gogs_password: testadmin

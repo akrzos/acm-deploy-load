@@ -8,6 +8,20 @@
   loop:
   - src: aap-controller-token.yaml.j2
     dest: "{{ install_directory }}/aap-deploy/aap-controller-token.yaml"
+  - src: channel.yaml.j2
+    dest: "{{ install_directory }}/aap-deploy/channel.yaml"
+  - src: application.yaml.j2
+    dest: "{{ install_directory }}/aap-deploy/application.yaml"
+
+- name: Copy files for aap acm setup
+  copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: policy.yaml
+    dest: "{{ install_directory }}/aap-deploy/policy.yaml"
+  - src: policyautomation.yaml
+    dest: "{{ install_directory }}/aap-deploy/policyautomation.yaml"
 
 - name: Enable MCE cluster-proxy-addon
   shell: |
@@ -18,10 +32,32 @@
 #   shell: |
 #     KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch mce multiclusterengine --type json -p '[{"op": "add", "path": "/spec/overrides/components/-", "value": {"name": "managedserviceaccount", "enabled":true}}]'
 
+# Application hook
 - name: Create ztp-day2-automation namespace
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc create namespace ztp-day2-automation
 
+- name: Create gogs-repo-ns namespace
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc create namespace gogs-repo-ns
+
 - name: Apply aap-controller-token
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/aap-controller-token.yaml
+
+- name: Apply gogs-repo channel
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/channel.yaml
+
+- name: Apply application, subscription, and placementrule
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/application.yaml
+
+# Governance hook
+- name: Apply policy, placementbinding, and placementrule
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/policy.yaml
+
+- name: Apply policyautomation
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/policyautomation.yaml
