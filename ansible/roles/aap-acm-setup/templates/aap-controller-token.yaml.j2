@@ -8,6 +8,6 @@ metadata:
   labels:
     cluster.open-cluster-management.io/type: ans
     cluster.open-cluster-management.io/credentials: ""
-stringData:
-  host: {{ automationcontroller_url }}
-  token: {{ automationcontroller_token }}
+data:
+  host: {{ automationcontroller_url | b64encode }}
+  token: {{ automationcontroller_token | b64encode }}

@@ -15,3 +15,6 @@ acm_ansible_collection_demo_repo: https://github.com/leo8a/acm-ansible-collectio
 # acm_ansible_collection_demo_repo: https://github.com/stolostron/acm-ansible-collection-demo.git
 
 acm_ansible_collection_demo_repo_branch: ztp-day2-automation
+
+aap_for_ztp_repo: https://github.com/akrzos/aap-for-ztp.git
+aap_for_ztp_repo_branch: main

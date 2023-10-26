@@ -8,16 +8,15 @@
   loop:
   - src: aap-controller-token.yaml.j2
     dest: "{{ install_directory }}/aap-deploy/aap-controller-token.yaml"
-  # - src: ansiblejob.yaml
-  #   dest: "{{ install_directory }}/aap-deploy/ansiblejob.yaml"
 
 - name: Enable MCE cluster-proxy-addon
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch mce multiclusterengine --type json -p '[{"op": "add", "path": "/spec/overrides/components/-", "value": {"name": "cluster-proxy-addon", "enabled":true}}]'
 
-- name: Enable MCE managedserviceaccount
-  shell: |
-    KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch mce multiclusterengine --type json -p '[{"op": "add", "path": "/spec/overrides/components/-", "value": {"name": "managedserviceaccount", "enabled":true}}]'
+# Not needed for AAP - ACM/ZTP day2 hook
+# - name: Enable MCE managedserviceaccount
+#   shell: |
+#     KUBECONFIG={{ hub_cluster_kubeconfig }} oc patch mce multiclusterengine --type json -p '[{"op": "add", "path": "/spec/overrides/components/-", "value": {"name": "managedserviceaccount", "enabled":true}}]'
 
 - name: Create ztp-day2-automation namespace
   shell: |

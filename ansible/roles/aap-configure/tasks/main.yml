@@ -36,6 +36,36 @@
     git remote add origin-gogs http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/acm-ansible-collection-demo.git
     git push -u origin-gogs --all --force
 
+- name: Clone aap-for-ztp to bastion
+  git:
+    repo: "{{ aap_for_ztp_repo }}"
+    dest: "{{ install_directory }}/aap-deploy/aap-for-ztp"
+    force: true
+    version: "{{ aap_for_ztp_repo_branch }}"
+
+- name: Create aap-for-ztp repo in gogs
+  uri:
+    url: "http://{{ gogs_host }}:{{ gogs_port }}/api/v1/admin/users/{{ gogs_username }}/repos"
+    user: "{{ gogs_username }}"
+    password: "{{ gogs_password }}"
+    force_basic_auth: true
+    method: POST
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"name": "aap-for-ztp", "description": "test repo", "private": false}
+    body_format: json
+    validate_certs: no
+    status_code: 201
+    return_content: yes
+  ignore_errors: true
+
+- name: Push aap-for-ztp into gogs
+  shell: |
+    cd {{ install_directory }}/aap-deploy/aap-for-ztp
+    git remote add origin-gogs http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/aap-for-ztp.git
+    git push -u origin-gogs --all --force
+
 - name: Get the automation hub admin password
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n ansible-automation-platform automationhub-admin-password -o jsonpath='{.data.password}' | base64 -d
@@ -327,5 +357,5 @@
     inventory: hub-acm-inventory
     ask_variables_on_launch: true
     allow_simultaneous: true
-    extra_vars: "{{ lookup('file', 'template_extra_vars.json') }}"
+    extra_vars: "{{ lookup('template', 'template_extra_vars.json') }}"
     credentials: hub-acm-kubeconfig

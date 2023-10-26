@@ -1,0 +1,9 @@
+{
+  "state": "present",
+  "namespace": "ztp-day2-automation",
+  "git_protocol": "http",
+  "git_repo_url": "{{ gogs_host }}:{{ gogs_port }}/testadmin/aap-for-ztp.git",
+  "git_scm_version": "{{ aap_for_ztp_repo_branch }}",
+  "git_user": "{{ gogs_username }}",
+  "git_password": "{{ gogs_password }}"
+}
