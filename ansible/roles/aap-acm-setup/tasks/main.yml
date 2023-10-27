@@ -53,11 +53,11 @@
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/application.yaml
 
-# Governance hook
-- name: Apply policy, placementbinding, and placementrule
-  shell: |
-    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/policy.yaml
-
-- name: Apply policyautomation
-  shell: |
-    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/policyautomation.yaml
+# Governance hook (Either application or governance hook)
+# - name: Apply policy, placementbinding, and placementrule
+#   shell: |
+#     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/policy.yaml
+#
+# - name: Apply policyautomation
+#   shell: |
+#     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/aap-deploy/policyautomation.yaml

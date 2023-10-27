@@ -17,3 +17,6 @@ acm_ansible_collection_demo_repo_branch: ztp-day2-automation
 
 aap_for_ztp_repo: https://github.com/akrzos/aap-for-ztp.git
 aap_for_ztp_repo_branch: main
+
+automationcontroller_template_playbook: playbooks/ztp-day2-automation-labeled.yml
+# automationcontroller_template_playbook: playbooks/cluster-mgmt.yml

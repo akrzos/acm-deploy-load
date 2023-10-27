@@ -274,9 +274,8 @@
     organization: Default
     credential_type: kubeconfig
     state: present
-    inputs: "{'kube_config':'{{ fetched_hub_kubeconfig.content | b64decode | to_json }}'}"
-    # inputs:
-    #   kube_config: "{{ fetched_hub_kubeconfig.content | b64decode }}"
+    inputs:
+      kube_config: "{{ fetched_hub_kubeconfig.content | b64decode }}"
 
 - name: Configure automation controller authentication to automation hub
   awx.awx.credential:
@@ -353,7 +352,7 @@
     controller_password: "{{ automationcontroller_admin_pw }}"
     name: ztp-day2-automation-template
     project: aap-for-ran-ztp-project
-    playbook: playbooks/cluster-mgmt.yml
+    playbook: "{{ automationcontroller_template_playbook }}"
     inventory: hub-acm-inventory
     ask_variables_on_launch: true
     allow_simultaneous: true
