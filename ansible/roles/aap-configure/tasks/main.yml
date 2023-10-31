@@ -178,6 +178,11 @@
     source .venv/bin/activate
     ansible-galaxy collection publish stolostron-core-{{ ansible_collection_git_tag.stdout }}.tar.gz --ignore-certs
 
+- name: Clear collections directory
+  file:
+    path: "{{ install_directory }}/aap-deploy/collections"
+    state: absent
+
 # ansible-galaxy command needed by sourcing the venv however need to cd out to reach external galaxy
 - name: Download additional required ansible collections
   shell: |
@@ -230,7 +235,7 @@
     version: 6.5.0
   - name: awx
     suffix: awx
-    version: 23.2.0
+    version: 23.3.1
   - name: kubernetes
     suffix: core
     version: 2.4.0
@@ -317,6 +322,7 @@
     name: aap-for-ran-ztp-project
     organization: Default
     scm_type: git
+    # scm_update_on_launch: true
     scm_branch: "{{ acm_ansible_collection_demo_repo_branch }}"
     scm_url: "http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/acm-ansible-collection-demo.git"
 

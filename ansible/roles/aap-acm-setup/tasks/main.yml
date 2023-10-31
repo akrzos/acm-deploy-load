@@ -13,15 +13,15 @@
   - src: application.yaml.j2
     dest: "{{ install_directory }}/aap-deploy/application.yaml"
 
-- name: Copy files for aap acm setup
-  copy:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-  loop:
-  - src: policy.yaml
-    dest: "{{ install_directory }}/aap-deploy/policy.yaml"
-  - src: policyautomation.yaml
-    dest: "{{ install_directory }}/aap-deploy/policyautomation.yaml"
+# - name: Copy files for aap acm setup
+#   copy:
+#     src: "{{ item.src }}"
+#     dest: "{{ item.dest }}"
+#   loop:
+#   - src: policy.yaml
+#     dest: "{{ install_directory }}/aap-deploy/policy.yaml"
+#   - src: policyautomation.yaml
+#     dest: "{{ install_directory }}/aap-deploy/policyautomation.yaml"
 
 - name: Enable MCE cluster-proxy-addon
   shell: |

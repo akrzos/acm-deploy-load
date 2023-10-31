@@ -10,7 +10,8 @@ gogs_port: 10880
 gogs_username: testadmin
 gogs_password: testadmin
 
-acm_ansible_collection_demo_repo: https://github.com/leo8a/acm-ansible-collection-demo.git
+acm_ansible_collection_demo_repo: https://github.com/akrzos/acm-ansible-collection-demo.git
+# acm_ansible_collection_demo_repo: https://github.com/leo8a/acm-ansible-collection-demo.git
 # acm_ansible_collection_demo_repo: https://github.com/stolostron/acm-ansible-collection-demo.git
 
 acm_ansible_collection_demo_repo_branch: ztp-day2-automation
