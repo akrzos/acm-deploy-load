@@ -49,3 +49,4 @@ spec:
   clusterSelector:
     matchExpressions:
       - {key: ztp-done, operator: Exists}
+      - {key: local-cluster, operator: DoesNotExist}
