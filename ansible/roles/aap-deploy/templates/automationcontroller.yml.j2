@@ -22,3 +22,7 @@ spec:
   admin_user: admin
   loadbalancer_protocol: http
   nodeport_port: 30080
+{% if automationcontroller_image_override %}
+  image: {{ automationcontroller_image }}
+  image_version: {{ automationcontroller_image_tag }}
+{% endif %}
