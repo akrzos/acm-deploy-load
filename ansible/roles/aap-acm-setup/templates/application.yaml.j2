@@ -48,5 +48,6 @@ spec:
       type: ManagedClusterConditionAvailable
   clusterSelector:
     matchExpressions:
+      - {key: ztp-ansible, operator: DoesNotExist}
       - {key: ztp-done, operator: Exists}
       - {key: local-cluster, operator: DoesNotExist}
