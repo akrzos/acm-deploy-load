@@ -8,5 +8,5 @@ automationhub_redis_storage_class: localstorage-sc
 automationcontroller_postgres_storage_class: localstorage-sc
 
 automationcontroller_image_override: false
-automationcontroller_image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/haoliu/awx
+automationcontroller_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/haoliu/awx"
 automationcontroller_image_tag: automationcontroller_task_ws_fix00
