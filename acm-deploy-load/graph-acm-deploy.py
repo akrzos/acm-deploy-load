@@ -78,18 +78,25 @@ def main():
   managed = df["managed"].values[-1]
   policy_inited = df["policy_init"].values[-1]
   policy_compliant = df["policy_compliant"].values[-1]
+  playbook_completed = df["playbook_completed"].values[-1]
 
   title_cluster_node = "ACM {} {} ({}/{} clusters)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
       cliargs.test_version, cluster_completed, cluster_inited, cliargs.hub_version, cliargs.deploy_version,
       cliargs.wan_emulation)
   title_cluster = "ACM {} {} ({}/{} clusters)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
       cliargs.test_version, managed, cluster_inited, cliargs.hub_version, cliargs.deploy_version, cliargs.wan_emulation)
-  title_policy = "ACM {} {} ({}/{} policy)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
+  title_policy = "ACM {} {} ({}/{} du compliant)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
       cliargs.test_version, policy_compliant, policy_inited, cliargs.hub_version, cliargs.deploy_version,
+      cliargs.wan_emulation)
+  title_playbook = "ACM {} {} ({}/{} playbook completed)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
+      cliargs.test_version, playbook_completed, policy_compliant, cliargs.hub_version, cliargs.deploy_version,
       cliargs.wan_emulation)
   title_share = "ACM {} {} ({}/{} compliant clusters)<br>OCP {}, Deployed Clusters {}, W/E {}".format(cliargs.acm_version,
       cliargs.test_version, policy_compliant, cluster_inited, cliargs.hub_version, cliargs.deploy_version,
       cliargs.wan_emulation)
+  title_share_playbook = "ACM {} {} ({}/{} playbook completed clusters)<br>OCP {}, Deployed Clusters {}, W/E {}".format(
+      cliargs.acm_version, cliargs.test_version, playbook_completed, cluster_inited, cliargs.hub_version,
+      cliargs.deploy_version, cliargs.wan_emulation)
 
   y_cluster_node = ["cluster_applied", "cluster_init", "node_booted", "node_discovered", "cluster_installing",
       "cluster_install_failed", "cluster_install_completed"]
@@ -97,11 +104,15 @@ def main():
       "cluster_install_completed", "managed"]
   y_policy = ["cluster_init", "cluster_install_completed", "managed", "policy_init", "policy_applying", "policy_timedout",
       "policy_compliant"]
+  y_playbook = ["cluster_init", "managed", "playbook_running", "playbook_completed"]
   y_share = ["cluster_applied", "cluster_init", "node_booted", "node_discovered", "cluster_installing",
       "cluster_install_failed", "cluster_install_completed", "managed", "policy_applying", "policy_timedout",
       "policy_compliant"]
   y_share2 = ["cluster_applied", "cluster_init", "cluster_installing", "cluster_install_failed",
       "cluster_install_completed", "managed", "policy_applying", "policy_timedout", "policy_compliant"]
+  y_share_playbook = ["cluster_applied", "cluster_init", "cluster_installing", "cluster_install_failed",
+      "cluster_install_completed", "managed", "policy_applying", "policy_timedout", "policy_compliant",
+      "playbook_running", "playbook_completed"]
 
   l = {"value" : "# clusters", "date" : ""}
   l2 = {"value" : "# clusters or # nodes", "date" : ""}
@@ -123,6 +134,11 @@ def main():
   fig_policy.update_layout(title=title_policy, legend_orientation="v")
   fig_policy.write_image("{}/policy-{}.png".format(cliargs.results_directory, ts))
 
+  logger.info("Creating Graph - {}/playbook-{}.png".format(cliargs.results_directory, ts))
+  fig_policy = px.line(df, x="date", y=y_playbook, labels=l, width=cliargs.width, height=cliargs.height)
+  fig_policy.update_layout(title=title_playbook, legend_orientation="v")
+  fig_policy.write_image("{}/playbook-{}.png".format(cliargs.results_directory, ts))
+
   logger.info("Creating Graph - {}/share-{}.png".format(cliargs.results_directory, ts))
   fig_share = px.line(df, x="date", y=y_share, labels=l2, width=cliargs.width, height=cliargs.height)
   fig_share.update_layout(title=title_share, legend_orientation="v")
@@ -132,6 +148,11 @@ def main():
   fig_share = px.line(df, x="date", y=y_share2, labels=l, width=cliargs.width, height=cliargs.height)
   fig_share.update_layout(title=title_share, legend_orientation="v")
   fig_share.write_image("{}/share2-{}.png".format(cliargs.results_directory, ts))
+
+  logger.info("Creating Graph - {}/playbook-share-{}.png".format(cliargs.results_directory, ts))
+  fig_share = px.line(df, x="date", y=y_share_playbook, labels=l, width=cliargs.width, height=cliargs.height)
+  fig_share.update_layout(title=title_share_playbook, legend_orientation="v")
+  fig_share.write_image("{}/playbook-share-{}.png".format(cliargs.results_directory, ts))
 
   end_time = time.time()
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
