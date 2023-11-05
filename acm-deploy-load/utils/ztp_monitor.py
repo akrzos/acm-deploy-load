@@ -41,7 +41,7 @@ class ZTPMonitor(Thread):
     logger.info("Starting ZTP Monitor")
 
     with open(self.csv_file, "w") as csv_file:
-      csv_file.write("date,cluster_applied,cluster_init,cluster_notstarted,node_booted,node_discovered,cluster_installing,cluster_install_failed,cluster_install_completed,managed,policy_init,policy_notstarted,policy_applying,policy_timedout,policy_compliant\n")
+      csv_file.write("date,cluster_applied,cluster_init,cluster_notstarted,node_booted,node_discovered,cluster_installing,cluster_install_failed,cluster_install_completed,managed,policy_init,policy_notstarted,policy_applying,policy_timedout,policy_compliant,playbook_running,playbook_completed\n")
 
     while self.signal:
       start_sample_time = time.time()
@@ -129,6 +129,8 @@ class ZTPMonitor(Thread):
       cluster_policy_applying = 0
       cluster_policy_timedout = 0
       cluster_policy_compliant = 0
+      cluster_playbook_running = 0
+      cluster_playbook_completed = 0
 
       # Parse agentclusterinstall data
       for item in aci_data["items"]:
@@ -240,6 +242,15 @@ class ZTPMonitor(Thread):
               logger.warning("mc: type missing from condition(condition): {}".format(condition))
         else:
           logger.warning("status or conditions not found in managedcluster object: {}".format(item))
+        # Monitoring for the aap day 2 playbook running
+        if "ztp-ansible" in item["metadata"]["labels"]:
+          mc_aap_label = item["metadata"]["labels"]["ztp-ansible"]
+          if mc_aap_label == "running":
+            cluster_playbook_running += 1
+          elif mc_aap_label == "completed":
+            cluster_playbook_completed += 1
+          else:
+            logger.warning("Unexpected ztp-ansible value: {}".format(mc_aap_label))
 
       self.monitor_data["cluster_init"] = cluster_init
       self.monitor_data["cluster_notstarted"] = cluster_notstarted
@@ -254,15 +265,17 @@ class ZTPMonitor(Thread):
       self.monitor_data["policy_applying"] = cluster_policy_applying
       self.monitor_data["policy_timedout"] = cluster_policy_timedout
       self.monitor_data["policy_compliant"] = cluster_policy_compliant
+      self.monitor_data["playbook_running"] = cluster_playbook_running
+      self.monitor_data["playbook_completed"] = cluster_playbook_completed
 
       # Write csv data
       with open(self.csv_file, "a") as csv_file:
-        csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
+        csv_file.write("{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}\n".format(
             datetime.utcfromtimestamp(start_sample_time).strftime('%Y-%m-%dT%H:%M:%SZ'),
             self.monitor_data["cluster_applied_committed"], cluster_init, cluster_notstarted, node_booted,
             node_discovered, cluster_installing, cluster_install_failed, cluster_install_completed, cluster_managed,
             cluster_policy_init, cluster_policy_notstarted, cluster_policy_applying, cluster_policy_timedout,
-            cluster_policy_compliant
+            cluster_policy_compliant, cluster_playbook_running, cluster_playbook_completed
         ))
 
       logger.debug("Applied/Committed Clusters: {}".format(self.monitor_data["cluster_applied_committed"]))
@@ -279,6 +292,8 @@ class ZTPMonitor(Thread):
       logger.debug("Policy Applying Clusters: {}".format(self.monitor_data["policy_applying"]))
       logger.debug("Policy Timedout Clusters: {}".format(self.monitor_data["policy_timedout"]))
       logger.debug("Policy Compliant Clusters: {}".format(self.monitor_data["policy_compliant"]))
+      logger.debug("Playbook Running Clusters: {}".format(self.monitor_data["playbook_running"]))
+      logger.debug("Playbook Completed Clusters: {}".format(self.monitor_data["playbook_completed"]))
 
       end_sample_time = time.time()
       sample_time = round(end_sample_time - start_sample_time, 1)

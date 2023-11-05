@@ -179,6 +179,8 @@ def log_monitor_data(data, elapsed_seconds):
   logger.info("Policy Applying Clusters: {}".format(data["policy_applying"]))
   logger.info("Policy Timedout Clusters: {}".format(data["policy_timedout"]))
   logger.info("Policy Compliant Clusters: {}".format(data["policy_compliant"]))
+  logger.info("Playbook Running Clusters: {}".format(data["playbook_running"]))
+  logger.info("Playbook Completed Clusters: {}".format(data["playbook_completed"]))
 
 
 def main():
@@ -407,9 +409,10 @@ def main():
     "policy_notstarted": 0,
     "policy_applying": 0,
     "policy_timedout": 0,
-    "policy_compliant": 0
+    "policy_compliant": 0,
+    "playbook_running": 0,
+    "playbook_completed": 0
   }
-
   monitor_thread = ZTPMonitor(talm_minor, monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
   monitor_thread.start()
   if cliargs.start_delay > 0:
