@@ -55,7 +55,8 @@ cat ${output_dir}/aci.status | grep "InstallationInProgress" | awk '{print $1}' 
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
 # Copy two SiteConfigs
 ls  /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
-
+# Ping 2 deployed clusters
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "ping6 -c 2 % > ${output_dir}/%.ping"
 
 echo "$(date -u) :: Collecting managedcluster data"
 
