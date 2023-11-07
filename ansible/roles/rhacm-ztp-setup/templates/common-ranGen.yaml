@@ -51,7 +51,7 @@ spec:
     - fileName: PtpOperatorStatus.yaml
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
 # Start PAO
-{% if operator_index_tag in ["v4.11", "v4.12", "v4.13"] %}
+{% if operator_index_tag in ["v4.11", "v4.12", "v4.13", "v4.14"] %}
     # - fileName: PaoSubscription.yaml
     #   policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
     #   spec:
