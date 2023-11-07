@@ -59,6 +59,7 @@ spec:
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
           {%- endraw +%}
 {% endif %}
+{% if operator_index_tag not in ["v4.14"] %}
       spec:
         curation:
           curator:
@@ -67,6 +68,7 @@ spec:
           logs:
             type: "fluentd"
             fluentd: {}
+{% endif %}
     - fileName: PtpConfigSlave.yaml   # Change to PtpConfigSlaveCvl.yaml for ColumbiaVille NIC
       policyName: "{{ 'ptp-config' if manyPolicies else 'config' }}-policy"
       metadata:
