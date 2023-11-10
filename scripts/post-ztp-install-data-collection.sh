@@ -96,6 +96,35 @@ oc get clustergroupupgrades -n ztp-install -o yaml > ${output_dir}/cgu.yaml
 cat ${output_dir}/cgu.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/cgu.status_count
 cat ${output_dir}/cgu.status | grep "TimedOut"  | awk '{print $1}' > ${output_dir}/cgu.TimedOut
 
+echo "$(date -u) :: Collecting ACM application hook data"
+
+oc get applications.app.k8s.io -n ztp-day2-automation > ${output_dir}/applications.app.k8s.io
+oc get applications.app.k8s.io -n ztp-day2-automation -o yaml > ${output_dir}/applications.app.k8s.io.yaml
+oc describe applications.app.k8s.io -n ztp-day2-automation > ${output_dir}/applications.app.k8s.io.describe
+
+oc get subscriptions.apps.open-cluster-management.io -n ztp-day2-automation > ${output_dir}/subscriptions.apps.open-cluster-management.io
+oc get subscriptions.apps.open-cluster-management.io -n ztp-day2-automation -o yaml > ${output_dir}/subscriptions.apps.open-cluster-management.io.yaml
+oc describe subscriptions.apps.open-cluster-management.io -n ztp-day2-automation > ${output_dir}/subscriptions.apps.open-cluster-management.io.describe
+
+oc get placementrules -n ztp-day2-automation > ${output_dir}/placementrules
+oc get placementrules -n ztp-day2-automation -o yaml > ${output_dir}/placementrules.yaml
+oc describe placementrules -n ztp-day2-automation > ${output_dir}/placementrules.describe
+
+echo "$(date -u) :: Collecting aap data"
+
+oc get automationhub -n ansible-automation-platform > ${output_dir}/automationhub
+oc get automationhub -n ansible-automation-platform -o yaml > ${output_dir}/automationhub.yaml
+oc describe automationhub -n ansible-automation-platform  > ${output_dir}/automationhub.describe
+
+oc get automationcontroller -n ansible-automation-platform > ${output_dir}/automationcontroller
+oc get automationcontroller -n ansible-automation-platform -o yaml > ${output_dir}/automationcontroller.yaml
+oc describe automationcontroller -n ansible-automation-platform  > ${output_dir}/automationcontroller.describe
+
+oc get ansiblejobs -A > ${output_dir}/ansiblejobs
+oc get ansiblejobs -A --no-headers | wc -l > ${output_dir}/ansiblejobs.count
+oc get ansiblejobs -A -o yaml > ${output_dir}/ansiblejobs.yaml
+oc describe ansiblejobs -A > ${output_dir}/ansiblejobs.describe
+
 echo "$(date -u) :: Inspecting failed cluster installs"
 truncate -s 0 ${output_dir}/cluster-install-failures
 for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
