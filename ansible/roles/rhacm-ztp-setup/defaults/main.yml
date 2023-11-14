@@ -24,6 +24,8 @@ operator_index_tag: v4.12
 
 ztp_site_generator_image_tag: v4.13.0-42
 
+rhacm_policy_generator_image_tag: v2.7
+
 # Initialize the siteconfig list so it can be sorted later
 siteconfig_list: []
 

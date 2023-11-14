@@ -61,6 +61,15 @@
     enabled: "{{ rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 }}"
   # - replace: "openshift-kni"
   #   regexp: "redhat_emp1"
+  # For rhacm policy generator release-4.14 branch
+  - replace: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}"
+    regexp: "registry.redhat.io"
+    enabled: "{{ rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 }}"
+  - replace: "acm-d"
+    regexp: "rhacm2"
+    enabled: "{{ rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 }}"
+  - replace: "{{ rhacm_policy_generator_image_tag }}"
+    regexp: "v2.7"
   # release-4.11 cnf-features-deploy
   - replace: "{{ ztp_site_generator_image_tag }}"
     regexp: "latest"
@@ -102,10 +111,26 @@
   - "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs"
   - "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy-applications/"
 
-- name: Create cluster application directories in cnf-features-deploy
+- name: Create override and extra-manifest files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: KlusterletAddonConfigOverride.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml"
+  - src: BareMetalHostOverride.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml"
+  - src: 999-sync-time-once-master.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml"
+
+- name: Create cluster application directories in cnf-features-deploy and copy files for each
   shell: |
     {% for item in range(1, cluster_applications_count + 1) %}
     mkdir -p "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}"
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/BareMetalHostOverride.yaml
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/KlusterletAddonConfigOverride.yaml
+    mkdir -p "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests"
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/999-sync-time-once-master.yaml
     {% endfor %}
 
 # ignore_errors because not all directories will exist
@@ -134,29 +159,17 @@
   set_fact:
     siteconfig_list: "{{ siteconfig_list | sort }}"
 
-- name: Create override files
-  template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-  loop:
-  - src: KlusterletAddonConfigOverride.yaml.j2
-    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml"
-  - src: BareMetalHostOverride.yaml.j2
-    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml"
-
 - name: Create cluster kustomization files in cnf-features-deploy
   template:
     src: cluster-kustomization.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/kustomization.yaml"
   loop: "{{ range(1, cluster_applications_count + 1) | list }}"
 
-# Similiar to the above kustomization file template, every cluster app's directoy must contain the actual siteconfig and not just a relative path "down" to the resource
+# Similar to the above kustomization file template, every cluster app's directory must contain the actual siteconfig and not just a relative path "down" to the resource
 - name: Loop through copying correct siteconfigs into each cluster application directory
   shell: |
     {% for sc in range((item - 1) * siteconfigs_per_application, item * siteconfigs_per_application ) %}
     {% if siteconfig_list | length > sc %}
-    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/BareMetalHostOverride.yaml
-    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/KlusterletAddonConfigOverride.yaml
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs/{{ siteconfig_list[sc] }}-siteconfig.yml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-siteconfig.yml
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs/{{ siteconfig_list[sc] }}-resources.yml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-resources.yml
     {% endif %}
