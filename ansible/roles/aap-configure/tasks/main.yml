@@ -214,6 +214,18 @@
   - awx-awx
   - kubernetes-core
 
+- name: Discover kubernetes-core collection version
+  shell: |
+    cd {{ install_directory }}/aap-deploy/collections
+    ls kubernetes-core-* | sed 's/kubernetes-core-//g' | sed 's/.tar.gz//g'
+  register: collection_kubernetes_version
+
+- name: Discover awx-awx collection version
+  shell: |
+    cd {{ install_directory }}/aap-deploy/collections
+    ls awx-awx-* | sed 's/awx-awx-//g' | sed 's/.tar.gz//g'
+  register: collection_awx_version
+
 - name: Approve automation hub collections
   uri:
     url: "{{ automationhub_url }}/api/galaxy/v3/collections/{{ item.name }}/{{ item.suffix }}/versions/{{ item.version }}/move/staging/published/"
@@ -235,10 +247,10 @@
     version: 6.5.0
   - name: awx
     suffix: awx
-    version: 23.4.0
+    version: "{{ collection_awx_version.stdout }}"
   - name: kubernetes
     suffix: core
-    version: 2.4.0
+    version: "{{ collection_kubernetes_version.stdout }}"
   - name: stolostron
     suffix: core
     version: "{{ ansible_collection_git_tag.stdout }}"
