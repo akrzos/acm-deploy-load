@@ -32,11 +32,24 @@ def get_ocp_version(kubeconfig):
     logger.error("oc version rc: {}".format(rc))
     sys.exit(1)
   version_data = json.loads(output)
-  logger.debug("Version is {}".format(version_data["openshiftVersion"]))
-  version["major"] = int(version_data["openshiftVersion"].split(".")[0])
-  version["minor"] = int(version_data["openshiftVersion"].split(".")[1])
+  if "openshiftVersion" in version_data:
+    version_key = "openshiftVersion"
+  elif "releaseClientVersion" in version_data:
+    logger.info("openshiftVersion not found in oc version, falling back to releaseClientVersion")
+    # If this fallback occurs, it means that the initial cluster install likely ended in partial state
+    version_key = "releaseClientVersion"
+  else:
+    logger.warning("Unable to determine ocp version via oc version: {}".format(version_data))
+    version["major"] = 0
+    version["minor"] = 0
+    version["patch"] = "0"
+    return version
+
+  logger.debug("Version is {}".format(version_data[version_key]))
+  version["major"] = int(version_data[version_key].split(".")[0])
+  version["minor"] = int(version_data[version_key].split(".")[1])
   # Sometimes patch version includes string data (Ex 4.14.0-rc.0)
-  version["patch"] = ".".join(version_data["openshiftVersion"].split(".")[2:])
+  version["patch"] = ".".join(version_data[version_key].split(".")[2:])
   return version
 
 
