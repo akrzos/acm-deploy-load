@@ -21,6 +21,10 @@ oc get clusterversion > ${output_dir}/clusterversion
 oc get clusterversion -o yaml > ${output_dir}/clusterversion.yaml
 oc describe clusterversion > ${output_dir}/clusterversion.describe
 
+oc get clusteroperators > ${output_dir}/clusteroperators
+oc get clusteroperators -o yaml > ${output_dir}/clusteroperators.yaml
+oc describe clusteroperators > ${output_dir}/clusteroperators.describe
+
 # Get hub cluster install config
 oc get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/cluster-config-v1
 
