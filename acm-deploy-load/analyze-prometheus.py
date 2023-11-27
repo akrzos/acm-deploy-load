@@ -275,6 +275,8 @@ def node_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-rcv-node", "Node Network Receive Throughput", "NET", w, h, q_names)
   q = "sum by (instance) (instance:node_network_transmit_bytes_excluding_lo:rate1m{cluster=''})"
   query_thanos(route, q, "instance", token, end_ts, duration, sub_report_dir, "net-xmt-node", "Node Network Transmit Throughput", "NET", w, h, q_names)
+  q = "sum(kube_pod_status_phase{phase!='Succeeded', phase!='Failed'} * on (namespace, pod, container, uid) group_left(node) kube_pod_info{pod_ip!=''}) by (node)"
+  query_thanos(route, q, "node", token, end_ts, duration, sub_report_dir, "nonterm-pods-node", "Non-terminated pods by Node", "Count", w, h, q_names)
   return q_names
 
 
