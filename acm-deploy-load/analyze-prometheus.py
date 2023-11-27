@@ -175,7 +175,7 @@ def acm_queries(report_dir, route, token, end_ts, duration, w, h):
 
 
 def cluster_queries(report_dir, route, token, end_ts, duration, w, h):
-  # Cluster CPU/Memory
+  # Cluster CPU/Memory/Network and nonterminated pods
   sub_report_dir = os.path.join(report_dir, "cluster")
   make_report_directories(sub_report_dir)
   q_names = OrderedDict()
@@ -187,6 +187,8 @@ def cluster_queries(report_dir, route, token, end_ts, duration, w, h):
   query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "net-rcv-cluster", "Cluster Network Receive Throughput", "NET", w, h, q_names)
   q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace!=''}[5m]))"
   query_thanos(route, q, "cluster", token, end_ts, duration, sub_report_dir, "net-xmt-cluster", "Cluster Network Transmit Throughput", "NET", w, h, q_names)
+  q = "sum(kube_pod_status_phase{phase!='Succeeded', phase!='Failed'})"
+  query_thanos(route, q, "non-terminated pods", token, end_ts, duration, sub_report_dir, "nonterm-pods-cluster", "Non-terminated pods across entire cluster", "Count", w, h, q_names)
   return q_names
 
 
