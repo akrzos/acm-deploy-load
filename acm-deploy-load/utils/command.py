@@ -34,7 +34,7 @@ def command(cmd, dry_run, cmd_directory="", retries=1, retry_backoff=True, no_lo
     if tries > 1 and retry_backoff:
       time.sleep(1 * (tries - 1))
     logger.info("Command({}): {}".format(tries, " ".join(cmd)))
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True)
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.PIPE, universal_newlines=True)
     if readlines:
       output = ""
       while True:
