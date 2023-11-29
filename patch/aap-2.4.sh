@@ -13,4 +13,15 @@ oc get deploy -n ansible-automation-platform resource-operator-controller-manage
 # echo "Sleep 15"
 # sleep 15
 
+# Possibly this belongs in ACM tuning instead of AAP, but is needed when AAP is enabled
+# Tune multicluster-operators-hub-subscription for large scale interaction with AAP
+# https://issues.redhat.com/browse/ACM-8636
+echo "Applying ACM multicluster-operators-hub-subscription memory limit bump to 32Gi"
+oc annotate mch -n open-cluster-management multiclusterhub mch-pause=True
+oc get deploy -n open-cluster-management multicluster-operators-hub-subscription -o json | jq '.spec.template.spec.containers[] | select(.name=="multicluster-operators-hub-subscription") | .resources.limits.memory'
+oc get deploy -n open-cluster-management multicluster-operators-hub-subscription -o json | jq '.spec.template.spec.containers[] |= (select(.name=="multicluster-operators-hub-subscription").resources.limits.memory = "32Gi")' | oc replace -f -
+oc get deploy -n open-cluster-management multicluster-operators-hub-subscription -o json | jq '.spec.template.spec.containers[] | select(.name=="multicluster-operators-hub-subscription") | .resources.limits.memory'
+echo "Sleep 10"
+sleep 10
+
 echo "Done Patching"
