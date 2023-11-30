@@ -10,8 +10,8 @@ oc get deploy -n ansible-automation-platform resource-operator-controller-manage
 oc get csv -n ansible-automation-platform ${aap_csv} -o json | jq '.spec.install.spec.deployments[] |= (select(.name=="resource-operator-controller-manager").spec.template.spec.containers[] |= (select(.name=="platform-resource-manager").resources.limits.memory = "32Gi"))' | oc replace -f -
 oc get csv -n ansible-automation-platform ${aap_csv} -o json | jq '.spec.install.spec.deployments[] | select(.name=="resource-operator-controller-manager").spec.template.spec.containers[] | select(.name=="platform-resource-manager").resources.limits.memory'
 oc get deploy -n ansible-automation-platform resource-operator-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="platform-resource-manager").resources.limits.memory'
-# echo "Sleep 15"
-# sleep 15
+echo "Sleep 10"
+sleep 10
 
 # Possibly this belongs in ACM tuning instead of AAP, but is needed when AAP is enabled
 # Tune multicluster-operators-hub-subscription for large scale interaction with AAP
