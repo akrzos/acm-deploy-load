@@ -47,12 +47,7 @@ time ./acm-deploy-load/analyze-clustergroupupgrades.py ${results_dir} 2>&1 | tee
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./scripts/post-ztp-gen-day1-csv.sh ${results_dir} 2>&1 | tee -a ${log_file}
-
-echo "################################################################################" 2>&1 | tee -a ${log_file}
-
-time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile combined --writegraph ${results_dir}/graph-combined-per-cluster.png 2>&1 | tee -a ${log_file}
-time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile all_stages --writegraph ${results_dir}/graph-per-cluster-stage_breakdown.png 2>&1 | tee -a ${log_file}
+time ./acm-deploy-load/analyze-ansiblejobs.py ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
@@ -60,6 +55,19 @@ start_time=$(grep "Start Time:" ${results_dir}/report.txt | awk '{print $4}')
 end_time=$(grep "End Time:" ${results_dir}/report.txt | awk '{print $4}')
 time ./acm-deploy-load/analyze-prometheus.py --gitops --lso --talm --acm --aap -p "deploy-pa" -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
 echo "time ./acm-deploy-load/analyze-prometheus.py --gitops --lso --talm --acm --aap -p deploy-pa -s ${start_time} -e ${end_time} ${results_dir}" | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+time ./acm-deploy-load/benchmark-search.py ${results_dir} --sample-count 10 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+time ./scripts/post-ztp-gen-day1-csv.sh ${results_dir} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile combined --writegraph ${results_dir}/graph-combined-per-cluster.png 2>&1 | tee -a ${log_file}
+time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile all_stages --writegraph ${results_dir}/graph-per-cluster-stage_breakdown.png 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
@@ -75,12 +83,13 @@ tar caf ${results_dir}/must-gather-${ts}.tar.gz --remove-files ${results_dir}/mu
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 echo "Running ACM-inspector"  2>&1 | tee -a ${log_file}
 
+acm_inspector_image="quay.io/bjoydeep/acm-inspector:2.9.0-SNAPSHOT-2023-10-02-16-51-40"
 acm_inspector_token=$(oc create token kubeburner -n default)
 acm_inspector_url=$(oc whoami --show-server)
 acm_inspector_output_dir="$(pwd)/${results_dir}/acm-inspector-$(date -u +%Y%m%d-%H%M%S)"
 mkdir -p ${acm_inspector_output_dir}
 
-podman run --network host -e OC_CLUSTER_URL=${acm_inspector_url} -e OC_TOKEN=${acm_inspector_token} -v ${acm_inspector_output_dir}:/acm-inspector/output quay.io/bjoydeep/acm-inspector  2>&1 | tee -a ${log_file}
+podman run --network host -e OC_CLUSTER_URL=${acm_inspector_url} -e OC_TOKEN=${acm_inspector_token} -v ${acm_inspector_output_dir}:/acm-inspector/output ${acm_inspector_image} 2>&1 | tee -a ${log_file}
 tar czf ${acm_inspector_output_dir}.tar.gz -C ${acm_inspector_output_dir} .
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}

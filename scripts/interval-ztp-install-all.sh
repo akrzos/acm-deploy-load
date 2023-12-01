@@ -51,6 +51,13 @@ time ./acm-deploy-load/analyze-ansiblejobs.py ${results_dir} 2>&1 | tee -a ${log
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
+start_time=$(grep "Start Time:" ${results_dir}/report.txt | awk '{print $4}')
+end_time=$(grep "End Time:" ${results_dir}/report.txt | awk '{print $4}')
+time ./acm-deploy-load/analyze-prometheus.py --gitops --lso --talm --acm --aap -p "deploy-pa" -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
+echo "time ./acm-deploy-load/analyze-prometheus.py --gitops --lso --talm --acm --aap -p deploy-pa -s ${start_time} -e ${end_time} ${results_dir}" | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
 time ./acm-deploy-load/benchmark-search.py ${results_dir} --sample-count 10 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
@@ -61,13 +68,6 @@ echo "##########################################################################
 
 time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile combined --writegraph ${results_dir}/graph-combined-per-cluster.png 2>&1 | tee -a ${log_file}
 time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile all_stages --writegraph ${results_dir}/graph-per-cluster-stage_breakdown.png 2>&1 | tee -a ${log_file}
-
-echo "################################################################################" 2>&1 | tee -a ${log_file}
-
-start_time=$(grep "Start Time:" ${results_dir}/report.txt | awk '{print $4}')
-end_time=$(grep "End Time:" ${results_dir}/report.txt | awk '{print $4}')
-time ./acm-deploy-load/analyze-prometheus.py --gitops --lso --talm --acm --aap -p "deploy-pa" -s "${start_time}" -e "${end_time}" ${results_dir} 2>&1 | tee -a ${log_file}
-echo "time ./acm-deploy-load/analyze-prometheus.py --gitops --lso --talm --acm --aap -p deploy-pa -s ${start_time} -e ${end_time} ${results_dir}" | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
