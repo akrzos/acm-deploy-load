@@ -23,6 +23,18 @@ import sys
 logger = logging.getLogger("acm-deploy-load")
 
 
+def get_ocp_namespace_list(kubeconfig):
+  logger.info("Getting OCP namespace list")
+  oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "namespace", "-o", "json"]
+  rc, output = command(oc_cmd, False, no_log=True)
+  if rc != 0:
+    logger.error("oc get namespace rc: {}".format(rc))
+    sys.exit(1)
+  namespace_data = json.loads(output)
+  namespaces = [item["metadata"]["name"] for item in namespace_data["items"]]
+  return namespaces
+
+
 def get_ocp_version(kubeconfig):
   logger.info("Getting OCP version")
   version = {}
