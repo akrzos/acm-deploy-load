@@ -317,6 +317,22 @@ def make_report_directories(sub_report_dir):
     os.mkdir(stats_dir)
 
 
+def metal3_queries(report_dir, route, token, end_ts, duration, w, h):
+  # Metal3 Prometheus Queries
+  sub_report_dir = os.path.join(report_dir, "metal3")
+  make_report_directories(sub_report_dir)
+  q_names = OrderedDict()
+  q = "sum by (pod) (node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='openshift-machine-api',pod=~'ironic-proxy-.*'})"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "cpu-metal3-ironic-proxy", "Metal3 Ironic Proxy CPU Cores Usage", "CPU", w, h, q_names)
+  q = "sum by (pod) (container_memory_working_set_bytes{cluster='',container!='',namespace='openshift-machine-api',pod=~'ironic-proxy-.*'})"
+  query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "mem-metal3-ironic-proxy", "Metal3 Ironic Proxy Memory Usage", "MEM", w, h, q_names)
+  # q = "sum by (pod) (irate(container_network_receive_bytes_total{cluster='',namespace='openshift-machine-api',pod=~'ironic-proxy-.*'}[5m]))"
+  # query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "net-rcv-metal3-ironic-proxy", "Metal3 Ironic Proxy Network Receive Throughput", "NET", w, h, q_names)
+  # q = "sum by (pod) (irate(container_network_transmit_bytes_total{cluster='',namespace='openshift-machine-api',pod=~'ironic-proxy-.*'}[5m]))"
+  # query_thanos(route, q, "pod", token, end_ts, duration, sub_report_dir, "net-xmt-metal3-ironic-proxy", "Metal3 Ironic Proxy Network Transmit Throughput", "NET", w, h, q_names)
+  return q_names
+
+
 def node_queries(report_dir, route, token, end_ts, duration, w, h):
   # Node CPU/Memory/Disk/Network
   sub_report_dir = os.path.join(report_dir, "node")
@@ -352,6 +368,7 @@ def ocp_queries(report_dir, route, token, end_ts, duration, w, h):
     "openshift-kube-apiserver",
     "openshift-kube-controller-manager",
     "openshift-kube-scheduler",
+    "openshift-machine-api",
     "openshift-monitoring"
   ]
   sub_report_dir = os.path.join(report_dir, "ocp")
@@ -681,6 +698,7 @@ def main():
   report_data["etcd"] = etcd_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
   report_data["ocp"] =  ocp_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
   report_data["resource"] = resource_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
+  report_data["metal3"] = metal3_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
   if "openshift-gitops" in namespaces:
     logger.info("openshift-gitops namespace found, querying for gitops metrics")
     report_data["gitops"] = gitops_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
