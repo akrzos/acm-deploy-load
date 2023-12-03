@@ -58,10 +58,6 @@ echo "time ./acm-deploy-load/analyze-prometheus.py -p deploy-pa -s ${start_time}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-time ./acm-deploy-load/benchmark-search.py ${results_dir} --sample-count 10 2>&1 | tee -a ${log_file}
-
-echo "################################################################################" 2>&1 | tee -a ${log_file}
-
 time ./scripts/post-ztp-gen-day1-csv.sh ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
@@ -91,6 +87,10 @@ mkdir -p ${acm_inspector_output_dir}
 
 podman run --network host -e OC_CLUSTER_URL=${acm_inspector_url} -e OC_TOKEN=${acm_inspector_token} -v ${acm_inspector_output_dir}:/acm-inspector/output ${acm_inspector_image} 2>&1 | tee -a ${log_file}
 tar czf ${acm_inspector_output_dir}.tar.gz -C ${acm_inspector_output_dir} .
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
+time ./acm-deploy-load/benchmark-search.py ${results_dir} --sample-count 10 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
