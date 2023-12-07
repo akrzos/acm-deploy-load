@@ -38,7 +38,7 @@ oc get no -o yaml > ${output_dir}/nodes.yaml
 oc describe no > ${output_dir}/nodes.describe
 oc get ns > ${output_dir}/namespaces
 oc get ns -o yaml > ${output_dir}/namespaces.yaml
-oc get pods -A > ${output_dir}/pods
+oc get pods -A -o wide > ${output_dir}/pods
 oc get pods -A -o yaml > ${output_dir}/pods.yaml
 oc describe pods -A > ${output_dir}/pods.describe
 oc get ev -A > ${output_dir}/events
