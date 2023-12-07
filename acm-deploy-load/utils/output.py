@@ -81,6 +81,13 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, " * DU Profile Timeout: {}".format(monitor_data["policy_timedout"]))
     log_write(report, " * DU Profile Successful Percent: {}%".format(success_du_percent))
     log_write(report, " * DU Profile Failed Percent: {}%".format(failed_du_percent))
+
+    if monitor_data["playbook_running"] > 0 or monitor_data["playbook_completed"] > 0:
+      log_write(report, "ZTP Day2 Playbook Results")
+      log_write(report, " * ZTP Day2 Targets: {}".format(monitor_data["policy_compliant"]))
+      log_write(report, " * ZTP Day2 Running: {}".format(monitor_data["playbook_running"]))
+      log_write(report, " * ZTP Day2 Completed: {}".format(monitor_data["playbook_completed"]))
+
     log_write(report, "Overall Results")
     log_write(report, " * Overall Success Percent: {}%".format(success_overall_percent))
     log_write(report, " * Overall Failed Percent: {}%".format(failed_overall_percent))
