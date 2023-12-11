@@ -96,22 +96,23 @@ def main():
       aj_result_finished = ""
       aj_result_elapsed = ""
 
-      if "changed" in item["status"]["ansibleJobResult"]:
-        aj_result_changed = item["status"]["ansibleJobResult"]["changed"]
-      if "status" in item["status"]["ansibleJobResult"]:
-        aj_result_status = item["status"]["ansibleJobResult"]["status"]
-        if aj_result_status in aj_status_total:
-          aj_status_total[aj_result_status] += 1
-        else:
-          aj_status_total[aj_result_status] = 1
-      if "failed" in item["status"]["ansibleJobResult"]:
-        aj_result_failed = item["status"]["ansibleJobResult"]["failed"]
-      if "started" in item["status"]["ansibleJobResult"]:
-        aj_result_started = item["status"]["ansibleJobResult"]["started"]
-      if "finished" in item["status"]["ansibleJobResult"]:
-        aj_result_finished = item["status"]["ansibleJobResult"]["finished"]
-      if "elapsed" in item["status"]["ansibleJobResult"]:
-        aj_result_elapsed = item["status"]["ansibleJobResult"]["elapsed"]
+      if "status" in item and "ansibleJobResult" in item["status"]:
+        if "changed" in item["status"]["ansibleJobResult"]:
+          aj_result_changed = item["status"]["ansibleJobResult"]["changed"]
+        if "status" in item["status"]["ansibleJobResult"]:
+          aj_result_status = item["status"]["ansibleJobResult"]["status"]
+          if aj_result_status in aj_status_total:
+            aj_status_total[aj_result_status] += 1
+          else:
+            aj_status_total[aj_result_status] = 1
+        if "failed" in item["status"]["ansibleJobResult"]:
+          aj_result_failed = item["status"]["ansibleJobResult"]["failed"]
+        if "started" in item["status"]["ansibleJobResult"]:
+          aj_result_started = item["status"]["ansibleJobResult"]["started"]
+        if "finished" in item["status"]["ansibleJobResult"]:
+          aj_result_finished = item["status"]["ansibleJobResult"]["finished"]
+        if "elapsed" in item["status"]["ansibleJobResult"]:
+          aj_result_elapsed = item["status"]["ansibleJobResult"]["elapsed"]
 
       created_dt = datetime.strptime(aj_creationTimestamp, "%Y-%m-%dT%H:%M:%SZ")
       created_dt_no_seconds = datetime.strptime(aj_creationTimestamp, "%Y-%m-%dT%H:%M:%SZ").replace(second=0, microsecond=0)
