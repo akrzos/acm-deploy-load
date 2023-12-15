@@ -451,6 +451,25 @@ def talm_queries(report_dir, route, token, end_ts, duration, w, h):
   return q_names
 
 
+def ztp_day2_queries(report_dir, route, token, end_ts, duration, w, h):
+  sub_report_dir = os.path.join(report_dir, "ztp-day2")
+  make_report_directories(sub_report_dir)
+  q_names = OrderedDict()
+
+  # AAP Namespace
+  q = "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster='',namespace='ztp-day2-automation'})"
+  query_thanos(route, q, "ztp-day2-automation", token, end_ts, duration, sub_report_dir, "cpu-ztp-day2", "ztp-day2-automation CPU Cores Usage", "CPU", w, h, q_names)
+  q = "sum(container_memory_working_set_bytes{cluster='',container!='',namespace='ztp-day2-automation'})"
+  query_thanos(route, q, "ztp-day2-automation", token, end_ts, duration, sub_report_dir, "mem-ztp-day2", "ztp-day2-automation Memory Usage", "MEM", w, h, q_names)
+  q = "sum(irate(container_network_receive_bytes_total{cluster='',namespace='ztp-day2-automation'}[5m]))"
+  query_thanos(route, q, "ztp-day2-automation", token, end_ts, duration, sub_report_dir, "net-rcv-ztp-day2", "ztp-day2-automation Network Receive Throughput", "NET", w, h, q_names)
+  q = "sum(irate(container_network_transmit_bytes_total{cluster='',namespace='ztp-day2-automation'}[5m]))"
+  query_thanos(route, q, "ztp-day2-automation", token, end_ts, duration, sub_report_dir, "net-xmt-ztp-day2", "ztp-day2-automation Network Transmit Throughput", "NET", w, h, q_names)
+  q = "sum(kube_pod_status_phase{phase!='Succeeded', phase!='Failed', namespace='ztp-day2-automation'})"
+  query_thanos(route, q, "non-terminated pods", token, end_ts, duration, sub_report_dir, "nonterm-pods-ztp-day2", "Non-terminated pods across ztp-day2-automation namespace", "Count", w, h, q_names)
+  return q_names
+
+
 def query_thanos(route, query, series_label, token, end_ts, duration, directory, fname, g_title, y_unit, g_width, g_height, q_names, resolution="1m"):
   logger.info("Querying data")
   if fname in q_names:
@@ -714,6 +733,10 @@ def main():
   if "ansible-automation-platform" in namespaces:
     logger.info("ansible-automation-platform namespace found, querying for aap metrics")
     report_data["aap"] = aap_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
+  if "ztp-day2-automation" in namespaces:
+    logger.info("ztp-day2-automation namespace found, querying for ztp day2 metrics")
+    report_data["ztp-day2"] = ztp_day2_queries(report_dir, route, token, q_end_ts, q_duration, w, h)
+
 
   generate_report_html(report_dir, report_data)
 
