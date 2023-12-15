@@ -18,6 +18,9 @@ sleep 10
 # https://issues.redhat.com/browse/ACM-8636
 echo "Applying ACM multicluster-operators-hub-subscription memory limit bump to 32Gi"
 oc annotate mch -n open-cluster-management multiclusterhub mch-pause=True
+# It seems it is possible to apply a patch too quickly after pausing the mch, pause for 20s
+echo "Sleep 20"
+sleep 20
 oc get deploy -n open-cluster-management multicluster-operators-hub-subscription -o json | jq '.spec.template.spec.containers[] | select(.name=="multicluster-operators-hub-subscription") | .resources.limits.memory'
 oc get deploy -n open-cluster-management multicluster-operators-hub-subscription -o json | jq '.spec.template.spec.containers[] |= (select(.name=="multicluster-operators-hub-subscription").resources.limits.memory = "32Gi")' | oc replace -f -
 oc get deploy -n open-cluster-management multicluster-operators-hub-subscription -o json | jq '.spec.template.spec.containers[] | select(.name=="multicluster-operators-hub-subscription") | .resources.limits.memory'
