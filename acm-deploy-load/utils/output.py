@@ -56,6 +56,7 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     phase_break(True, report)
     log_write(report, "Versions")
     log_write(report, " * ACM: {}".format(cliargs.acm_version))
+    log_write(report, " * AAP: {}".format(cliargs.aap_version))
     log_write(report, " * Test: {}".format(cliargs.test_version))
     log_write(report, " * Hub OCP: {}".format(cliargs.hub_version))
     log_write(report, " * Deployed OCP: {}".format(cliargs.deploy_version))
@@ -81,14 +82,17 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, " * DU Profile Timeout: {}".format(monitor_data["policy_timedout"]))
     log_write(report, " * DU Profile Successful Percent: {}%".format(success_du_percent))
     log_write(report, " * DU Profile Failed Percent: {}%".format(failed_du_percent))
-
     if monitor_data["playbook_running"] > 0 or monitor_data["playbook_completed"] > 0:
+      success_playbook_percent = round((monitor_data["playbook_completed"] / monitor_data["policy_compliant"]) * 100, 1)
+      failed_playbook_percent = round(100 - success_playbook_percent, 1)
       log_write(report, "ZTP Day2 Playbook Results")
       log_write(report, " * ZTP Day2 Targets: {}".format(monitor_data["policy_compliant"]))
       log_write(report, " * ZTP Day2 Running: {}".format(monitor_data["playbook_running"]))
       log_write(report, " * ZTP Day2 Completed: {}".format(monitor_data["playbook_completed"]))
-
+      log_write(report, " * ZTP Day2 Successful Percent: {}%".format(success_playbook_percent))
+      log_write(report, " * ZTP Day2 Failed Percent: {}%".format(failed_playbook_percent))
     log_write(report, "Overall Results")
+    log_write(report, " * Overall Success (DU Compliant / Deployed): {} / {}".format(monitor_data["policy_compliant"], monitor_data["cluster_applied_committed"]))
     log_write(report, " * Overall Success Percent: {}%".format(success_overall_percent))
     log_write(report, " * Overall Failed Percent: {}%".format(failed_overall_percent))
     log_write(report, "Deployed Cluster Orchestration")

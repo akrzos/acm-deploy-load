@@ -226,11 +226,12 @@ def main():
   # Report options
   parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-ztp-0",
                       help="Suffix to be appended to results directory name")
-  parser.add_argument("--acm-version", type=str, default="2.8.0", help="Sets ACM version for report")
+  parser.add_argument("--acm-version", type=str, default="", help="Sets ACM version for report")
+  parser.add_argument("--aap-version", type=str, default="", help="Sets AAP version for report")
   parser.add_argument("--test-version", type=str, default="ZTP Scale Run 1", help="Sets test version for graph title")
-  parser.add_argument("--hub-version", type=str, default="4.12.7", help="Sets OCP Hub version for report")
-  parser.add_argument("--deploy-version", type=str, default="4.12.7", help="Sets OCP deployed version for report")
-  parser.add_argument("--wan-emulation", type=str, default="(50ms/0.02)", help="Sets WAN emulation for graph title")
+  parser.add_argument("--hub-version", type=str, default="", help="Sets OCP Hub version for report")
+  parser.add_argument("--deploy-version", type=str, default="", help="Sets OCP deployed version for report")
+  parser.add_argument("--wan-emulation", type=str, default="", help="Sets WAN emulation for graph title")
 
   # Debug and dry-run options
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
