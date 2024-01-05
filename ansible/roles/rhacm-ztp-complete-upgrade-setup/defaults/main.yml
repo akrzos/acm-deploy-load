@@ -5,18 +5,18 @@ http_store_path: /opt/http_store
 
 clusters_label: "ztp-done="
 
-du_upgrade_channel: "fast-4.12"
+du_upgrade_channel: "fast-4.14"
 
-du_upgrade_version: "4.12.11"
+du_upgrade_version: "4.14.7"
 
-# For 4.11 to 4.12, 4.12 to 4.13 Y-stream upgrade an admin ack is required to permit those upgrades
+# For 4.11 to 4.12, 4.12 to 4.13, 4.13 to 4.14 Y-stream upgrade an admin ack is required to permit those upgrades
 include_admin_ack: true
 
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
-disconnected_operator_index_tag: v4.12
+disconnected_operator_index_tag: v4.14
 
 # Must match the original used in common-ranGen.yaml PGT
-original_disconnected_operator_index_tag: v4.11
+original_disconnected_operator_index_tag: v4.13
 
 # Must match the original used in common-ranGen.yaml PGT
 original_common_catalogsource_name: rh-du-operators

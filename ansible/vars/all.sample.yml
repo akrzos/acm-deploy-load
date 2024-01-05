@@ -22,7 +22,7 @@ hub_cluster_kubeconfig: /root/bm/kubeconfig
 rhacm_icsp_enable_tag_mirror: false
 # When installing RHACM or MCE in a connected environment this pull secret must be populated
 rhacm_quay_pullsecret: ''
-# Example: rhacm_build: '2.9.0-DOWNSTREAM-2023-09-05-07-27-22'
+# Example: rhacm_build: '2.9.0-DOWNSTREAM-2023-11-14-18-06-19' # ACM 2.9 GA Build
 rhacm_build:
 setup_rhacm_search_pv: false
 setup_rhacm_search_api_route: true
@@ -48,11 +48,11 @@ setup_ztp_policy_application: true
 gitops_redis_mem_patch: true
 
 # MCE Assisted-installer items (Installed with RHACM)
-mce_assisted_ocp_version: quay.io/openshift-release-dev/ocp-release:4.13.10-x86_64
+mce_assisted_ocp_version: quay.io/openshift-release-dev/ocp-release:4.14.7-x86_64
 mce_assisted_service_namespace: multicluster-engine
 mce_clusterimagesets:
-- name: openshift-4.12.16
-  releaseImage: quay.io/openshift-release-dev/ocp-release:4.13.10-x86_64
+- name: openshift-4.14.7
+  releaseImage: quay.io/openshift-release-dev/ocp-release:4.14.7-x86_64
 
 # AAP deploy/configure vars
 # Place the license file in the base directory of the cloned acm-deploy-load repo, Example:

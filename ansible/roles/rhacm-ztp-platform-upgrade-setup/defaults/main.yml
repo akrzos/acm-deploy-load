@@ -5,11 +5,11 @@ http_store_path: /opt/http_store
 
 clusters_label: "ztp-done="
 
-du_upgrade_channel: "fast-4.12"
+du_upgrade_channel: "fast-4.14"
 
-du_upgrade_version: "4.12.16"
+du_upgrade_version: "4.14.7"
 
-# For 4.11 to 4.12, 4.12 to 4.13 Y-stream upgrade an admin ack is required to permit those upgrades
+# For 4.11 to 4.12, 4.12 to 4.13, 4.13 to 4.14 Y-stream upgrade an admin ack is required to permit those upgrades
 include_admin_ack: true
 
 clusters_per_cgu: 1000

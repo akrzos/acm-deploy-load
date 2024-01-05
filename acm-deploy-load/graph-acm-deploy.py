@@ -45,11 +45,11 @@ def main():
       prog="graph-acm-deploy.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   # Graph Title Data
-  parser.add_argument("--acm-version", type=str, default="2.8.0", help="Sets ACM version for graph title")
+  parser.add_argument("--acm-version", type=str, default="", help="Sets ACM version for graph title")
   parser.add_argument("--test-version", type=str, default="ZTP Scale Run 1", help="Sets test version for graph title")
-  parser.add_argument("--hub-version", type=str, default="4.12.7", help="Sets OCP Hub version for graph title")
-  parser.add_argument("--deploy-version", type=str, default="4.12.7", help="Sets OCP deployed version for graph title")
-  parser.add_argument("--wan-emulation", type=str, default="(50ms/0.02)", help="Sets WAN emulation for graph title")
+  parser.add_argument("--hub-version", type=str, default="", help="Sets OCP Hub version for graph title")
+  parser.add_argument("--deploy-version", type=str, default="", help="Sets OCP deployed version for graph title")
+  parser.add_argument("--wan-emulation", type=str, default="", help="Sets WAN emulation for graph title")
 
   # Name of csv file found in results directory
   parser.add_argument("--monitor-data-file-name", type=str, default="monitor_data.csv",

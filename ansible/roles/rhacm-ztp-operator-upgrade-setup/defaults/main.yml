@@ -2,7 +2,7 @@
 # rhacm-ztp-upgrade-setup default vars
 
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
-disconnected_operator_index_tag: v4.11
+disconnected_operator_index_tag: v4.14
 
 clusters_label: "ztp-done="
 

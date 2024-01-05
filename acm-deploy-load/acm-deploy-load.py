@@ -40,7 +40,6 @@ import time
 # TODO:
 # * Discern sno, compact, and standard clusters in monitor data and report individual results
 # * Discern sno, compact, and standard clusters in analysis scripts
-# * Prom queries for System metric data
 # * Upgrade script orchestration and monitoring
 
 
