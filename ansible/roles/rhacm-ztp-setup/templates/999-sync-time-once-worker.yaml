@@ -2,8 +2,8 @@ apiVersion: machineconfiguration.openshift.io/v1
 kind: MachineConfig
 metadata:
   labels:
-    machineconfiguration.openshift.io/role: master
-  name: 999-sync-time-once-master
+    machineconfiguration.openshift.io/role: worker
+  name: 999-sync-time-once-worker
 spec:
   config:
     ignition:

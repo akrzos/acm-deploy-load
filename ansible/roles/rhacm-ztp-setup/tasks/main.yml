@@ -122,6 +122,8 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml"
   - src: 999-sync-time-once-master.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml"
+  - src: 999-sync-time-once-worker.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-worker.yaml"
 
 - name: Create cluster application directories in cnf-features-deploy and copy files for each
   shell: |
@@ -131,6 +133,7 @@
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/KlusterletAddonConfigOverride.yaml
     mkdir -p "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests"
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/999-sync-time-once-master.yaml
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-worker.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/999-sync-time-once-worker.yaml
     {% endfor %}
 
 # ignore_errors because not all directories will exist
