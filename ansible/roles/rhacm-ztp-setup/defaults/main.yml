@@ -22,7 +22,7 @@ gogs_password: testadmin
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
 operator_index_tag: v4.14
 
-ztp_site_generator_image_tag: v4.14.0-71
+ztp_site_generator_image_tag: v4.14.1
 
 rhacm_policy_generator_image_tag: v2.9.0-34
 
