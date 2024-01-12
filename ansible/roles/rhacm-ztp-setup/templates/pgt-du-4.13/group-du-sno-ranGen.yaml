@@ -13,10 +13,18 @@ spec:
   sourceFiles:
     - fileName: DisableOLMPprof.yaml
       policyName: "{{ 'olm-config' if manyPolicies else 'config' }}-policy"
+{% if extraHubGroupTemplates %}
+      metadata:
+        annotations:
+          {%- raw %}
+          scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
+          scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
+          {%- endraw +%}
+{% endif %}
     # Set ClusterLogForwarder & ClusterLogging as example might be better to create another policyTemp-Group
     - fileName: ClusterLogForwarder.yaml
       policyName: "{{ group_policy_logforwarder_name }}"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -43,7 +51,7 @@ spec:
              - kafka-open
     - fileName: ClusterLogging.yaml
       policyName: "config-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -79,7 +87,7 @@ spec:
       policyName: "{{ 'ptp-config' if manyPolicies else 'config' }}-policy"
       metadata:
         name: "du-ptp-slave"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
         annotations:
           {%- raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
@@ -100,7 +108,7 @@ spec:
       # After complying with the policy, the complianceType can
       # be reverted to "musthave"
       complianceType: musthave
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -113,7 +121,7 @@ spec:
           node-role.kubernetes.io/worker: ""
     - fileName: StorageLV.yaml
       policyName: "{{ group_policy_storage_name }}"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -135,7 +143,7 @@ spec:
           - /dev/sdb2
     - fileName: DisableSnoNetworkDiag.yaml
       policyName: "{{ 'network-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -164,7 +172,7 @@ spec:
           perPodPowerManagement: false
     - fileName: TunedPerformancePatch.yaml
       policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -208,7 +216,7 @@ spec:
 #          perPodPowerManagement: false
 #    - fileName: TunedPerformancePatch.yaml
 #      policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
 #      metadata:
 #        annotations:
           {%- raw %}

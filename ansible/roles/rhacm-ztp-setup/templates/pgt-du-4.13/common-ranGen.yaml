@@ -12,7 +12,7 @@ spec:
     # Create operators policies that will be installed in all clusters
     - fileName: SriovSubscription.yaml
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -32,7 +32,7 @@ spec:
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: PtpSubscription.yaml
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -56,7 +56,7 @@ spec:
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: ClusterLogSubscription.yaml
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -76,7 +76,7 @@ spec:
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: StorageSubscription.yaml
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -125,7 +125,7 @@ spec:
       # these in the same policy orders their application to the cluster.
       metadata:
         name: {{ common_catalogsource_name }}
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
         annotations:
           {%- raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "common-template-map" "key3" hub}}'

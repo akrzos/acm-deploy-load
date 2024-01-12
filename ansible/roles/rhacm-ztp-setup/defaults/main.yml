@@ -48,7 +48,12 @@ group_policy_storage_name: "config-storage-policy"
 # group_policy_logforwarder_name: "config-policy"
 # group_policy_storage_name: "config-policy"
 
-# When set this organizes the CRs into a larger number of policies (13 total instead of the default of 5 policies)
+# Only implemented for SNOs, organizes the CRs into 13 policies instead of the default of 5 policies
 manyPolicies: false
-# When set this creates extra annotations which use hub side templating
-extraHubTemplates: false
+
+# When enabled, creates extra annotations in common PGT which use hub side templating
+extraHubCommonTemplates: false
+# When enabled, creates extra annotations in group PGT which use hub side templating
+extraHubGroupTemplates: false
+# When enabled, creates extra annotations from site specific ConfigMaps on hub in group PGT
+extraHubSiteTemplates: false

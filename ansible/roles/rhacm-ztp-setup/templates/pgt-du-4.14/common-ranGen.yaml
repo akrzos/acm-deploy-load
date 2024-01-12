@@ -17,7 +17,7 @@ spec:
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: SriovSubscription.yaml
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -37,7 +37,7 @@ spec:
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: PtpSubscription.yaml
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -57,7 +57,7 @@ spec:
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: ClusterLogSubscription.yaml
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -77,7 +77,7 @@ spec:
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: StorageSubscription.yaml
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -127,7 +127,7 @@ spec:
       # Tip: for RH sources `image: registry.redhat.io/redhat/redhat-operator-index:v4.xx`
       metadata:
         name: {{ common_catalogsource_name }}
-{% if extraHubTemplates %}
+{% if extraHubCommonTemplates %}
         annotations:
           {%- raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "common-template-map" "key3" hub}}'

@@ -13,7 +13,7 @@ spec:
   sourceFiles:
     - fileName: ConsoleOperatorDisable.yaml
       policyName: "{{ 'console-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -26,7 +26,7 @@ spec:
     # Set ClusterLogForwarder & ClusterLogging as example might be better to create another policyTemp-Group
     - fileName: ClusterLogForwarder.yaml
       policyName: "{{ group_policy_logforwarder_name }}"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -53,7 +53,7 @@ spec:
              - kafka-open
     - fileName: ClusterLogging.yaml
       policyName: "config-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -88,7 +88,7 @@ spec:
       policyName: "{{ 'ptp-config' if manyPolicies else 'config' }}-policy"
       metadata:
         name: "du-ptp-slave"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
         annotations:
           {%- raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
@@ -109,7 +109,7 @@ spec:
       # After complying with the policy, the complianceType can
       # be reverted to "musthave"
       complianceType: musthave
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -123,7 +123,7 @@ spec:
         disableDrain: true
     - fileName: StorageLV.yaml
       policyName: "{{ group_policy_storage_name }}"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -145,7 +145,7 @@ spec:
               - /dev/sdb2
     - fileName: DisableSnoNetworkDiag.yaml
       policyName: "{{ 'network-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -170,7 +170,7 @@ spec:
           enabled: {{ setup_ztp_perfprofile_realtime | lower }}
     - fileName: TunedPerformancePatch.yaml
       policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
       metadata:
         annotations:
           {%- raw %}
@@ -212,7 +212,7 @@ spec:
 #          enabled: {{ setup_ztp_perfprofile_realtime | lower }}
 #    - fileName: TunedPerformancePatch.yaml
 #      policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubTemplates %}
+{% if extraHubGroupTemplates %}
 #      metadata:
 #        annotations:
           {%- raw %}
