@@ -2,14 +2,19 @@
 apiVersion: ran.openshift.io/v1
 kind: PolicyGenTemplate
 metadata:
-  name: "common"
+  name: "common-latest"
   namespace: "ztp-common"
 spec:
   bindingRules:
     # These policies will correspond to all clusters with this label:
     common: "true"
+    # du-profile: "latest"
   sourceFiles:
     # Create operators policies that will be installed in all clusters
+    - fileName: SriovSubscriptionNS.yaml
+      policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: SriovSubscriptionOperGroup.yaml
+      policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: SriovSubscription.yaml
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
 {% if extraHubTemplates %}
@@ -24,12 +29,12 @@ spec:
       spec:
         source: {{ common_catalogsource_name }}
 {% endif %}
-    - fileName: SriovSubscriptionNS.yaml
-      policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: SriovSubscriptionOperGroup.yaml
-      policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: SriovOperatorStatus.yaml
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: PtpSubscriptionNS.yaml
+      policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: PtpSubscriptionOperGroup.yaml
+      policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: PtpSubscription.yaml
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
 {% if extraHubTemplates %}
@@ -44,51 +49,8 @@ spec:
       spec:
         source: {{ common_catalogsource_name }}
 {% endif %}
-    - fileName: PtpSubscriptionNS.yaml
-      policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: PtpSubscriptionOperGroup.yaml
-      policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: PtpOperatorStatus.yaml
       policyName: "{{ 'ptp-subs' if manyPolicies else 'subscriptions' }}-policy"
-# Start PAO
-{% if operator_index_tag in ["v4.11", "v4.12", "v4.13", "v4.14"] %}
-    # - fileName: PaoSubscription.yaml
-    #   policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-    #   spec:
-    #     source: {{ common_catalogsource_name }}
-    #   # Changing the channel value will upgrade/downgrade the operator installed version.
-    #     channel: "{{ pao_subscription_channel }}"
-    # - fileName: PaoSubscriptionNS.yaml
-    #   policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-    # - fileName: PaoSubscriptionOperGroup.yaml
-    #   policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-    # - fileName: PaoOperatorStatus.yaml
-    #   policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% else %}
-    - fileName: PaoSubscription.yaml
-      policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if extraHubTemplates %}
-      metadata:
-        annotations:
-          {%- raw %}
-          scale-test-label-1: '{{hub fromConfigMap "" "common-template-map" "key1" hub}}'
-          scale-test-label-2: '{{hub fromConfigMap "" "common-template-map" "key2" hub}}'
-          {%- endraw +%}
-{% endif %}
-{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
-      spec:
-        source: {{ common_catalogsource_name }}
-      # Changing the channel value will upgrade/downgrade the operator installed version.
-        channel: "{{ pao_subscription_channel }}"
-{% endif %}
-    - fileName: PaoSubscriptionNS.yaml
-      policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: PaoSubscriptionOperGroup.yaml
-      policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: PaoOperatorStatus.yaml
-      policyName: "{{ 'pao-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% endif %}
-# End PAO
     - fileName: ClusterLogNS.yaml
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: ClusterLogOperGroup.yaml
@@ -109,13 +71,6 @@ spec:
 {% endif %}
     - fileName: ClusterLogOperatorStatus.yaml
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% if include_clo_fix %}
-    - fileName: logging-openshift-io_elasticsearches.yaml
-      policyName: "config-policy"
-{% else %}
-    #- fileName: logging-openshift-io_elasticsearches.yaml
-    #  policyName: "config-policy"
-{% endif %}
     - fileName: StorageNS.yaml
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: StorageOperGroup.yaml
@@ -136,8 +91,27 @@ spec:
 {% endif %}
     - fileName: StorageOperatorStatus.yaml
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
+    # - fileName: AmqSubscriptionNS.yaml
+    #   policyName: "subscriptions-policy"
+    # - fileName: AmqSubscriptionOperGroup.yaml
+    #   policyName: "subscriptions-policy"
+    # - fileName: AmqSubscription.yaml
+    #   policyName: "subscriptions-policy"
+    # - fileName: BareMetalEventRelaySubscriptionNS.yaml
+    #   policyName: "subscriptions-policy"
+    # - fileName: BareMetalEventRelaySubscriptionOperGroup.yaml
+    #   policyName: "subscriptions-policy"
+    # - fileName: BareMetalEventRelaySubscription.yaml
+    #   policyName: "subscriptions-policy"
     - fileName: ReduceMonitoringFootprint.yaml
       policyName: "{{ 'monitoring-config' if manyPolicies else 'config' }}-policy"
+{% if include_clo_fix %}
+    - fileName: logging-openshift-io_elasticsearches.yaml
+      policyName: "config-policy"
+{% else %}
+    #- fileName: logging-openshift-io_elasticsearches.yaml
+    #  policyName: "config-policy"
+{% endif %}
 {% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
     #
     # These CRs are in support of installation from a disconnected registry
@@ -146,10 +120,11 @@ spec:
       policyName: "config-policy"
     - fileName: DefaultCatsrc.yaml
       policyName: "config-policy"
-      # The Subscriptions all point to redhat-operators. The OperatorHub CR
-      # disables the defaults and this CR replaces redhat-operators with a
+      # The Subscriptions all point to redhat-operators-disconnected. The OperatorHub CR
+      # disables the defaults and this CR replaces redhat-operators-disconnected with a
       # CatalogSource pointing to the disconnected registry. Including both of
       # these in the same policy orders their application to the cluster.
+      # Tip: for RH sources `image: registry.redhat.io/redhat/redhat-operator-index:v4.xx`
       metadata:
         name: {{ common_catalogsource_name }}
 {% if extraHubTemplates %}

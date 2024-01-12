@@ -2,16 +2,16 @@
 apiVersion: ran.openshift.io/v1
 kind: PolicyGenTemplate
 metadata:
-  name: "group-du-3node"
+  name: "group-du-standard"
   namespace: "ztp-group"
 spec:
   bindingRules:
     # These policies will correspond to all clusters with this label:
-    group-du-3node: ""
-  # Because 3-node clusters are both workers and masters, and the MCP pool for master binds more strongly than that for worker,
-  # the Performance Profile needs to be set up to apply to the master MCP:
-  mcp: "master"
+    group-du-standard: ""
+  mcp: "worker"
   sourceFiles:
+    - fileName: PtpOperatorConfig.yaml
+      policyName: "config-policy"
     - fileName: PtpConfigSlave.yaml   # Change to PtpConfigSlaveCvl.yaml for ColumbiaVille NIC
       policyName: "config-policy"
       metadata:
@@ -38,10 +38,6 @@ spec:
           pages:
             - size: 1G
               count: 32
-        workloadHints:
-          realTime: true
-          highPowerConsumption: false
-          perPodPowerManagement: false
     - fileName: TunedPerformancePatch.yaml
       policyName: "config-policy"
       spec:
@@ -58,7 +54,6 @@ spec:
               kernel.timer_migration=1
               [scheduler]
               group.ice-ptp=0:f:10:*:ice-ptp.*
-              group.ice-gnss=0:f:10:*:ice-gnss.*
               [service]
               service.stalld=start,enable
               service.chronyd=stop,disable
@@ -75,10 +70,6 @@ spec:
 #           pages:
 #             - size: 1G
 #               count: 32
-#         workloadHints:
-#           realTime: true
-#           highPowerConsumption: false
-#           perPodPowerManagement: false
 #     - fileName: TunedPerformancePatch.yaml
 #       policyName: "config-policy"
 #       spec:
@@ -95,7 +86,6 @@ spec:
 #               kernel.timer_migration=1
 #               [scheduler]
 #               group.ice-ptp=0:f:10:*:ice-ptp.*
-#               group.ice-gnss=0:f:10:*:ice-gnss.*
 #               [service]
 #               service.stalld=start,enable
 #               service.chronyd=stop,disable

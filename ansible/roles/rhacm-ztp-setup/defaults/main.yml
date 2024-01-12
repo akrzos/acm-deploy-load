@@ -19,6 +19,9 @@ gogs_port: 10880
 gogs_username: testadmin
 gogs_password: testadmin
 
+# Currently can choose between 4.15, 4.14, 4.13, and 4.12
+du_profile_version: 4.14
+
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
 operator_index_tag: v4.14
 
@@ -37,9 +40,6 @@ common_catalogsource_name: rh-du-operators
 # https://access.redhat.com/solutions/6990588
 # Prevents CLO on SNO from crashlooping over missing CRD (Fixed in v5.6.0 of CLO)
 include_clo_fix: false
-
-# Allow the du profile PAO subscription channel to be overridden
-pao_subscription_channel: "4.10"
 
 # These policy names were adjusted to increase the number of ztp generated policies to match as if performanceprofile
 # was enabled.  The original names are commented below.

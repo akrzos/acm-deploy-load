@@ -191,21 +191,21 @@
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
   loop:
-  - src: common-ranGen.yaml
+  - src: pgt-du-{{ du_profile_version }}/common-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/common-ranGen.yaml"
-  - src: group-du-sno-ranGen.yaml
+  - src: pgt-du-{{ du_profile_version }}/group-du-sno-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-sno-ranGen.yaml"
-  - src: group-du-sno-validator-ranGen.yaml
+  - src: pgt-du-{{ du_profile_version }}/group-du-sno-validator-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-sno-validator-ranGen.yaml"
   - src: sno-site.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/sno-site.yaml"
-  - src: group-du-3node-ranGen.yaml
+  - src: pgt-du-{{ du_profile_version }}/group-du-3node-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-3node-ranGen.yaml"
-  - src: group-du-3node-validator-ranGen.yaml
+  - src: pgt-du-{{ du_profile_version }}/group-du-3node-validator-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-3node-validator-ranGen.yaml"
-  - src: group-du-standard-ranGen.yaml
+  - src: pgt-du-{{ du_profile_version }}/group-du-standard-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-standard-ranGen.yaml"
-  - src: group-du-standard-validator-ranGen.yaml
+  - src:  pgt-du-{{ du_profile_version }}/group-du-standard-validator-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-standard-validator-ranGen.yaml"
   - src: policy-kustomization.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/kustomization.yaml"
