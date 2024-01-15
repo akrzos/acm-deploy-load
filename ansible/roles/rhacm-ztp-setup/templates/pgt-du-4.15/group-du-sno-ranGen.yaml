@@ -14,41 +14,41 @@ spec:
   sourceFiles:
     - fileName: DisableOLMPprof.yaml
       policyName: "{{ 'olm-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
       metadata:
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
     # Set ClusterLogForwarder & ClusterLogging as example might be better to create another policyTemp-Group
     - fileName: ClusterLogForwarder.yaml
       policyName: "{{ group_policy_logforwarder_name }}"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
       metadata:
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
       spec:
         outputs:
           - type: "kafka"
@@ -69,22 +69,22 @@ spec:
           - kafka-open
     - fileName: ClusterLogging.yaml
       policyName: "config-policy"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
       metadata:
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
     # The setting below overrides the default "worker" selector predefined in
     # the source-crs. The change is recommended on SNOs configured with PTP
     # event notification for forward compatibility with possible SNO expansion.
@@ -105,22 +105,21 @@ spec:
       policyName: "{{ 'ptp-config' if manyPolicies else 'config' }}-policy"
       metadata:
         name: "du-ptp-slave"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
-      metadata:
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
       spec:
         profile:
         - name: "slave"
@@ -135,43 +134,43 @@ spec:
       # After complying with the policy, the complianceType can
       # be reverted to "musthave"
       complianceType: musthave
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
       metadata:
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
       spec:
         configDaemonNodeSelector:
           node-role.kubernetes.io/worker: ""
     - fileName: StorageLV.yaml
       policyName: "{{ group_policy_storage_name }}"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
       metadata:
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
       spec:
         storageClassDevices:
         - storageClassName: "example-storage-class-1"
@@ -186,22 +185,22 @@ spec:
           - /dev/disk/by-path/pci-0000:89:00.0-nvme-1
     - fileName: DisableSnoNetworkDiag.yaml
       policyName: "{{ 'network-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
       metadata:
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
 {% if setup_ztp_enable_performanceprofile %}
     - fileName: PerformanceProfile.yaml
       policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
@@ -219,22 +218,22 @@ spec:
           enabled: {{ setup_ztp_perfprofile_realtime | lower }}
     - fileName: TunedPerformancePatch.yaml
       policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
       metadata:
         annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
           scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
           scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
           site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
           site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
 {% else %}
 #    - fileName: PerformanceProfile.yaml
 #      policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
@@ -252,22 +251,22 @@ spec:
 #          enabled: {{ setup_ztp_perfprofile_realtime | lower }}
 #    - fileName: TunedPerformancePatch.yaml
 #      policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
-{% if extraHubGroupTemplates or extraHubSiteTemplates %}
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
 #      metadata:
 #        annotations:
-{% if extraHubGroupTemplates %}
-          {%- raw %}
+{%- if extraHubGroupTemplates %}
+          {% raw %}
 #          scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
 #          scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
 {% if extraHubSiteTemplates %}
-          {%- raw %}
+          {% raw %}
 #          site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
 #          site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
-          {%- endraw +%}
+          {%- endraw %}
 {% endif %}
-{% endif %}
+{% endif +%}
 {% endif %}
     #
     # These CRs are to enable crun on master and worker nodes for 4.13+ only

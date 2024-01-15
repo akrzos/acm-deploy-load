@@ -14,9 +14,24 @@ spec:
   mcp: "master"
   sourceFiles:
     - fileName: PtpConfigSlave.yaml   # Change to PtpConfigSlaveCvl.yaml for ColumbiaVille NIC
-      policyName: "config-policy"
+      policyName: "{{ 'ptp-config' if manyPolicies else 'config' }}-policy"
       metadata:
         name: "du-ptp-slave"
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
+        annotations:
+{%- if extraHubGroupTemplates %}
+          {% raw %}
+          scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
+          scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% if extraHubSiteTemplates %}
+          {% raw %}
+          site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
+          site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% endif +%}
       spec:
         profile:
         - name: "slave"
@@ -25,10 +40,26 @@ spec:
           ptp4lOpts: "-2 -s --summary_interval -4"
           phc2sysOpts: "-a -r -n 24"
     - fileName: SriovOperatorConfig.yaml
-      policyName: "config-policy"
+      policyName: "{{ 'sriov-config' if manyPolicies else 'config' }}-policy"
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
+      metadata:
+        annotations:
+{%- if extraHubGroupTemplates %}
+          {% raw %}
+          scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
+          scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% if extraHubSiteTemplates %}
+          {% raw %}
+          site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
+          site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% endif +%}
 {% if setup_ztp_enable_performanceprofile %}
     - fileName: PerformanceProfile.yaml
-      policyName: "config-policy"
+      policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
       spec:
         cpu:
           # These must be tailored for the specific hardware platform
@@ -40,10 +71,26 @@ spec:
             - size: 1G
               count: 32
     - fileName: TunedPerformancePatch.yaml
-      policyName: "config-policy"
+      policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
+      metadata:
+        annotations:
+{%- if extraHubGroupTemplates %}
+          {% raw %}
+          scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
+          scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% if extraHubSiteTemplates %}
+          {% raw %}
+          site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
+          site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% endif +%}
 {% else %}
 #     - fileName: PerformanceProfile.yaml
-#       policyName: "config-policy"
+#       policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
 #       spec:
 #         cpu:
 #           # These must be tailored for the specific hardware platform
@@ -55,7 +102,23 @@ spec:
 #             - size: 1G
 #               count: 32
 #     - fileName: TunedPerformancePatch.yaml
-#       policyName: "config-policy"
+#       policyName: "{{ 'tuning-config' if manyPolicies else 'config' }}-policy"
+{%- if extraHubGroupTemplates or extraHubSiteTemplates +%}
+#      metadata:
+#        annotations:
+{%- if extraHubGroupTemplates %}
+          {% raw %}
+#          scale-test-label-1: '{{hub fromConfigMap "" "group-template-map" "key1" hub}}'
+#          scale-test-label-2: '{{hub fromConfigMap "" "group-template-map" "key2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% if extraHubSiteTemplates %}
+          {% raw %}
+#          site-test-label-1: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey1" hub}}'
+#          site-test-label-2: '{{hub fromConfigMap "" (printf "site-%s" .ManagedClusterName) "sitekey2" hub}}'
+          {%- endraw %}
+{% endif %}
+{% endif +%}
 {% endif %}
     #
     # These CRs are to enable crun on master and worker nodes for 4.13+ only
