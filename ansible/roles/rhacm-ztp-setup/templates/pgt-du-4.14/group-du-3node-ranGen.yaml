@@ -129,5 +129,15 @@ spec:
     # to avoid the risky of an extra reboot.
     - fileName: optional-extra-manifest/enable-crun-master.yaml
       policyName: "config-policy"
+{% if manyPolicies %}
+      metadata:
+        annotations:
+          ran.openshift.io/ztp-deploy-wave: "10"
+{% endif %}
     - fileName: optional-extra-manifest/enable-crun-worker.yaml
       policyName: "config-policy"
+{% if manyPolicies %}
+      metadata:
+        annotations:
+          ran.openshift.io/ztp-deploy-wave: "10"
+{% endif %}
