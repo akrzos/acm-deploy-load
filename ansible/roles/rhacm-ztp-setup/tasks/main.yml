@@ -120,6 +120,10 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml"
   - src: BareMetalHostOverride.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml"
+  - src: enable-crun-master.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/enable-crun-master.yaml"
+  - src: enable-crun-worker.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/enable-crun-worker.yaml"
   - src: 999-sync-time-once-master.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml"
   - src: 999-sync-time-once-worker.yaml
@@ -132,8 +136,14 @@
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/BareMetalHostOverride.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/BareMetalHostOverride.yaml
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/KlusterletAddonConfigOverride.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/KlusterletAddonConfigOverride.yaml
     mkdir -p "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests"
+    {% if include_crun_extra_manifests %}
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/enable-crun-master.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/enable-crun-master.yaml
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/enable-crun-worker.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/enable-crun-worker.yaml
+    {% endif %}
+    {% if include_synctimeonce_extra_manifests %}
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/999-sync-time-once-master.yaml
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-worker.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/999-sync-time-once-worker.yaml
+    {% endif %}
     {% endfor %}
 
 # ignore_errors because not all directories will exist

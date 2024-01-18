@@ -41,6 +41,13 @@ common_catalogsource_name: rh-du-operators
 # Prevents CLO on SNO from crashlooping over missing CRD (Fixed in v5.6.0 of CLO)
 include_clo_fix: false
 
+# Include the crun container runtime manifest with day-0 install via siteconfig extra-manifests directory
+include_crun_extra_manifests: false
+# Include a modified sync-time-once chronyd manifest with day-0 install instead of the ztp generator included version
+# Used in conjunction with "siteconfig_exclude_sync_time_once" to prevent chronyd start and time drift issue
+# See https://issues.redhat.com/browse/OCPBUGS-21740
+include_synctimeonce_extra_manifests: false
+
 # These policy names were adjusted to increase the number of ztp generated policies to match as if performanceprofile
 # was enabled.  The original names are commented below.
 group_policy_logforwarder_name: "config-log-policy"
