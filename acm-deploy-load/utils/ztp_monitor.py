@@ -137,6 +137,9 @@ class ZTPMonitor(Thread):
         if item["metadata"]["name"] == "local-agent-cluster-cluster-install":
           logger.debug("aci: Skipping local-agent-cluster-cluster-install")
           continue
+        if item["metadata"]["name"] == "local-cluster":
+          logger.debug("aci: Skipping local-cluster")
+          continue
         cluster_init += 1
         if "status" in item and "conditions" in item["status"]:
           for condition in item["status"]["conditions"]:
