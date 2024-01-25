@@ -56,7 +56,7 @@ logging.Formatter.converter = time.gmtime
 def calculate_query_offset(end_ts):
   cur_utc_unix_time = time.mktime(datetime.utcnow().timetuple())
   offset_minutes = (int(cur_utc_unix_time) - end_ts) / 60
-  if offset_minutes < 0:
+  if offset_minutes < 1:
     offset_minutes = 0
   return offset_minutes
 
