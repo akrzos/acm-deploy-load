@@ -137,10 +137,10 @@ def check_nodes(kubeconfig):
 
     message = "Node {}".format(node_name)
     if no_ready["status"] != "True" or no_ready["status"] == "Unknown":
-      message += "is not Ready ({})".format(no_ready["reason"])
+      message += " is not Ready ({})".format(no_ready["reason"])
       success = False
     else:
-      message += "is Ready"
+      message += " is Ready"
 
     if no_memory["status"] == "True" or no_memory["status"] == "Unknown":
       message += " has MemoryPressure ({})".format(no_memory["reason"])
