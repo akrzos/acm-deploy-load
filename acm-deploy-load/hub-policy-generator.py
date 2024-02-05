@@ -49,7 +49,6 @@ data:
 """
 
 policy_template = """---
----
 apiVersion: apps.open-cluster-management.io/v1
 kind: PlacementRule
 metadata:
@@ -88,6 +87,7 @@ metadata:
   namespace: {{ namespace }}
 spec:
   disabled: false
+  remediationAction: enforce
   policy-templates:
   - objectDefinition:
       apiVersion: policy.open-cluster-management.io/v1
@@ -95,6 +95,8 @@ spec:
       metadata:
         name: cfgpolicy-{{ name }}
       spec:
+        remediationAction: enforce
+        severity: medium
         object-templates:
         {%- for ns in policy_namespaces %}
         - complianceType: musthave
@@ -103,8 +105,8 @@ spec:
             kind: Namespace
             metadata:
               name: {{ ns }}
-            labels:
-              mc-workload: "true"
+              labels:
+                mc-workload: "true"
         {%- for deploy in deployments[ns] %}
         - complianceType: musthave
           objectDefinition:
@@ -118,8 +120,6 @@ spec:
               selector:
                 matchLabels:
                   app: mc-deploy-{{ deploy }}
-              strategy:
-                resources: {}
               template:
                 metadata:
                   labels:
@@ -132,7 +132,7 @@ spec:
                     - name: PORT
                       value: "{{ container_port }}"
                     - name: KEY1
-                      value: "{%raw%}{{{%endraw%}hub fromConfigMap "" "policies-template-map" "key{{ (deploy | int) % hub_policy_cm_key_count }}" hub{%raw%}}}{%endraw%}"
+                      value: '{%raw%}{{{%endraw%}hub fromConfigMap "" "{{ hub_policy_cm_name }}" "key{{ (deploy | int) % hub_policy_cm_key_count }}" hub{%raw%}}}{%endraw%}'
                   {%- if (configmaps[ns][deploy]|length > 0) or (secrets[ns][deploy]|length > 0) %}
                     volumeMounts:
                     {%- for cm in configmaps[ns][deploy] %}
@@ -365,6 +365,7 @@ def main():
           configmaps=configmaps,
           secrets=secrets,
           service=cliargs.service,
+          hub_policy_cm_name=cliargs.hub_policy_cm_name,
           hub_policy_cm_key_count=cliargs.hub_policy_cm_keys)
       with open("{}/{}".format(manifests_dir, "03-policy-{:04d}.yml".format(policy)), "w") as file1:
         file1.writelines(policy_template_rendered)
