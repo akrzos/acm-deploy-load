@@ -44,7 +44,7 @@ metadata:
   namespace: {{ namespace }}
 data:
 {%- for key in keys %}
-  {{ key }}: "0"
+  key{{ key }}: "{{ key * 100000 }}"
 {%- endfor %}
 """
 
@@ -244,7 +244,7 @@ def main():
 
   parser.add_argument("--hub-policy-namespace", type=str, default="policies", help="Namespace for the policies")
   parser_gen.add_argument("--hub-policy-cm-name", type=str, default="policy-template-map", help="Name for hub side configmap for policy data keys")
-  parser_gen.add_argument("--hub-policy-cm-keys", type=int, default=4, help="Number of keys for the hub side configmap")
+  parser_gen.add_argument("--hub-policy-cm-keys", type=int, default=5, help="Number of keys for the hub side configmap")
 
   parser_gen.add_argument("--no-apply", action="store_true", default=False, help="Do not apply the manifests")
 
@@ -319,7 +319,7 @@ def main():
       file1.writelines(hns_template_rendered)
 
     logger.info("Rendering Hub Policy ConfigMap: {}".format(cliargs.hub_policy_cm_name))
-    keys = ["key" + str(i) for i in range(cliargs.hub_policy_cm_keys)]
+    keys = [i for i in range(cliargs.hub_policy_cm_keys)]
     t = Template(hub_configmap_template)
     hcm_template_rendered = t.render(
         name=cliargs.hub_policy_cm_name,
