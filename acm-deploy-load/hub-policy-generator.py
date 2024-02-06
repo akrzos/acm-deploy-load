@@ -115,6 +115,8 @@ spec:
             metadata:
               name: mc-deploy-{{ deploy }}
               namespace: {{ ns }}
+              labels:
+                mc-workload: "true"
             spec:
               replicas: {{ replicas }}
               selector:
@@ -124,6 +126,7 @@ spec:
                 metadata:
                   labels:
                     app: mc-deploy-{{ deploy }}
+                    mc-workload: "true"
                 spec:
                   containers:
                   - name: mc-workload
