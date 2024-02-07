@@ -44,7 +44,7 @@ metadata:
   namespace: {{ namespace }}
 data:
 {%- for key in keys %}
-  key{{ key }}: "{{ key * 100000 }}"
+  key{{ key }}: "{{ '%06d' % (key * 100000) }}"
 {%- endfor %}
 """
 
@@ -310,6 +310,12 @@ def main():
     logger.info(" * {} secrets".format(total_secrets))
     logger.info(" * {} services".format(total_services))
     logger.info("Total Objects: {}".format(total_objs))
+
+    phase_break()
+    if cliargs.no_apply:
+      logger.info("Not Applying Manifests")
+    else:
+      logger.info("Applying Manifests")
 
     phase_break()
     logger.info("Rendering Hub Policy Namespace: {}".format(cliargs.hub_policy_namespace))
