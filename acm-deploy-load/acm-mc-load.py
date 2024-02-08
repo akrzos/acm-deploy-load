@@ -272,10 +272,17 @@ def main():
       total_policy_cm_updates += 1
 
     # Log something to make sure we know this is still alive
-    if current_time - 120 > last_logged:
+    if current_time - 300 > last_logged:
       last_logged = current_time
+      remaining_mc_time = round(next_mc_time - current_time)
+      remaining_policy_time = round(next_policy_time - current_time)
       logger.info("Total clusters managed: {}".format(total_clusters_managed))
       logger.info("Total policy updates: {}".format(total_policy_cm_updates))
+      if total_clusters_managed >= available_clusters:
+        logger.info("Last cluster managed, remaining interval time: {}s :: {}".format(remaining_mc_time, str(timedelta(seconds=remaining_mc_time))))
+      else:
+        logger.info("Time until next cluster to manage: {}s :: {}".format(remaining_mc_time, str(timedelta(seconds=remaining_mc_time))))
+      logger.info("Time until next policy update: {}s :: {}".format(remaining_policy_time, str(timedelta(seconds=remaining_mc_time))))
 
     total_intervals += 1
     time.sleep(.1)
