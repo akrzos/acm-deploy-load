@@ -138,6 +138,7 @@ def main():
   parser.add_argument("-p", "--interval-policy", type=int, default=720,
                       help="Interval between updating configmap used in policy templates")
 
+  parser.add_argument("-s", "--start-delay", type=int, default=120, help="Delay on start of script")
   parser.add_argument("-e", "--end-delay", type=int, default=120, help="Delay on end of script")
 
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
@@ -201,7 +202,8 @@ def main():
   oc_cmd = ["oc", "--kubeconfig", cliargs.kubeconfig, "get", "cm", "-n", cliargs.hub_policy_namespace, cliargs.hub_policy_cm_name, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
-    logger.warning("oc get cm {} -n {} rc: {}".format(cliargs.hub_policy_cm_name, cliargs.hub_policy_namespace, rc))
+    logger.error("oc get cm {} -n {} rc: {}".format(cliargs.hub_policy_cm_name, cliargs.hub_policy_namespace, rc))
+    sys.exit(1)
   else:
     logger.info("Detected configmap {} in namespace {}".format(cliargs.hub_policy_cm_name, cliargs.hub_policy_namespace))
 
@@ -215,11 +217,22 @@ def main():
   os.mkdir(mc_dir)
   os.mkdir(policy_dir)
 
+  manage_start_time = time.time()
+  phase_break()
+  if cliargs.start_delay > 0:
+    logger.info("Sleeping {}s for start delay".format(cliargs.start_delay))
+    total_start_delay = cliargs.start_delay
+    while(total_start_delay > 300):
+      time.sleep(300)
+      total_start_delay -= 300
+      logger.info("{}s remaining in start delay".format(total_start_delay))
+    # Sleep remaining less than 5 minutes time
+    time.sleep(cliargs.start_delay)
+
   total_intervals = 0
   total_clusters_managed = 0
   total_policy_cm_updates = 0
 
-  manage_start_time = time.time()
   next_mc_time = manage_start_time
   next_policy_time = manage_start_time + cliargs.interval_policy
   last_logged = manage_start_time
@@ -269,11 +282,16 @@ def main():
     current_time = time.time()
     # End run loop
 
-  phase_break()
   # End of workload delay
   if cliargs.end_delay > 0:
     phase_break()
     logger.info("Sleeping {}s for end delay".format(cliargs.end_delay))
+    total_end_delay = cliargs.end_delay
+    while(total_end_delay > 300):
+      time.sleep(300)
+      total_end_delay -= 300
+      logger.info("{}s remaining in end delay".format(total_end_delay))
+    # Sleep remaining less than 5 minutes time
     time.sleep(cliargs.end_delay)
 
   manage_end_time = time.time()
@@ -282,9 +300,12 @@ def main():
   with open("{}/report.txt".format(report_dir), "w") as report:
     phase_break(True, report)
     log_write(report, "acm-mc-load Report Card")
+    phase_break(True, report)
     log_write(report, "Workload")
     log_write(report, " * Manage {} cluster(s) per {}s interval".format(cliargs.batch, cliargs.interval_manage))
     log_write(report, " * Update cm ({}) in policy namespace ({}) per {}s interval".format(cliargs.hub_policy_cm_name, cliargs.hub_policy_namespace, cliargs.interval_policy))
+    log_write(report, " * Start delay: {}".format(cliargs.start_delay))
+    log_write(report, " * End delay: {}".format(cliargs.end_delay))
     log_write(report, " * Total cluster(s) managed: {}".format(total_clusters_managed))
     log_write(report, " * Total policy cm updates: {}".format(total_policy_cm_updates))
     log_write(report, "Workload Duration Results")
@@ -292,6 +313,7 @@ def main():
     log_write(report, " * End Time: {} {}".format(datetime.utcfromtimestamp(manage_end_time).strftime("%Y-%m-%dT%H:%M:%SZ"), int(manage_end_time * 1000)))
     total_duration = round(manage_end_time - manage_start_time)
     log_write(report, " * Total Duration: {}s :: {}".format(total_duration, str(timedelta(seconds=total_duration))))
+    log_write(report, " * Times include start and end delay")
 
   logger.info("Took {}s".format(round(manage_end_time - start_time, 1)))
 
