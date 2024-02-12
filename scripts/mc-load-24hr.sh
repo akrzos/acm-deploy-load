@@ -21,7 +21,7 @@ end_delay=3600
 ts="$(date -u +%Y%m%d-%H%M%S)"
 log_file="mc-load-${ts}.log"
 
-time ./acm-deploy-load/acm-mc-load.py -i ${interval_manage} -p ${interval_policy} -e ${end_delay} 2>&1 | tee ${log_file}
+time ./acm-deploy-load/acm-mc-load.py -i ${interval_manage} -p ${interval_policy} -s ${start_delay} -e ${end_delay} 2>&1 | tee ${log_file}
 
 results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 
@@ -34,11 +34,10 @@ echo "time ./acm-deploy-load/analyze-prometheus.py -p mc-load -s ${start_time} -
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
-# Post MC load data gathering
-# Hub nodes, pods, namespaces, policies, mch, mce, mco, clusterversion, clusteroperators
-# capacities across Managedclusters, policies, state of workload pods
+time ./scripts/post-mc-load-data-collection.sh -k 2>&1 | tee -a ${log_file}
 
-# Moved the must-gather to last since it can occassionally fail and exit this script
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
 oc adm must-gather --dest-dir="${results_dir}/must-gather-${ts}" 2>&1 | tee -a ${log_file}
 tar caf ${results_dir}/must-gather-${ts}.tar.gz --remove-files ${results_dir}/must-gather-${ts} 2>&1 | tee -a ${log_file}
 
