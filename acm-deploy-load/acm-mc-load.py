@@ -227,14 +227,15 @@ def main():
       total_start_delay -= 300
       logger.info("{}s remaining in start delay".format(total_start_delay))
     # Sleep remaining less than 5 minutes time
-    time.sleep(cliargs.start_delay)
+    time.sleep(total_start_delay)
+  start_delay_complete_ts = time.time()
 
-  total_intervals = 0
   total_clusters_managed = 0
   total_policy_cm_updates = 0
+  cluster_managed_timestamps = []
 
-  next_mc_time = manage_start_time
-  next_policy_time = manage_start_time + cliargs.interval_policy
+  next_mc_time = manage_start_time + cliargs.start_delay
+  next_policy_time = next_mc_time + cliargs.interval_policy
   last_logged = manage_start_time
   phase_break()
   logger.info("Begin managing clusters - {}".format(int(time.time() * 1000)))
@@ -258,6 +259,7 @@ def main():
         st = time.time()
         manage_clusters(cluster_list[total_clusters_managed:total_clusters_managed + new_cluster_count], mc_dir, cliargs.kubeconfig)
         et = time.time()
+        mc_timestamps.append(et)
         logger.info("Managing took: {}".format(round(et - st, 1)))
         total_clusters_managed += new_cluster_count
       next_mc_time = next_mc_time + cliargs.interval_manage
@@ -282,13 +284,13 @@ def main():
         logger.info("Last cluster managed, remaining interval time: {}s :: {}".format(remaining_mc_time, str(timedelta(seconds=remaining_mc_time))))
       else:
         logger.info("Time until next cluster to manage: {}s :: {}".format(remaining_mc_time, str(timedelta(seconds=remaining_mc_time))))
-      logger.info("Time until next policy update: {}s :: {}".format(remaining_policy_time, str(timedelta(seconds=remaining_mc_time))))
+      logger.info("Time until next policy update: {}s :: {}".format(remaining_policy_time, str(timedelta(seconds=remaining_policy_time))))
 
-    total_intervals += 1
     time.sleep(.1)
     current_time = time.time()
     # End run loop
 
+  end_delay_start_ts = time.time()
   # End of workload delay
   if cliargs.end_delay > 0:
     phase_break()
@@ -299,7 +301,7 @@ def main():
       total_end_delay -= 300
       logger.info("{}s remaining in end delay".format(total_end_delay))
     # Sleep remaining less than 5 minutes time
-    time.sleep(cliargs.end_delay)
+    time.sleep(total_end_delay)
 
   manage_end_time = time.time()
 
@@ -315,12 +317,32 @@ def main():
     log_write(report, " * End delay: {}".format(cliargs.end_delay))
     log_write(report, " * Total cluster(s) managed: {}".format(total_clusters_managed))
     log_write(report, " * Total policy cm updates: {}".format(total_policy_cm_updates))
-    log_write(report, "Workload Duration Results")
+    log_write(report, "Workload Timestamps")
     log_write(report, " * Start Time: {} {}".format(datetime.utcfromtimestamp(manage_start_time).strftime("%Y-%m-%dT%H:%M:%SZ"), int(manage_start_time * 1000)))
+    log_write(report, " * Start Delay Complete Time: {}".format(datetime.utcfromtimestamp(start_delay_complete_ts).strftime("%Y-%m-%dT%H:%M:%SZ")))
+    for i, ts in enumerate(mc_timestamps):
+      log_write(report, " * MC {} event: {}".format(i, datetime.utcfromtimestamp(ts).strftime("%Y-%m-%dT%H:%M:%SZ")))
+    log_write(report, " * End Delay Start Time: {}".format(datetime.utcfromtimestamp(end_delay_start_ts).strftime("%Y-%m-%dT%H:%M:%SZ")))
     log_write(report, " * End Time: {} {}".format(datetime.utcfromtimestamp(manage_end_time).strftime("%Y-%m-%dT%H:%M:%SZ"), int(manage_end_time * 1000)))
+
+    log_write(report, "Workload Duration Results")
+    sd_duration = round(start_delay_complete_ts - manage_start_time)
+    log_write(report, " * Start until start delay complete: {}s".format(sd_duration))
+    last_ts = start_delay_complete_ts
+    for i, ts in enumerate(mc_timestamps):
+      next_duration = round(ts - last_ts)
+      if i == 0:
+        log_write(report, " * Start delay until MC {} event: {}s".format(i, next_duration))
+      else:
+        log_write(report, " * MC {} until MC {} event: {}s".format(i - 1, i, next_duration))
+      last_ts = ts
+    next_duration = round(end_delay_start_ts - last_ts)
+    log_write(report, " * MC {} event until end delay start time: {}s".format(i, next_duration))
+    ed_duration = round(manage_end_time - end_delay_start_ts)
+    log_write(report, " * End delay duration: {}s".format(ed_duration))
     total_duration = round(manage_end_time - manage_start_time)
-    log_write(report, " * Total Duration: {}s :: {}".format(total_duration, str(timedelta(seconds=total_duration))))
-    log_write(report, " * Times include start and end delay")
+    log_write(report, " * Total duration: {}s :: {}".format(total_duration, str(timedelta(seconds=total_duration))))
+    log_write(report, " * Total include start and end delay")
 
   logger.info("Took {}s".format(round(manage_end_time - start_time, 1)))
 
