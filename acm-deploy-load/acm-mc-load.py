@@ -259,7 +259,7 @@ def main():
         st = time.time()
         manage_clusters(cluster_list[total_clusters_managed:total_clusters_managed + new_cluster_count], mc_dir, cliargs.kubeconfig)
         et = time.time()
-        mc_timestamps.append(et)
+        cluster_managed_timestamps.append(et)
         logger.info("Managing took: {}".format(round(et - st, 1)))
         total_clusters_managed += new_cluster_count
       next_mc_time = next_mc_time + cliargs.interval_manage
@@ -320,7 +320,7 @@ def main():
     log_write(report, "Workload Timestamps")
     log_write(report, " * Start Time: {} {}".format(datetime.utcfromtimestamp(manage_start_time).strftime("%Y-%m-%dT%H:%M:%SZ"), int(manage_start_time * 1000)))
     log_write(report, " * Start Delay Complete Time: {}".format(datetime.utcfromtimestamp(start_delay_complete_ts).strftime("%Y-%m-%dT%H:%M:%SZ")))
-    for i, ts in enumerate(mc_timestamps):
+    for i, ts in enumerate(cluster_managed_timestamps):
       log_write(report, " * MC {} event: {}".format(i, datetime.utcfromtimestamp(ts).strftime("%Y-%m-%dT%H:%M:%SZ")))
     log_write(report, " * End Delay Start Time: {}".format(datetime.utcfromtimestamp(end_delay_start_ts).strftime("%Y-%m-%dT%H:%M:%SZ")))
     log_write(report, " * End Time: {} {}".format(datetime.utcfromtimestamp(manage_end_time).strftime("%Y-%m-%dT%H:%M:%SZ"), int(manage_end_time * 1000)))
@@ -329,7 +329,7 @@ def main():
     sd_duration = round(start_delay_complete_ts - manage_start_time)
     log_write(report, " * Start until start delay complete: {}s".format(sd_duration))
     last_ts = start_delay_complete_ts
-    for i, ts in enumerate(mc_timestamps):
+    for i, ts in enumerate(cluster_managed_timestamps):
       next_duration = round(ts - last_ts)
       if i == 0:
         log_write(report, " * Start delay until MC {} event: {}s".format(i, next_duration))
