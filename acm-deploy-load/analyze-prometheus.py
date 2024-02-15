@@ -619,7 +619,7 @@ def main():
 
   parser = argparse.ArgumentParser(
       description="Query and Graph Prometheus data off a live OpenShift cluster",
-      prog="graph-acm-deploy.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+      prog="analyze-prometheus.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
   parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
