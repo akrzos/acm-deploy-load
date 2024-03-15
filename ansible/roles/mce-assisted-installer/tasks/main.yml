@@ -11,13 +11,26 @@
     path: "{{ install_directory }}/mce-assisted-installer"
     state: directory
 
+# Ex: quay.io/openshift-release-dev/ocp-release:4.15.2-x86_64 becomes 4.15
+- name: Determine OCP version in "{{ mce_assisted_ocp_version }}"
+  set_fact:
+    openshift_version: "{{ mce_assisted_ocp_version.split(':')[1].split('.')[0:2] | join('.') }}"
+
 - name: Extract/Download the openshift-install binary for the specific release
   shell: |
     cd {{ install_directory }}/mce-assisted-installer
     rm -rf openshift-install-linux-*.tar.gz openshift-client-linux-*.tar.gz
     oc.latest adm release extract --tools {{ mce_assisted_ocp_version }}
     tar -xvf openshift-install-linux-*.tar.gz openshift-install
+    {% if openshift_version is version('4.15', ">=") %}
+    {% if ansible_facts['distribution_major_version'] is version('8', '==') %}
+    tar -xvf openshift-client-linux-amd64-rhel8-*.tar.gz oc kubectl
+    {% else %}
+    tar -xvf openshift-client-linux-amd64-rhel9-*.tar.gz oc kubectl
+    {% endif %}
+    {% else %}
     tar -xvf openshift-client-linux-*.tar.gz oc kubectl
+    {% endif %}
 
 - name: Get display/release name/version
   shell: |
