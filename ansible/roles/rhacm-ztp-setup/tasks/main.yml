@@ -77,6 +77,11 @@
   - replace: "{{ ztp_site_generator_image_tag }}"
     regexp: "4.10.0"
 
+- name: Remove cnf-tests from cnf-features-deploy
+  file:
+    state: absent
+    path: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/cnf-tests"
+
 - name: Remove the examples/siteconfig directory from cnf-features-deploy
   file:
     state: absent
