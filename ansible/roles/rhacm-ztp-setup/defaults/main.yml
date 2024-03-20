@@ -47,6 +47,8 @@ include_crun_extra_manifests: false
 # Used in conjunction with "siteconfig_exclude_sync_time_once" to prevent chronyd start and time drift issue
 # See https://issues.redhat.com/browse/OCPBUGS-21740
 include_synctimeonce_extra_manifests: false
+# Include a manifest to partition /var/lib/containers for IBU
+include_varlibcontainers_partitioned_extra_manifests: false
 
 # These policy names were adjusted to increase the number of ztp generated policies to match as if performanceprofile
 # was enabled.  The original names are commented below.

@@ -129,6 +129,8 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/enable-crun-master.yaml"
   - src: enable-crun-worker.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/enable-crun-worker.yaml"
+  - src: 98-var-lib-containers-partitioned.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/98-var-lib-containers-partitioned.yaml"
   - src: 999-sync-time-once-master.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml"
   - src: 999-sync-time-once-worker.yaml
@@ -148,6 +150,9 @@
     {% if include_synctimeonce_extra_manifests %}
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-master.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/999-sync-time-once-master.yaml
     cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/999-sync-time-once-worker.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/999-sync-time-once-worker.yaml
+    {% endif %}
+    {% if include_varlibcontainers_partitioned_extra_manifests %}
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/98-var-lib-containers-partitioned.yaml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/extra-manifests/98-var-lib-containers-partitioned.yaml
     {% endif %}
     {% endfor %}
 
