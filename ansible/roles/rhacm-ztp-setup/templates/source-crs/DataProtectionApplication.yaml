@@ -12,7 +12,7 @@ spec:
       defaultPlugins:
       - aws
       - openshift
-      # resourceTimeout: 10m
+      resourceTimeout: 10m
   backupLocations:
   - velero:
       config:

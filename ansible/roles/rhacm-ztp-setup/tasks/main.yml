@@ -235,10 +235,10 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/ns-upgrade.yaml"
   - src: policy-common-and-group.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy-applications/common-and-group.yaml"
-  - src: logging-openshift-io_elasticsearches.yaml
-    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/logging-openshift-io_elasticsearches.yaml"
   - src: hub-template-maps.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/hub-template-maps.yaml"
+  - src: source-crs/logging-openshift-io_elasticsearches.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/logging-openshift-io_elasticsearches.yaml"
   - src: source-crs/OadpSubscriptionNS.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpSubscriptionNS.yaml"
   - src: source-crs/OadpSubscriptionOperGroup.yaml
@@ -253,6 +253,15 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/DataProtectionApplication.yaml"
   - src: source-crs/OadpBackupStorageLocationStatus.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpBackupStorageLocationStatus.yaml"
+  - src: source-crs/LcaSubscriptionNS.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaSubscriptionNS.yaml"
+  - src: source-crs/LcaSubscriptionOperGroup.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaSubscriptionOperGroup.yaml"
+  - src: source-crs/LcaSubscription.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaSubscription.yaml"
+  - src: source-crs/LcaOperatorStatus.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaOperatorStatus.yaml"
+
 
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |
