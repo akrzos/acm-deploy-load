@@ -12,6 +12,24 @@ spec:
     # du-profile: "latest"
   mcp: "master"
   sourceFiles:
+{% if include_oadp_operator %}
+    - fileName: OadpSecret.yaml
+      policyName: "{{ 'oadp-config' if manyPolicies else 'config' }}-policy"
+      data:
+        cloud: {{ lookup('template', './s3-creds.j2') | b64encode }}
+    - fileName: DataProtectionApplication.yaml
+      policyName: "{{ 'oadp-config' if manyPolicies else 'config' }}-policy"
+      spec:
+        backupLocations:
+          - velero:
+              config:
+                region: minio
+                s3Url: {{ oadp_s3Url }}
+              objectStorage:
+                bucket: ibu
+    - fileName: OadpBackupStorageLocationStatus.yaml
+      policyName: "{{ 'oadp-config' if manyPolicies else 'config' }}-policy"
+{% endif %}
     - fileName: DisableOLMPprof.yaml
       policyName: "{{ 'olm-config' if manyPolicies else 'config' }}-policy"
 {%- if extraHubGroupTemplates or extraHubSiteTemplates +%}

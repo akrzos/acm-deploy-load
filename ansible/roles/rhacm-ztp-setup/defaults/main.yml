@@ -19,6 +19,21 @@ gogs_port: 10880
 gogs_username: testadmin
 gogs_password: testadmin
 
+#####
+# Siteconfig extra-manifests to include:
+#####
+# Include the crun container runtime manifest with day-0 install via siteconfig extra-manifests directory
+include_crun_extra_manifests: false
+# Include a modified sync-time-once chronyd manifest with day-0 install instead of the ztp generator included version
+# Used in conjunction with "siteconfig_exclude_sync_time_once" to prevent chronyd start and time drift issue
+# See https://issues.redhat.com/browse/OCPBUGS-21740
+include_synctimeonce_extra_manifests: false
+# Include a manifest to partition /var/lib/containers for IBU
+include_varlibcontainers_partitioned_extra_manifests: false
+
+#####
+# DU Profile Options
+#####
 # Currently can choose between 4.15, 4.14, 4.13, and 4.12
 du_profile_version: 4.14
 
@@ -41,21 +56,19 @@ common_catalogsource_name: rh-du-operators
 # Prevents CLO on SNO from crashlooping over missing CRD (Fixed in v5.6.0 of CLO)
 include_clo_fix: false
 
-# Include the crun container runtime manifest with day-0 install via siteconfig extra-manifests directory
-include_crun_extra_manifests: false
-# Include a modified sync-time-once chronyd manifest with day-0 install instead of the ztp generator included version
-# Used in conjunction with "siteconfig_exclude_sync_time_once" to prevent chronyd start and time drift issue
-# See https://issues.redhat.com/browse/OCPBUGS-21740
-include_synctimeonce_extra_manifests: false
-# Include a manifest to partition /var/lib/containers for IBU
-include_varlibcontainers_partitioned_extra_manifests: false
-
 # These policy names were adjusted to increase the number of ztp generated policies to match as if performanceprofile
 # was enabled.  The original names are commented below.
 group_policy_logforwarder_name: "config-log-policy"
 group_policy_storage_name: "config-storage-policy"
 # group_policy_logforwarder_name: "config-policy"
 # group_policy_storage_name: "config-policy"
+
+# Image Based Upgrades requires the oadp operator to be installed on SNOs
+include_oadp_operator: false
+# Adjust URL to match your cluster's minio route
+oadp_s3Url: http://minio-minio.apps.bm.example.com
+s3_access_key_id: minio
+s3_secret_access_key: minio123
 
 # Only implemented for SNOs, organizes the CRs into 13 policies instead of the default of 5 policies
 manyPolicies: false

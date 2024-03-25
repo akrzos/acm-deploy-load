@@ -239,6 +239,20 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/logging-openshift-io_elasticsearches.yaml"
   - src: hub-template-maps.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/hub-template-maps.yaml"
+  - src: source-crs/OadpSubscriptionNS.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpSubscriptionNS.yaml"
+  - src: source-crs/OadpSubscriptionOperGroup.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpSubscriptionOperGroup.yaml"
+  - src: source-crs/OadpSubscription.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpSubscription.yaml"
+  - src: source-crs/OadpOperatorStatus.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpOperatorStatus.yaml"
+  - src: source-crs/OadpSecret.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpSecret.yaml"
+  - src: source-crs/DataProtectionApplication.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/DataProtectionApplication.yaml"
+  - src: source-crs/OadpBackupStorageLocationStatus.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpBackupStorageLocationStatus.yaml"
 
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |

@@ -11,6 +11,20 @@ spec:
     # du-profile: "latest"
   sourceFiles:
     # Create operators policies that will be installed in all clusters
+{% if include_oadp_operator %}
+    - fileName: OadpSubscriptionNS.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: OadpSubscriptionOperGroup.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: OadpSubscription.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
+      spec:
+        source: {{ common_catalogsource_name }}
+{% endif %}
+    - fileName: OadpOperatorStatus.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+{% endif %}
     - fileName: SriovSubscriptionNS.yaml
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: SriovSubscriptionOperGroup.yaml
