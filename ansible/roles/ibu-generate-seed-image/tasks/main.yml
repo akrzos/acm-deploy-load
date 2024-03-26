@@ -1,0 +1,38 @@
+---
+# ibu-generate-seed-image tasks
+
+- name: Create directory for ibu-ztp
+  file:
+    path: "{{ install_directory }}/ibu-ztp"
+    state: directory
+
+- name: Template generate seed image files
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0744"
+  loop:
+  - src: seedgen-secret.yml.j2
+    dest: "{{ install_directory }}/ibu-ztp/seedgen-secret-{{ ibu_seed_image_version }}.yml"
+  - src: seedimage-seedgenerator.yml.j2
+    dest: "{{ install_directory }}/ibu-ztp/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml"
+
+- name: Delete seedgenerator seedimage
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc delete seedgenerator seedimage
+
+- name: Apply seedgen-secret to seed cluster
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/ibu-ztp/seedgen-secret-{{ ibu_seed_image_version }}.yml
+
+- name: Apply seedimage-seedgenerator to seed cluster
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/ibu-ztp/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml
+
+- name: Wait until seedgenerator completed
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc get seedgenerator seedimage -o json | jq -r '.status.conditions[] | select(.type=="SeedGenCompleted") | .status'
+  register: seedgen_complete
+  until: seedgen_complete.stdout == "True"
+  retries: 240
+  delay: 5
