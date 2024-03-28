@@ -29,6 +29,15 @@ spec:
                 bucket: ibu
     - fileName: OadpBackupStorageLocationStatus.yaml
       policyName: "{{ 'oadp-config' if manyPolicies else 'config' }}-policy"
+    - fileName: OadpCm.yaml
+      policyName: "config-policy"
+{% endif %}
+{% if include_lca_operator %}
+    - fileName: LcaSecret.yaml
+      policyName: "{{ 'lca-config' if manyPolicies else 'config' }}-policy"
+      data:
+        seedAuth: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
+        .dockerconfigjson: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
 {% endif %}
     - fileName: DisableOLMPprof.yaml
       policyName: "{{ 'olm-config' if manyPolicies else 'config' }}-policy"

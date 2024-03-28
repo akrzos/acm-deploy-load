@@ -17,9 +17,17 @@
   - src: seedimage-seedgenerator.yml.j2
     dest: "{{ install_directory }}/ibu-ztp/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml"
 
+# ignore errors because if it does not exist, we return an error
+- name: Check for existing seedgenerator
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc get seedgenerator seedimage
+  ignore_errors: true
+  register: get_seedgenerator
+
 - name: Delete seedgenerator seedimage
   shell: |
     KUBECONFIG={{ seedcluster_kubeconfig }} oc delete seedgenerator seedimage
+  when: get_seedgenerator.rc == 0
 
 - name: Apply seedgen-secret to seed cluster
   shell: |
@@ -29,6 +37,7 @@
   shell: |
     KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/ibu-ztp/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml
 
+# Takes around 10 minutes to generate the seed image in the ACM/ZTP Environment
 - name: Wait until seedgenerator completed
   shell: |
     KUBECONFIG={{ seedcluster_kubeconfig }} oc get seedgenerator seedimage -o json | jq -r '.status.conditions[] | select(.type=="SeedGenCompleted") | .status'

@@ -73,6 +73,10 @@ s3_secret_access_key: minio123
 # Image Based Upgrades requires the Lifecycle-agent operator to be installed on SNOs
 include_lca_operator: false
 
+# Bastion registry default auth
+registry_user: registry
+registry_password: registry
+
 # Only implemented for SNOs, organizes the CRs into 13 policies instead of the default of 5 policies
 manyPolicies: false
 

@@ -249,6 +249,8 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpOperatorStatus.yaml"
   - src: source-crs/OadpSecret.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpSecret.yaml"
+  - src: source-crs/OadpCm.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpCm.yaml"
   - src: source-crs/DataProtectionApplication.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/DataProtectionApplication.yaml"
   - src: source-crs/OadpBackupStorageLocationStatus.yaml
@@ -261,6 +263,8 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaSubscription.yaml"
   - src: source-crs/LcaOperatorStatus.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaOperatorStatus.yaml"
+  - src: source-crs/LcaSecret.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaSecret.yaml"
 
 
 - name: Commit and push the above changes to cnf-features-deploy
