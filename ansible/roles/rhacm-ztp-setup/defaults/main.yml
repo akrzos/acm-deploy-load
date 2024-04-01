@@ -2,7 +2,7 @@
 # rhacm-ztp-setup default vars
 
 cnf_features_deploy_repo: https://github.com/openshift-kni/cnf-features-deploy.git
-cnf_features_deploy_branch: release-4.14
+cnf_features_deploy_branch: release-4.15
 
 # Pre-creates manifests for the desired number of argocd cluster applications
 cluster_applications_count: 35
@@ -23,7 +23,7 @@ gogs_password: testadmin
 # Siteconfig extra-manifests to include:
 #####
 # Include the crun container runtime manifest with day-0 install via siteconfig extra-manifests directory
-include_crun_extra_manifests: false
+include_crun_extra_manifests: true
 # Include a modified sync-time-once chronyd manifest with day-0 install instead of the ztp generator included version
 # Used in conjunction with "siteconfig_exclude_sync_time_once" to prevent chronyd start and time drift issue
 # See https://issues.redhat.com/browse/OCPBUGS-21740
@@ -35,12 +35,12 @@ include_varlibcontainers_partitioned_extra_manifests: false
 # DU Profile Options
 #####
 # Currently can choose between 4.15, 4.14, 4.13, and 4.12
-du_profile_version: 4.14
+du_profile_version: 4.15
 
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
-operator_index_tag: v4.14
+operator_index_tag: v4.15
 
-ztp_site_generator_image_tag: v4.14.1
+ztp_site_generator_image_tag: v4.15.0-36
 
 rhacm_policy_generator_image_tag: v2.9.0-34
 
