@@ -14,7 +14,6 @@
   template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"
-    mode: "0744"
   loop:
   - src: seedgen-secret.yml.j2
     dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/seedgen-secret-{{ ibu_seed_image_version }}.yml"
@@ -47,5 +46,5 @@
     KUBECONFIG={{ seedcluster_kubeconfig }} oc get seedgenerator seedimage -o json | jq -r '.status.conditions[] | select(.type=="SeedGenCompleted") | .status'
   register: seedgen_complete
   until: seedgen_complete.stdout == "True"
-  retries: 240
-  delay: 5
+  retries: 120
+  delay: 10

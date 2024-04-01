@@ -1,0 +1,18 @@
+---
+# Playbook to prepare a seed cluster to be create a seed image
+#
+# Example Usage:
+#
+# time ansible-playbook -i ansible/inventory/cloud30.local ansible/ibu-prepare-seed-cluster.yml
+#
+
+- name: Prepare IBU Seed Cluster
+  hosts: bastion
+  vars:
+    seedcluster_kubeconfig: ""
+  vars_files:
+  - vars/all.yml
+  roles:
+  - ibu-prepare-seed-cluster
+  - role: ibu-generate-seed-image
+    when: generate_seed_image_after_upgrade | default(true)
