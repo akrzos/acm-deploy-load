@@ -5,8 +5,6 @@
 http_store_host: "{{ groups['bastion'][0] }}"
 http_store_port: 8081
 
-http_store_path: /opt/http_store
-
 registry_path: /opt/registry
 
 # Patch to address - https://bugzilla.redhat.com/show_bug.cgi?id=2101987

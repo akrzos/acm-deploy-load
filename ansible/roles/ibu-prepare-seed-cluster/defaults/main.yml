@@ -1,8 +1,6 @@
 ---
 # ibu-prepare-seed-cluster default vars
 
-http_store_path: /opt/http_store
-
 # Leave empty unless you selected a cluster and removed it from gitops
 seed_cluster: ""
 
