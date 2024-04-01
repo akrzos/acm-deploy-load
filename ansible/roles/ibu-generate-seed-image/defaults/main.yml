@@ -2,7 +2,7 @@
 # ibu-generate-seed-image default vars
 
 # The kubeconfig to the cluster being generated into a ibu seed image
-seedcluster_kubeconfig: /root/ibu-ztp/seedcluster.kubeconfig
+seedcluster_kubeconfig: "{{ install_directory }}/rhacm-ztp/ibu/seed/seedcluster.kubeconfig"
 
 # Version of OCP we are turning into a seed image
 ibu_seed_image_version: 4.15.3

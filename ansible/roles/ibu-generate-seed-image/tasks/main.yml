@@ -1,10 +1,14 @@
 ---
 # ibu-generate-seed-image tasks
 
-- name: Create directory for ibu-ztp
+- name: Create directories for IBU seed generation
   file:
-    path: "{{ install_directory }}/ibu-ztp"
+    path: "{{ item }}"
     state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp"
+  - "{{ install_directory }}/rhacm-ztp/ibu"
+  - "{{ install_directory }}/rhacm-ztp/ibu/seed"
 
 - name: Template generate seed image files
   template:
@@ -13,9 +17,9 @@
     mode: "0744"
   loop:
   - src: seedgen-secret.yml.j2
-    dest: "{{ install_directory }}/ibu-ztp/seedgen-secret-{{ ibu_seed_image_version }}.yml"
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/seedgen-secret-{{ ibu_seed_image_version }}.yml"
   - src: seedimage-seedgenerator.yml.j2
-    dest: "{{ install_directory }}/ibu-ztp/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml"
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml"
 
 # ignore errors because if it does not exist, we return an error
 - name: Check for existing seedgenerator
@@ -31,11 +35,11 @@
 
 - name: Apply seedgen-secret to seed cluster
   shell: |
-    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/ibu-ztp/seedgen-secret-{{ ibu_seed_image_version }}.yml
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/seedgen-secret-{{ ibu_seed_image_version }}.yml
 
 - name: Apply seedimage-seedgenerator to seed cluster
   shell: |
-    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/ibu-ztp/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/seedimage-seedgenerator-{{ ibu_seed_image_version }}.yml
 
 # Takes around 10 minutes to generate the seed image in the ACM/ZTP Environment
 - name: Wait until seedgenerator completed
