@@ -8,7 +8,7 @@ seed_cluster: ""
 seedcluster_kubeconfig: "{{ install_directory }}/rhacm-ztp/ibu/seed/{{ seed_cluster }}.kubeconfig"
 
 # Version of OCP we are upgrading the seed cluster to
-ibu_seed_image_version: 4.15.3
+ibu_seed_image_version: 4.15.5
 
 # Channel referring to upgrade graph for the seed cluster
 ibu_upgrade_channel: fast-4.15

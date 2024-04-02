@@ -1,0 +1,83 @@
+---
+# rhacm-ztp-platform-ibu-setup tasks
+
+- name: Create directories for IBU
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp"
+  - "{{ install_directory }}/rhacm-ztp/ibu"
+  - "{{ install_directory }}/rhacm-ztp/ibu/scripts"
+
+- name: Get list of clusters for upgrade
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get managedclusters -l {{ clusters_label }} --no-headers -o custom-columns=NAME:'.metadata.name' | grep -v local-cluster
+  register: ztp_done_clusters
+
+- name: Template the platform IBU PGT
+  template:
+    src: du-ibu.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/du-ibu.yaml"
+
+- name: Enable platform IBU PGT in the kustomization.yaml file
+  replace:
+    path: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/kustomization.yaml"
+    replace: "- du-ibu.yaml"
+    regexp: "# - du-ibu.yaml"
+
+- name: Commit and push the above changes to cnf-features-deploy
+  shell: |
+    cd {{ install_directory }}/rhacm-ztp/cnf-features-deploy
+    git add ztp/gitops-subscriptions/argocd/cluster/ ztp/gitops-subscriptions/argocd/cluster-applications/
+    git add ztp/gitops-subscriptions/argocd/policy/ ztp/gitops-subscriptions/argocd/policy-applications/
+    git commit -a -m "Add Platform IBU PGT to {{ ibu_seed_image_version }}"
+    git push origin-gogs
+
+- name: Trigger policy application policy-common-and-group for refresh
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc annotate applications.argoproj.io -n openshift-gitops policy-common-and-group argocd.argoproj.io/refresh=normal
+
+# View upgrade graphs
+# https://access.redhat.com/labs/ocpupgradegraph
+# https://ctron.github.io/openshift-update-graph/#fast-4.15
+- name: Download upgrade graphs
+  get_url:
+    url: "{{ item.url }}"
+    dest: "{{ http_store_path }}/data/upgrade/{{ item.name }}"
+  loop:
+  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.15
+    name: upgrade-graph_stable-4.15
+  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.15
+    name: upgrade-graph_fast-4.15
+
+- name: Template CGU ibu-prep object(s)
+  template:
+    src: cgu-platform-ibu-prep.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-prep-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_prep_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+
+- name: Template CGU ibu-upgrade object(s)
+  template:
+    src: cgu-platform-ibu-upgrade.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_upgrade_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+
+- name: Template CGU ibu-finalize object(s)
+  template:
+    src: cgu-platform-ibu-finalize.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_finalize_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+
+- name: Template CGU apply scripts
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0744"
+  loop:
+  - src: apply-cgu-platform-ibu-prep.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-prep-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-cgu-platform-ibu-upgrade.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-cgu-platform-ibu-finalize.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-') }}.sh"

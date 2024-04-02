@@ -1,0 +1,36 @@
+---
+# rhacm-ztp-platform-ibu-setup default vars
+
+clusters_label: "ztp-done="
+
+ibu_seed_image_version: "4.15.5"
+
+platform_ibu_prep_clusters_per_cgu: 500
+platform_ibu_prep_concurrency: 500
+platform_ibu_prep_timeout: 30
+platform_ibu_prep_enable: true
+
+platform_ibu_upgrade_clusters_per_cgu: 500
+platform_ibu_upgrade_concurrency: 500
+platform_ibu_upgrade_timeout: 45
+platform_ibu_upgrade_enable: true
+
+platform_ibu_finalize_clusters_per_cgu: 500
+platform_ibu_finalize_concurrency: 500
+platform_ibu_finalize_timeout: 20
+platform_ibu_finalize_enable: true
+
+ibu_auto_rollback_disabledForPostRebootConfig: false
+ibu_auto_rollback_disabledForUpgradeCompletion: false
+ibu_auto_rollback_disabledInitMonitor: false
+
+# Amount of time to sleep between applying CGUs for each IBU "step"
+# Setting to 0 would mean apply all of the CGUs for that step at "almost" the same time
+platform_ibu_prep_sleep: 0
+platform_ibu_upgrade_sleep: 30
+platform_ibu_finalize_sleep: 0
+
+# Extra minutes to add between CGU applys in each script
+platform_ibu_prep_offset: 0
+platform_ibu_upgrade_offset: 0
+platform_ibu_finalize_offset: 0

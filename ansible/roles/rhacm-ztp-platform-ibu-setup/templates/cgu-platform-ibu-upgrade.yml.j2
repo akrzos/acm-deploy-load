@@ -1,0 +1,22 @@
+---
+apiVersion: ran.openshift.io/v1alpha1
+kind: ClusterGroupUpgrade
+metadata:
+  name: platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
+  namespace: ztp-platform-upgrade
+  labels:
+    ibu-upgrade: "{{ ibu_seed_image_version }}"
+spec:
+  managedPolicies:
+  # - group-ibu-prep-policy
+  - group-ibu-upgrade-policy
+  clusters:
+{% for cluster in range(item * platform_ibu_upgrade_clusters_per_cgu, (item + 1) * platform_ibu_upgrade_clusters_per_cgu) %}
+{% if ztp_done_clusters.stdout_lines | length > cluster %}
+  - {{ ztp_done_clusters.stdout_lines[cluster] }}
+{% endif %}
+{% endfor %}
+  remediationStrategy:
+    maxConcurrency: {{ platform_ibu_upgrade_concurrency }}
+    timeout: {{ platform_ibu_upgrade_timeout }}
+  enable: {{ platform_ibu_upgrade_enable }}

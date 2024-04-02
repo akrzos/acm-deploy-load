@@ -1,0 +1,60 @@
+---
+apiVersion: ran.openshift.io/v1
+kind: PolicyGenTemplate
+metadata:
+  name: group-ibu
+  namespace: ztp-group
+spec:
+  bindingRules:
+    group-du-sno: ""
+  mcp: master
+  evaluationInterval:
+    compliant: 10s
+    noncompliant: 10s
+  sourceFiles:
+    - fileName: ibu/ImageBasedUpgrade.yaml
+      policyName: prep-policy
+      spec:
+        autoRollbackOnFailure:
+          disabledForPostRebootConfig: {{ ibu_auto_rollback_disabledForPostRebootConfig }}
+          disabledForUpgradeCompletion: {{ ibu_auto_rollback_disabledForUpgradeCompletion }}
+          disabledInitMonitor: {{ ibu_auto_rollback_disabledInitMonitor }}
+        stage: Prep
+        seedImageRef:
+          version: {{ ibu_seed_image_version }}
+          image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/ocp-ibu:{{ ibu_seed_image_version }}.ibu-x86_64
+          pullSecretRef:
+            name: seedgen
+        oadpContent:
+          - name: oadp-cm
+            namespace: openshift-adp
+#        extraManifests:
+#          - name: sno-extra-manifests
+#            namespace: openshift-lifecycle-agent
+      status:
+        conditions:
+          - reason: Completed
+            status: "True"
+            type: PrepCompleted
+    - fileName: LcaSecret.yaml
+      policyName: "prep-policy"
+      data:
+        seedAuth: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
+        .dockerconfigjson: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
+    - fileName: ibu/ImageBasedUpgrade.yaml
+      policyName: upgrade-policy
+      spec:
+        stage: Upgrade
+      status:
+        conditions:
+          - reason: Completed
+            status: "True"
+            type: UpgradeCompleted
+    - fileName: ibu/ImageBasedUpgrade.yaml
+      policyName: finalize-policy
+      spec:
+        stage: Idle
+      status:
+        conditions:
+          - status: "True"
+            type: Idle
