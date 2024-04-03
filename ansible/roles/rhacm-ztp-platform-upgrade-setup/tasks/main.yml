@@ -14,23 +14,6 @@
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc get managedclusters -l {{ clusters_label }} --no-headers -o custom-columns=NAME:'.metadata.name'
   register: ztp_done_clusters
 
-- name: Template CGU object(s)
-  template:
-    src: cgu-platform-upgrade.yml.j2
-    dest: "{{ install_directory }}/rhacm-ztp/upgrade/cgu-platform-upgrade-{{ du_upgrade_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
-  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
-
-- name: Template CGU apply/patch scripts
-  template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    mode: "0744"
-  loop:
-  - src: apply-cgu-platform.sh
-    dest: "{{ install_directory }}/rhacm-ztp/upgrade/apply-cgu-platform-{{ du_upgrade_version | replace('.', '-') }}.sh"
-  - src: patch-cgu-platform.sh
-    dest: "{{ install_directory }}/rhacm-ztp/upgrade/patch-cgu-platform-{{ du_upgrade_version | replace('.', '-') }}.sh"
-
 - name: Template the gen_checksum.sh script
   template:
     src: gen_checksum.sh
@@ -66,7 +49,27 @@
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |
     cd {{ install_directory }}/rhacm-ztp/cnf-features-deploy
-    git add ztp/gitops-subscriptions/argocd/cluster/ ztp/gitops-subscriptions/argocd/cluster-applications/
-    git add ztp/gitops-subscriptions/argocd/policy/ ztp/gitops-subscriptions/argocd/policy-applications/
+    git add ztp/gitops-subscriptions/argocd/policy/
     git commit -a -m "Add Platform Upgrade PGT to {{ du_upgrade_version }}"
     git push origin-gogs
+
+- name: Trigger policy application policy-common-and-group for refresh
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc annotate applications.argoproj.io -n openshift-gitops policy-common-and-group argocd.argoproj.io/refresh=normal
+
+- name: Template CGU object(s)
+  template:
+    src: cgu-platform-upgrade.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/upgrade/cgu-platform-upgrade-{{ du_upgrade_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+
+- name: Template CGU apply/patch scripts
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0744"
+  loop:
+  - src: apply-cgu-platform.sh
+    dest: "{{ install_directory }}/rhacm-ztp/upgrade/apply-cgu-platform-{{ du_upgrade_version | replace('.', '-') }}.sh"
+  - src: patch-cgu-platform.sh
+    dest: "{{ install_directory }}/rhacm-ztp/upgrade/patch-cgu-platform-{{ du_upgrade_version | replace('.', '-') }}.sh"

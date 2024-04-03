@@ -29,8 +29,7 @@
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |
     cd {{ install_directory }}/rhacm-ztp/cnf-features-deploy
-    git add ztp/gitops-subscriptions/argocd/cluster/ ztp/gitops-subscriptions/argocd/cluster-applications/
-    git add ztp/gitops-subscriptions/argocd/policy/ ztp/gitops-subscriptions/argocd/policy-applications/
+    git add ztp/gitops-subscriptions/argocd/policy/
     git commit -a -m "Add Platform IBU PGT to {{ ibu_seed_image_version }}"
     git push origin-gogs
 
