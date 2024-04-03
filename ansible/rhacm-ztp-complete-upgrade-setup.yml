@@ -11,4 +11,5 @@
   vars_files:
   - vars/all.yml
   roles:
+  - http-upgrade-graphs
   - rhacm-ztp-complete-upgrade-setup

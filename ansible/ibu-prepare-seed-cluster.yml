@@ -13,6 +13,7 @@
   vars_files:
   - vars/all.yml
   roles:
+  - http-upgrade-graphs
   - ibu-prepare-seed-cluster
   - role: ibu-generate-seed-image
     when: generate_seed_image_after_upgrade | default(true)

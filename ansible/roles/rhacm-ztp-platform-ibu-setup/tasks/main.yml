@@ -38,19 +38,6 @@
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc annotate applications.argoproj.io -n openshift-gitops policy-common-and-group argocd.argoproj.io/refresh=normal
 
-# View upgrade graphs
-# https://access.redhat.com/labs/ocpupgradegraph
-# https://ctron.github.io/openshift-update-graph/#fast-4.15
-- name: Download upgrade graphs
-  get_url:
-    url: "{{ item.url }}"
-    dest: "{{ http_store_path }}/data/upgrade/{{ item.name }}"
-  loop:
-  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.15
-    name: upgrade-graph_stable-4.15
-  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.15
-    name: upgrade-graph_fast-4.15
-
 - name: Template CGU ibu-prep object(s)
   template:
     src: cgu-platform-ibu-prep.yml.j2
