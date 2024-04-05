@@ -41,6 +41,12 @@ spec:
       data:
         seedAuth: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
         .dockerconfigjson: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
+    - fileName: DefaultCatsrc.yaml
+      policyName: "prep-policy"
+      metadata:
+        name: {{ common_catalogsource_name }}
+        labels:
+          lca.openshift.io/target-ocp-version: "{{ ibu_seed_image_version }}"
     - fileName: ibu/ImageBasedUpgrade.yaml
       policyName: upgrade-policy
       spec:

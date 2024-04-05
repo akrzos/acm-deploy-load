@@ -5,6 +5,8 @@ clusters_label: "ztp-done="
 
 ibu_seed_image_version: "4.15.5"
 
+common_catalogsource_name: rh-du-operators
+
 platform_ibu_prep_clusters_per_cgu: 500
 platform_ibu_prep_concurrency: 500
 platform_ibu_prep_timeout: 30
