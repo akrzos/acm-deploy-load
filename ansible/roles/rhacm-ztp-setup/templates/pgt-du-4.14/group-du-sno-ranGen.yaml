@@ -26,7 +26,7 @@ spec:
                 region: minio
                 s3Url: {{ oadp_s3Url }}
               objectStorage:
-                bucket: ibu
+                bucket: '{% raw %}{{hub (printf "%s" .ManagedClusterName) hub}}{% endraw %}-ibu'
     - fileName: OadpBackupStorageLocationStatus.yaml
       policyName: "{{ 'oadp-config' if manyPolicies else 'config' }}-policy"
     - fileName: OadpCm.yaml
