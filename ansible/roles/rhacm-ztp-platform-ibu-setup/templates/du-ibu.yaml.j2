@@ -45,6 +45,8 @@ spec:
       policyName: "prep-policy"
       metadata:
         name: {{ common_catalogsource_name }}
+        annotations:
+          ran.openshift.io/ztp-deploy-wave: "10"
         labels:
           lca.openshift.io/target-ocp-version: "{{ ibu_seed_image_version }}"
     - fileName: ibu/ImageBasedUpgrade.yaml
