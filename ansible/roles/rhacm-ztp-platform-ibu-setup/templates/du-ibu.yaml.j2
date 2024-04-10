@@ -28,9 +28,9 @@ spec:
         oadpContent:
           - name: oadp-cm
             namespace: openshift-adp
-#        extraManifests:
-#          - name: sno-extra-manifests
-#            namespace: openshift-lifecycle-agent
+        extraManifests:
+          - name: extra-manifests
+            namespace: openshift-lifecycle-agent
       status:
         conditions:
           - reason: Completed
@@ -41,14 +41,21 @@ spec:
       data:
         seedAuth: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
         .dockerconfigjson: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
-    - fileName: DefaultCatsrc.yaml
+    - fileName: LcaCM.yaml
       policyName: "prep-policy"
-      metadata:
-        name: {{ common_catalogsource_name }}
-        annotations:
-          ran.openshift.io/ztp-deploy-wave: "10"
-        labels:
-          lca.openshift.io/target-ocp-version: "{{ ibu_seed_image_version }}"
+      data:
+        catalogsource.yaml: |
+          apiVersion: operators.coreos.com/v1alpha1
+          kind: CatalogSource
+          metadata:
+            annotations:
+              target.workload.openshift.io/management: '{"effect": "PreferredDuringScheduling"}'
+            name: rh-du-operators
+            namespace: openshift-marketplace
+          spec:
+            sourceType: grpc
+            displayName: disconnected-redhat-operators
+            image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:{{ operator_index_tag }}
     - fileName: ibu/ImageBasedUpgrade.yaml
       policyName: upgrade-policy
       spec:

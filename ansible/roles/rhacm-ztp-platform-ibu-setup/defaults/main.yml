@@ -6,6 +6,8 @@ clusters_label: "ztp-done="
 ibu_seed_image_version: "4.15.5"
 
 common_catalogsource_name: rh-du-operators
+disconnected_operator_index_name: olm-mirror/redhat-operator-index
+operator_index_tag: v4.15
 
 platform_ibu_prep_clusters_per_cgu: 500
 platform_ibu_prep_concurrency: 500

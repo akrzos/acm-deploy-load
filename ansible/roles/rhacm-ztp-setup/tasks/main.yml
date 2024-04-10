@@ -265,7 +265,8 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaOperatorStatus.yaml"
   - src: source-crs/LcaSecret.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaSecret.yaml"
-
+  - src: source-crs/LcaCM.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/LcaCM.yaml"
 
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |
