@@ -12,3 +12,27 @@ ibu_seed_image_version: 4.15.5
 
 # Channel referring to upgrade graph for the seed cluster
 ibu_upgrade_channel: fast-4.15
+
+# Upgrade operators (Typically used with Y-stream upgrades)
+ibu_prepare_upgrade_operators: false
+catalogsource_name: rh-du-operators-upgrade
+catalogsource_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/olm-mirror/redhat-operator-index"
+catalogsource_image_tag: v4.15
+
+operators_to_upgrade:
+- csv_name: local-storage-operator
+  namespace: openshift-local-storage
+  search: v4.15
+  subscription_name: local-storage-operator
+- csv_name: cluster-logging
+  namespace: openshift-logging
+  search: v5.9
+  subscription_name: cluster-logging
+- csv_name: ptp-operator
+  namespace: openshift-ptp
+  search: v4.15
+  subscription_name: ptp-operator-subscription
+- csv_name: sriov-network-operator
+  namespace: openshift-sriov-network-operator
+  search: v4.15
+  subscription_name: sriov-network-operator-subscription

@@ -8,7 +8,6 @@ metadata:
     ibu-upgrade: "{{ ibu_seed_image_version }}"
 spec:
   managedPolicies:
-  # - group-ibu-prep-policy
   - group-ibu-upgrade-policy
   clusters:
 {% for cluster in range(item * platform_ibu_upgrade_clusters_per_cgu, (item + 1) * platform_ibu_upgrade_clusters_per_cgu) %}

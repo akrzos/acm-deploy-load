@@ -35,7 +35,7 @@
     dest: "{{ seedcluster_kubeconfig }}"
     remote_src: true
 
-- name: Get cluster applicaiton with seed cluster
+- name: Get cluster application with seed cluster
   shell: |
     grep -l "{{ seed_cluster }}" /root/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-*/kustomization.yaml
   register: seed_cluster_kustomization
@@ -126,3 +126,49 @@
   until: check_cluster_version.stdout == "Completed"
   retries: 360
   delay: 10
+
+# Upgrade the operators
+- name: Upgrade Operators
+  when: ibu_prepare_upgrade_operators
+  block:
+  - name: Template the new catalogsource
+    template:
+      src: catalogsource.yml.j2
+      dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/catalogsource.yml"
+
+  - name: Apply the catalogsource for operator upgrade
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/catalogsource.yml
+
+  - name: Check that the catalogsource for operator upgrade is ready
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get catalogsource -n openshift-marketplace {{ catalogsource_name }} -o json | jq -r '.status.connectionState.lastObservedState'
+    register: check_catalogsource
+    ignore_errors: true
+    until: check_catalogsource.stdout == "READY"
+    retries: 60
+    delay: 2
+
+  - name: Set each operator to upgrade automatically
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc patch subscriptions -n {{ item.namespace }} {{ item.subscription_name }} --type merge -p '{"spec": {"installPlanApproval": "Automatic"}}'
+    loop: "{{ operators_to_upgrade }}"
+
+  - name: Set each operator to new catalogsource
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc patch subscriptions -n {{ item.namespace }} {{ item.subscription_name }} --type merge -p '{"spec": {"source": "{{ catalogsource_name }}"}}'
+    loop: "{{ operators_to_upgrade }}"
+
+  - name: Check that operator had upgraded
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get csvs -n {{ item.namespace }} | grep -i "Succeeded" | grep {{ item.csv_name }} | grep "{{ item.search }}"
+    loop: "{{ operators_to_upgrade }}"
+    register: check_csvs
+    # ignore_errors: true
+    until: check_csvs.rc == 0
+    retries: 120
+    delay: 2
+
+  - name: Pause for 5 minutes
+    pause:
+      seconds: 300
