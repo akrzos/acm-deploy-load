@@ -29,6 +29,7 @@ from pathlib import Path
 import sys
 import time
 from utils.command import command
+from utils.output import assemble_stats
 from utils.output import log_write
 
 
@@ -526,30 +527,6 @@ def main():
   end_time = time.time()
   logger.info("##########################################################################################")
   logger.info("Took {}s".format(round(end_time - start_time, 1)))
-
-def assemble_stats(the_list, seconds=True):
-  stats_min = 0
-  stats_avg = 0
-  stats_p50 = 0
-  stats_p95 = 0
-  stats_p99 = 0
-  stats_max = 0
-  if len(the_list) > 0:
-    if seconds:
-      stats_min = np.min(the_list)
-      stats_avg = round(np.mean(the_list), 1)
-      stats_p50 = round(np.percentile(the_list, 50), 1)
-      stats_p95 = round(np.percentile(the_list, 95), 1)
-      stats_p99 = round(np.percentile(the_list, 99), 1)
-      stats_max = np.max(the_list)
-    else:
-      stats_min = str(timedelta(seconds=np.min(the_list)))
-      stats_avg = str(timedelta(seconds=round(np.mean(the_list))))
-      stats_p50 = str(timedelta(seconds=round(np.percentile(the_list, 50))))
-      stats_p95 = str(timedelta(seconds=round(np.percentile(the_list, 95))))
-      stats_p99 = str(timedelta(seconds=round(np.percentile(the_list, 99))))
-      stats_max = str(timedelta(seconds=np.max(the_list)))
-  return "{} :: {} :: {} :: {} :: {} :: {}".format(stats_min, stats_avg, stats_p50, stats_p95, stats_p99, stats_max)
 
 if __name__ == "__main__":
   sys.exit(main())
