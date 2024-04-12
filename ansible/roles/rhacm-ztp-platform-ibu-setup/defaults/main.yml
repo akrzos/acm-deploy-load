@@ -11,7 +11,7 @@ operator_index_tag: v4.15
 
 platform_ibu_prep_clusters_per_cgu: 500
 platform_ibu_prep_concurrency: 500
-platform_ibu_prep_timeout: 30
+platform_ibu_prep_timeout: 60
 platform_ibu_prep_enable: true
 
 platform_ibu_upgrade_clusters_per_cgu: 500

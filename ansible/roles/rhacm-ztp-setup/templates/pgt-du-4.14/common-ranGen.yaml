@@ -164,6 +164,8 @@ spec:
           scale-test-label-2: '{{hub fromConfigMap "" "common-template-map" "key4" hub}}'
           {%- endraw +%}
 {% endif %}
+        labels:
+          lca.openshift.io/target-ocp-version: "4.14.0"
       spec:
         displayName: disconnected-redhat-operators
         image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:{{ operator_index_tag }}
