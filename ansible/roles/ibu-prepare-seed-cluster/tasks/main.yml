@@ -113,9 +113,9 @@
   retries: 60
   delay: 1
 
-- name: Trigger seed cluster to upgrade via patch
+- name: Trigger seed cluster to upgrade via oc adm
   shell: |
-    KUBECONFIG={{ seedcluster_kubeconfig }} oc patch clusterversion version --type merge -p '{"spec": {"desiredUpdate": {"version": "{{ ibu_seed_image_version }}"}}}'
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc adm upgrade --allow-not-recommended --to "{{ ibu_seed_image_version }}"
 
 # Wait 1 hour to see if completed upgrading
 - name: Check if seed cluster is upgraded
@@ -140,6 +140,14 @@
     shell: |
       KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/catalogsource.yml
 
+  - name: Get CSVs for display
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get csvs -A
+    register: check_csvs
+  - name: Display CSVs prior to Operator upgrade
+    debug:
+      msg: "{{ check_csvs.stdout_lines }}"
+
   - name: Check that the catalogsource for operator upgrade is ready
     shell: |
       KUBECONFIG={{ seedcluster_kubeconfig }} oc get catalogsource -n openshift-marketplace {{ catalogsource_name }} -o json | jq -r '.status.connectionState.lastObservedState'
@@ -161,14 +169,23 @@
 
   - name: Check that operator had upgraded
     shell: |
-      KUBECONFIG={{ seedcluster_kubeconfig }} oc get csvs -n {{ item.namespace }} | grep -i "Succeeded" | grep {{ item.csv_name }} | grep "{{ item.search }}"
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get csvs -n {{ item.namespace }} -o json | jq '.items[] | select(.status.reason=="InstallSucceeded").spec.version' | grep "{{ item.search }}"
     loop: "{{ operators_to_upgrade }}"
     register: check_csvs
-    # ignore_errors: true
     until: check_csvs.rc == 0
     retries: 120
     delay: 2
 
-  - name: Pause for 5 minutes
+  - name: Get CSVs for display
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get csvs -A
+    register: check_csvs
+  - name: Display CSVs prior to Operator upgrade
+    debug:
+      msg: "{{ check_csvs.stdout_lines }}"
+
+  # Operators have more pods than just the operator pod which can take significant time to be replaced after operator
+  # upgrade claims the install is completed. Pausing ensures those pods are replaced after operator upgrade for IBU.
+  - name: Pause for 10 minutes for remaining operator pod replacement
     pause:
-      seconds: 300
+      seconds: 600

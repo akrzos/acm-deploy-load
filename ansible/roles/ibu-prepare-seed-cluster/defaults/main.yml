@@ -22,17 +22,17 @@ catalogsource_image_tag: v4.15
 operators_to_upgrade:
 - csv_name: local-storage-operator
   namespace: openshift-local-storage
-  search: v4.15
+  search: "4.15"
   subscription_name: local-storage-operator
 - csv_name: cluster-logging
   namespace: openshift-logging
-  search: v5.9
+  search: "5.9"
   subscription_name: cluster-logging
 - csv_name: ptp-operator
   namespace: openshift-ptp
-  search: v4.15
+  search: "4.15"
   subscription_name: ptp-operator-subscription
 - csv_name: sriov-network-operator
   namespace: openshift-sriov-network-operator
-  search: v4.15
+  search: "4.15"
   subscription_name: sriov-network-operator-subscription
