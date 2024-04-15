@@ -29,18 +29,24 @@
 - name: Comment out OperatorHub.yaml source-cr because IBU requires 4.15 ztp site generator
   replace:
     path: /root/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/common-ranGen.yaml
-    replace: |
-      # Previously part of 4.14 du profile
+    replace: |-
+      # Start OPERATORHUB
           # - fileName: OperatorHub.yaml
           #   policyName: "config-policy"
-    regexp: '    - fileName: OperatorHub.yaml[\s]*policyName: "config-policy"'
+      # End OPERATORHUB
+    regexp: '^# Start OPERATORHUB[\s\S]*# End OPERATORHUB'
   when: ibu_seed_image_version is version('4.14.0', ">=")
 
-- name: Relabel the catalogsource in the common-ranGen
+- name: Apply catalogsource changes in the common-ranGen.yaml
   replace:
     path: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/common-ranGen.yaml"
-    replace: 'lca.openshift.io/target-ocp-version: "{{ ibu_seed_image_version }}"'
+    replace: "{{ item.replace }}"
+    regexp: "{{ item.regexp }}"
+  loop:
+  - replace: 'lca.openshift.io/target-ocp-version: "{{ ibu_seed_image_version }}"'
     regexp: 'lca.openshift.io/target-ocp-version: "[0-9.]*"'
+  - replace: 'image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:{{ operator_index_tag }}'
+    regexp: 'image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:v[0-9.]*'
 
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |
