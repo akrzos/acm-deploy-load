@@ -157,6 +157,7 @@ def examine_ibu_cgu(phases, phase, cgu_data, ibu_cgu_csv_file):
     phases[phase]["cgus"][cgu_name]["startedAt"] = cgu_startedAt
     phases[phase]["cgus"][cgu_name]["completedAt"] = cgu_completedAt
     phases[phase]["cgus"][cgu_name]["duration"] = cgu_duration
+    phases[phase]["cgus"][cgu_name]["timeout"] = cgu_timeout
     phases[phase]["cgus"][cgu_name]["batches_count"] = cgu_batches_count
     phases[phase]["cgus"][cgu_name]["clusters_count"] = cgu_clusters_total
     phases[phase]["cgus"][cgu_name]["clusters_completed_count"] = cgu_clusters_completed_count
@@ -194,7 +195,7 @@ def main():
   if cliargs.offline_process:
     if cliargs.raw_data_directory == "":
       # Detect last raw data directory
-      dir_scan = sorted([ f.path for f in os.scandir(cliargs.results_directory) if f.is_dir() and "ibu-cgu" in f.path ])
+      dir_scan = sorted([ f.path for f in os.scandir(cliargs.results_directory) if f.is_dir() and "ibu-cgu-{}".format(cliargs.ocp_version) in f.path ])
       if len(dir_scan) == 0:
         logger.error("No previous offline directories found. Exiting")
         sys.exit(1)
@@ -256,11 +257,6 @@ def main():
 
   with open("{}/finalize-cgus.json".format(raw_data_dir), "r") as cgu_data_file:
     cgu_finalize_data = json.load(cgu_data_file)
-
-  logger.info("Writing CSV: {}".format(ibu_cgu_csv_file))
-  with open(ibu_cgu_csv_file, "w") as csv_file:
-    csv_file.write("name,status,creationTimestamp,startedAt,completedAt,duration,timeout,batchCount,clusterCount,clusterCompleted,clusterTimedout\n")
-
   # Examine all cgu data for a complete IBU upgrade
   phases = OrderedDict()
   ibus = []
@@ -268,6 +264,10 @@ def main():
   if len(cgu_prep_data["items"]) == 0:
     logger.error("No prep cgu(s) to examine")
     sys.exit(1)
+
+  logger.info("Writing CSV: {}".format(ibu_cgu_csv_file))
+  with open(ibu_cgu_csv_file, "w") as csv_file:
+    csv_file.write("name,status,creationTimestamp,startedAt,completedAt,duration,timeout,batchCount,clusterCount,clusterCompleted,clusterTimedout\n")
 
   logger.info("{} prep cgu(s) to examine".format(len(cgu_prep_data["items"])))
   examine_ibu_cgu(phases, "prep", cgu_prep_data, ibu_cgu_csv_file)
@@ -299,11 +299,9 @@ def main():
     with open(ibu_upgrade_csv_file, "w") as csv_file:
       csv_file.write("name,status,cgu,batch,cguStarted,upgradeCompleted,duration\n")
 
-    # Gather per IBU data here
+    # Get individual cluster IBU data here
     for cluster in ibus:
-      logger.info("Gather cluster ibu data on {}".format(cluster))
       kubeconfig = "{}/{}/kubeconfig".format(cliargs.kubeconfigs, cluster)
-
       if not cliargs.offline_process:
         oc_cmd = ["oc", "--kubeconfig", kubeconfig, "get", "ibu", "upgrade", "-o", "json"]
         rc, output = command(oc_cmd, False, retries=2, no_log=True)
@@ -319,6 +317,7 @@ def main():
         with open("{}/{}-ibu.json".format(raw_data_dir, cluster), "r") as ibu_data_file:
           ibu_data = json.load(ibu_data_file)
 
+      # Determine timestamps from conditions in IBU data
       ibu_prep_started_time = ""
       ibu_prep_completed_time = ""
       ibu_upgrade_completed_time = ""
@@ -332,6 +331,7 @@ def main():
             if condition["type"] == "UpgradeCompleted" and condition["status"] == "True":
               ibu_upgrade_completed_time = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
 
+      # Match timestamps from IBU data to the correct cluster
       for phase in phases:
         for cgu in phases[phase]["cgus"]:
           found_batch = False
@@ -348,13 +348,13 @@ def main():
                 phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"] = ibu_upgrade_completed_time
                 if ibu_upgrade_completed_time != "":
                   duration = (ibu_upgrade_completed_time - ibu_cgu_upgrade_started_time).total_seconds()
-              # logger.info("Populating timing in {} :: {} :: {} :: {} :: {}".format(phase, cgu, batch, cluster, duration))
               phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] = duration
               found_batch = True
               break
           if found_batch:
             break
 
+    # Write the IBU data to a CSV for prep phase
     with open(ibu_prep_csv_file, "a") as csv_file:
       for cgu in phases["prep"]["cgus"]:
         for batch in phases["prep"]["cgus"][cgu]["remediationPlan"]:
@@ -367,6 +367,7 @@ def main():
             #   logger.error("Cluster with 0 duration: {}".format(cluster))
             csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, prep_started, prep_completed, duration))
 
+    # Write the IBU data to a CSV for upgrade phase
     with open(ibu_upgrade_csv_file, "a") as csv_file:
       for cgu in phases["upgrade"]["cgus"]:
         for batch in phases["upgrade"]["cgus"][cgu]["remediationPlan"]:
@@ -378,18 +379,17 @@ def main():
             csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, cgu_started, upgrade_completed, duration))
   # End ibu_analysis
 
-  # Data Structure assembled for IBU analysis
-  # logger.info(phases["prep"]["cgus"])
-
   # Display summary of the collected CGU data
   logger.info("Writing Stats: {}".format(ibu_cgu_stats_file))
   with open(ibu_cgu_stats_file, "w") as stats_file:
-    log_write(stats_file, "#############################################")
+    # log_write(stats_file, "#############################################")
+    log_write(stats_file, "##########################################################################################")
     log_write(stats_file, "Stats on imagebasedupgrade clustergroupupgrades CRs in namespace {}".format(cliargs.namespace))
     log_write(stats_file, "Expected OCP Version {}".format(cliargs.ocp_version))
     cgu_total = sum([phases[x]["cgus_count"] for x in phases ])
     log_write(stats_file, "Total CGUs for all phases: {}".format(cgu_total))
-    log_write(stats_file, "#############################################")
+    log_write(stats_file, "##########################################################################################")
+    # log_write(stats_file, "#############################################")
     for phase in phases:
       phase_duration = (phases[phase]["completedAt"] - phases[phase]["creationTimestamp"]).total_seconds()
       log_write(stats_file, "Phase: {}".format(phase))
@@ -409,7 +409,38 @@ def main():
         log_write(stats_file, "CGU Success Durations count: {}".format(len(phases[phase]["succeeded_durations"])))
         log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(phases[phase]["succeeded_durations"])))
         log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(phases[phase]["succeeded_durations"], False)))
-      log_write(stats_file, "#############################################")
+      for cgu in phases[phase]["cgus"]:
+        log_write(stats_file, "#############################################")
+        status = phases[phase]["cgus"][cgu]["status"]
+        created = phases[phase]["cgus"][cgu]["creationTimestamp"]
+        startedAt = phases[phase]["cgus"][cgu]["startedAt"]
+        completedAt = phases[phase]["cgus"][cgu]["completedAt"]
+        duration = phases[phase]["cgus"][cgu]["duration"]
+        timeout = phases[phase]["cgus"][cgu]["timeout"]
+        batches = phases[phase]["cgus"][cgu]["batches_count"]
+        clusters = phases[phase]["cgus"][cgu]["clusters_count"]
+        clusters_completed = phases[phase]["cgus"][cgu]["clusters_completed_count"]
+        clusters_timedout = phases[phase]["cgus"][cgu]["clusters_timedout_count"]
+        completed_p = round(((clusters_completed / clusters) * 100), 1)
+        timedout_p = round(((clusters_timedout / clusters) * 100), 1)
+        log_write(stats_file, "CGU: {}, Status: {}, Batches: {}".format(cgu, status, batches))
+        log_write(stats_file, "Clusters: {}, completed: {} ({}%), timedout: {} ({}%)".format(clusters, clusters_completed, completed_p, clusters_timedout, timedout_p))
+        log_write(stats_file, "Timedout Clusters: {}".format(phases[phase]["cgus"][cgu]["clusters_timedout"]))
+        log_write(stats_file, "creationTimestamp: {}".format(created))
+        log_write(stats_file, "startedAt: {}".format(startedAt))
+        log_write(stats_file, "completedAt: {}".format(completedAt))
+        log_write(stats_file, "Duration: {}s :: {}, Timeout: {}".format(duration, str(timedelta(seconds=phase_duration)), timeout))
+        for batch in phases[phase]["cgus"][cgu]["remediationPlan"]:
+          b_clusters = len(phases[phase]["cgus"][cgu]["remediationPlan"][batch])
+          recorded_durations = []
+          for cluster in phases[phase]["cgus"][cgu]["remediationPlan"][batch]:
+            if phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] > 0:
+              recorded_durations.append(phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"])
+          log_write(stats_file, "Batch: {}, Clusters: {}, Recorded Samples: {}".format(batch, b_clusters, len(recorded_durations)))
+          log_write(stats_file, "(IBU) Batch Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(recorded_durations)))
+          log_write(stats_file, "(IBU) Batch Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(recorded_durations, False)))
+      log_write(stats_file, "##########################################################################################")
+
 
   end_time = time.time()
   logger.info("##########################################################################################")
