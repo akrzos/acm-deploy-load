@@ -191,11 +191,11 @@ def main():
 
   logger.info("Analyze imagebasedupgrade")
   ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-  raw_data_dir = "{}/ibu-cgu-{}-{}".format(cliargs.results_directory, cliargs.ocp_version, ts)
+  raw_data_dir = "{}/ibu-{}-cgu-{}".format(cliargs.results_directory, cliargs.ocp_version, ts)
   if cliargs.offline_process:
     if cliargs.raw_data_directory == "":
       # Detect last raw data directory
-      dir_scan = sorted([ f.path for f in os.scandir(cliargs.results_directory) if f.is_dir() and "ibu-cgu-{}".format(cliargs.ocp_version) in f.path ])
+      dir_scan = sorted([ f.path for f in os.scandir(cliargs.results_directory) if f.is_dir() and "ibu-{}-cgu".format(cliargs.ocp_version) in f.path ])
       if len(dir_scan) == 0:
         logger.error("No previous offline directories found. Exiting")
         sys.exit(1)
@@ -206,10 +206,10 @@ def main():
   else:
     Path(raw_data_dir).mkdir(parents=True, exist_ok=True)
     logger.info("Storing raw data in: {}".format(raw_data_dir))
-  ibu_cgu_csv_file = "{}/ibu-cgus-{}-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
-  ibu_prep_csv_file = "{}/ibu-prep-{}-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
-  ibu_upgrade_csv_file = "{}/ibu-upgrade-{}-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
-  ibu_cgu_stats_file = "{}/ibu-cgus-{}-{}.stats".format(cliargs.results_directory, cliargs.ocp_version, ts)
+  ibu_cgu_csv_file = "{}/ibu-{}-cgus-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
+  ibu_prep_csv_file = "{}/ibu-{}-prep-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
+  ibu_upgrade_csv_file = "{}/ibu-{}-upgrade-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
+  ibu_cgu_stats_file = "{}/ibu-{}-cgus-{}.stats".format(cliargs.results_directory, cliargs.ocp_version, ts)
 
   # Gather all CGU data for an IBU upgrade
   prep_label = "{}={}".format(cliargs.prep_label, cliargs.ocp_version)
@@ -290,15 +290,6 @@ def main():
     examine_ibu_cgu(phases, "finalize", cgu_finalize_data, ibu_cgu_csv_file)
 
   if ibu_analysis:
-    # Individual IBU recorded data points
-    logger.info("Writing CSV: {}".format(ibu_prep_csv_file))
-    with open(ibu_prep_csv_file, "w") as csv_file:
-      csv_file.write("name,status,cgu,batch,prepStarted,prepCompleted,duration\n")
-
-    logger.info("Writing CSV: {}".format(ibu_upgrade_csv_file))
-    with open(ibu_upgrade_csv_file, "w") as csv_file:
-      csv_file.write("name,status,cgu,batch,cguStarted,upgradeCompleted,duration\n")
-
     # Get individual cluster IBU data here
     for cluster in ibus:
       kubeconfig = "{}/{}/kubeconfig".format(cliargs.kubeconfigs, cluster)
@@ -353,9 +344,10 @@ def main():
               break
           if found_batch:
             break
-
     # Write the IBU data to a CSV for prep phase
+    logger.info("Writing CSV: {}".format(ibu_prep_csv_file))
     with open(ibu_prep_csv_file, "a") as csv_file:
+      csv_file.write("name,status,cgu,batch,prepStarted,prepCompleted,duration\n")
       for cgu in phases["prep"]["cgus"]:
         for batch in phases["prep"]["cgus"][cgu]["remediationPlan"]:
           for cluster in phases["prep"]["cgus"][cgu]["remediationPlan"][batch]:
@@ -368,15 +360,18 @@ def main():
             csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, prep_started, prep_completed, duration))
 
     # Write the IBU data to a CSV for upgrade phase
-    with open(ibu_upgrade_csv_file, "a") as csv_file:
-      for cgu in phases["upgrade"]["cgus"]:
-        for batch in phases["upgrade"]["cgus"][cgu]["remediationPlan"]:
-          for cluster in phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch]:
-            status = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["status"]
-            cgu_started = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["cguStarted"]
-            upgrade_completed = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"]
-            duration = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
-            csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, cgu_started, upgrade_completed, duration))
+    if "upgrade" in phases:
+      logger.info("Writing CSV: {}".format(ibu_upgrade_csv_file))
+      with open(ibu_upgrade_csv_file, "a") as csv_file:
+        csv_file.write("name,status,cgu,batch,cguStarted,upgradeCompleted,duration\n")
+        for cgu in phases["upgrade"]["cgus"]:
+          for batch in phases["upgrade"]["cgus"][cgu]["remediationPlan"]:
+            for cluster in phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch]:
+              status = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["status"]
+              cgu_started = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["cguStarted"]
+              upgrade_completed = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"]
+              duration = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
+              csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, cgu_started, upgrade_completed, duration))
   # End ibu_analysis
 
   # Display summary of the collected CGU data
@@ -440,7 +435,6 @@ def main():
           log_write(stats_file, "(IBU) Batch Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(recorded_durations)))
           log_write(stats_file, "(IBU) Batch Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(recorded_durations, False)))
       log_write(stats_file, "##########################################################################################")
-
 
   end_time = time.time()
   logger.info("##########################################################################################")
