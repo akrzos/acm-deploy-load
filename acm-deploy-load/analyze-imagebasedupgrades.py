@@ -424,7 +424,7 @@ def main():
         log_write(stats_file, "creationTimestamp: {}".format(created))
         log_write(stats_file, "startedAt: {}".format(startedAt))
         log_write(stats_file, "completedAt: {}".format(completedAt))
-        log_write(stats_file, "Duration: {}s :: {}, Timeout: {}".format(duration, str(timedelta(seconds=phase_duration)), timeout))
+        log_write(stats_file, "Duration: {}s :: {}, Timeout: {}".format(duration, str(timedelta(seconds=duration)), timeout))
         for batch in phases[phase]["cgus"][cgu]["remediationPlan"]:
           b_clusters = len(phases[phase]["cgus"][cgu]["remediationPlan"][batch])
           recorded_durations = []
