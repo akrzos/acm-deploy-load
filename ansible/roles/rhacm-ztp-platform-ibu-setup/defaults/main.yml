@@ -16,7 +16,7 @@ platform_ibu_prep_enable: true
 
 platform_ibu_upgrade_clusters_per_cgu: 500
 platform_ibu_upgrade_concurrency: 500
-platform_ibu_upgrade_timeout: 45
+platform_ibu_upgrade_timeout: 30
 platform_ibu_upgrade_enable: true
 
 platform_ibu_finalize_clusters_per_cgu: 500
