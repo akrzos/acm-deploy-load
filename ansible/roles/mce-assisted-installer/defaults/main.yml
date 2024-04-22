@@ -11,4 +11,4 @@ registry_path: /opt/registry
 mce_2_1_patch: false
 
 # Enables Converged Flow in Assisted-Installer
-enable_converged_flow: false
+enable_converged_flow: true
