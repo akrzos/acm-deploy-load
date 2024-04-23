@@ -7,14 +7,15 @@ metadata:
   labels:
     ibu-upgrade: "{{ ibu_seed_image_version }}"
 spec:
+  actions:
+    afterCompletion:
+      addClusterLabels:
+        ibu-upgraded: "{{ ibu_seed_image_version }}"
+        ibu-upgrade: "{{ ibu_seed_image_version }}-{{ '%04d' | format(item) }}"
   managedPolicies:
   - group-ibu-upgrade-policy
-  clusters:
-{% for cluster in range(item * platform_ibu_upgrade_clusters_per_cgu, (item + 1) * platform_ibu_upgrade_clusters_per_cgu) %}
-{% if ztp_done_clusters.stdout_lines | length > cluster %}
-  - {{ ztp_done_clusters.stdout_lines[cluster] }}
-{% endif %}
-{% endfor %}
+  clusterSelector:
+  - 'ibu-prep={{ ibu_seed_image_version }}-{{ '%04d' | format(item) }}'
   remediationStrategy:
     maxConcurrency: {{ platform_ibu_upgrade_concurrency }}
     timeout: {{ platform_ibu_upgrade_timeout }}

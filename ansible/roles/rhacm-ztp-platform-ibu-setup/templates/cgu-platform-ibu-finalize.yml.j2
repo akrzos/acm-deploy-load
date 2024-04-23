@@ -9,12 +9,8 @@ metadata:
 spec:
   managedPolicies:
   - group-ibu-finalize-policy
-  clusters:
-{% for cluster in range(item * platform_ibu_finalize_clusters_per_cgu, (item + 1) * platform_ibu_finalize_clusters_per_cgu) %}
-{% if ztp_done_clusters.stdout_lines | length > cluster %}
-  - {{ ztp_done_clusters.stdout_lines[cluster] }}
-{% endif %}
-{% endfor %}
+  clusterSelector:
+  - 'ibu-upgraded={{ ibu_seed_image_version }}'
   remediationStrategy:
     maxConcurrency: {{ platform_ibu_finalize_concurrency }}
     timeout: {{ platform_ibu_finalize_timeout }}

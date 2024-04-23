@@ -7,6 +7,10 @@ metadata:
   labels:
     ibu-prep: "{{ ibu_seed_image_version }}"
 spec:
+  actions:
+    afterCompletion:
+      addClusterLabels:
+        ibu-prep: "{{ ibu_seed_image_version }}-{{ '%04d' | format(item) }}"
   managedPolicies:
   - group-ibu-prep-policy
   clusters:
