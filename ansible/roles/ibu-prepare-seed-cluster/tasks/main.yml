@@ -105,9 +105,9 @@
   shell: |
     KUBECONFIG={{ seedcluster_kubeconfig }} oc patch clusterversion version --type merge -p '{"spec": {"channel": "{{ ibu_upgrade_channel }}", "upstream": "http://{{ rhacm_disconnected_registry }}:8081/upgrade/upgrade-graph_{{ ibu_upgrade_channel }}"}}'
 
-- name: Check if seed cluster has availableUpdates
+- name: Check if seed cluster has availableUpdates or conditionalUpdates with the version
   shell: |
-    KUBECONFIG={{ seedcluster_kubeconfig }} oc get clusterversion version -o json | jq '.status.availableUpdates[] | select(.version=="{{ ibu_seed_image_version }}")'
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc get clusterversion version -o json | jq -e '[.status.availableUpdates[]?.version] + [.status.conditionalUpdates[]?.release.version] | index("{{ ibu_seed_image_version }}")'
   register: check_availableupdates
   until: check_availableupdates.rc == 0
   retries: 60
