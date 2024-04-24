@@ -47,6 +47,7 @@ def examine_ibu_cgu(phases, phase, cgu_data, ibu_cgu_csv_file):
   phases[phase]["startedAt"] = ""
   phases[phase]["completedAt"] = ""
   phases[phase]["succeeded_durations"] = []
+  phases[phase]["ibu_succeeded_durations"] = []
   phases[phase]["batches_count"] = 0
   phases[phase]["clusters_count"] = 0
   phases[phase]["clusters_completed_count"] = 0
@@ -364,6 +365,8 @@ def main():
                 if ibu_upgrade_completed_time != "":
                   duration = (ibu_upgrade_completed_time - ibu_cgu_upgrade_started_time).total_seconds()
               phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] = duration
+              if duration > 0:
+                phases[phase]["ibu_succeeded_durations"].append(duration)
               found_batch = True
               break
           if found_batch:
@@ -428,6 +431,9 @@ def main():
         log_write(stats_file, "CGU Success Durations count: {}".format(len(phases[phase]["succeeded_durations"])))
         log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(phases[phase]["succeeded_durations"])))
         log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(phases[phase]["succeeded_durations"], False)))
+      log_write(stats_file, "CGU IBU recorded Duration Total Count: {}".format(len(phases[phase]["ibu_succeeded_durations"])))
+      log_write(stats_file, "CGU IBU Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(phases[phase]["ibu_succeeded_durations"])))
+      log_write(stats_file, "CGU IBU Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(phases[phase]["ibu_succeeded_durations"], False)))
       for cgu in phases[phase]["cgus"]:
         log_write(stats_file, "#############################################")
         status = phases[phase]["cgus"][cgu]["status"]
