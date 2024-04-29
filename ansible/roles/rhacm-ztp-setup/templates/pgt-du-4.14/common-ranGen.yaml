@@ -181,4 +181,7 @@ spec:
         - mirrors:
           - {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}
           source: registry.redhat.io
+        - mirrors:
+          - {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}
+          source: registry-proxy.engineering.redhat.com
 {% endif %}
