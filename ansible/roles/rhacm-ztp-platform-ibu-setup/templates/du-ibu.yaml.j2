@@ -15,10 +15,12 @@ spec:
     - fileName: ibu/ImageBasedUpgrade.yaml
       policyName: prep-policy
       spec:
+{% if ibu_seed_image_version is version('4.16', '<') %}
         autoRollbackOnFailure:
           disabledForPostRebootConfig: {{ ibu_auto_rollback_disabledForPostRebootConfig }}
           disabledForUpgradeCompletion: {{ ibu_auto_rollback_disabledForUpgradeCompletion }}
           disabledInitMonitor: {{ ibu_auto_rollback_disabledInitMonitor }}
+{% endif %}
         stage: Prep
         seedImageRef:
           version: {{ ibu_seed_image_version }}
