@@ -14,6 +14,19 @@ spec:
   sourceFiles:
     - fileName: ibu/ImageBasedUpgrade.yaml
       policyName: prep-policy
+{% if ibu_seed_image_version is version('4.16', '>=') and (ibu_auto_rollback_disabledForPostRebootConfig or ibu_auto_rollback_disabledForUpgradeCompletion or ibu_auto_rollback_disabledInitMonitor) %}
+      metadata:
+        annotations:
+{% if ibu_auto_rollback_disabledForPostRebootConfig %}
+          auto-rollback-on-failure.lca.openshift.io/post-reboot-config: Disabled
+{% endif %}
+{% if ibu_auto_rollback_disabledForUpgradeCompletion %}
+          auto-rollback-on-failure.lca.openshift.io/upgrade-completion: Disabled
+{% endif %}
+{% if ibu_auto_rollback_disabledInitMonitor %}
+          auto-rollback-on-failure.lca.openshift.io/init-monitor: Disabled
+{% endif %}
+{% endif %}
       spec:
 {% if ibu_seed_image_version is version('4.16', '<') %}
         autoRollbackOnFailure:
