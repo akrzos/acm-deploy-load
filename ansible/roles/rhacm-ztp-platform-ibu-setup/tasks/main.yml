@@ -46,7 +46,7 @@
   - replace: 'lca.openshift.io/target-ocp-version: "{{ ibu_seed_image_version }}"'
     regexp: 'lca.openshift.io/target-ocp-version: "[0-9.]*"'
   - replace: 'image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:{{ operator_index_tag }}'
-    regexp: 'image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:v[0-9.]*'
+    regexp: 'image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/{{ disconnected_operator_index_name }}:v[0-9.\-a-zA-Z]*'
 
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |
