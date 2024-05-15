@@ -62,6 +62,10 @@ ls  /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 2 | xargs -I % sh -c "c
 ls  /root/hv-vm/*/siteconfigs/*-resources.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
 # Ping 2 deployed clusters
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "ping6 -c 2 % > ${output_dir}/%.ping"
+# Get 2 Deployed cluster's clusterversion objects
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version -o yaml > ${output_dir}/%.clusterversion.yaml"
+# Get 2 Deployed cluster's pods
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get po -A > ${output_dir}/%.pods"
 
 echo "$(date -u) :: Collecting managedcluster data"
 
