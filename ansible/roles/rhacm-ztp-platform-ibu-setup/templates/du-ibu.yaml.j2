@@ -14,7 +14,7 @@ spec:
   sourceFiles:
     - fileName: ibu/ImageBasedUpgrade.yaml
       policyName: prep-policy
-{% if ibu_seed_image_version is version('4.16', '>=') and (ibu_auto_rollback_disabledForPostRebootConfig or ibu_auto_rollback_disabledForUpgradeCompletion or ibu_auto_rollback_disabledInitMonitor) %}
+{% if ibu_rollback_annotations and (ibu_auto_rollback_disabledForPostRebootConfig or ibu_auto_rollback_disabledForUpgradeCompletion or ibu_auto_rollback_disabledInitMonitor) %}
       metadata:
         annotations:
 {% if ibu_auto_rollback_disabledForPostRebootConfig %}
@@ -28,7 +28,7 @@ spec:
 {% endif %}
 {% endif %}
       spec:
-{% if ibu_seed_image_version is version('4.16', '<') %}
+{% if not ibu_rollback_annotations %}
         autoRollbackOnFailure:
           disabledForPostRebootConfig: {{ ibu_auto_rollback_disabledForPostRebootConfig }}
           disabledForUpgradeCompletion: {{ ibu_auto_rollback_disabledForUpgradeCompletion }}

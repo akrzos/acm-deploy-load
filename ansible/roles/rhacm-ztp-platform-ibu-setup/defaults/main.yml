@@ -24,6 +24,8 @@ platform_ibu_finalize_concurrency: 500
 platform_ibu_finalize_timeout: 20
 platform_ibu_finalize_enable: true
 
+# IBU rollback annotations are only used for 4.16 LCA or newer
+ibu_rollback_annotations: false
 ibu_auto_rollback_disabledForPostRebootConfig: false
 ibu_auto_rollback_disabledForUpgradeCompletion: false
 ibu_auto_rollback_disabledInitMonitor: false
