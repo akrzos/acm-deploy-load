@@ -71,6 +71,12 @@
     dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
   loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_upgrade_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
 
+- name: Template CGU ibu-rollback object(s)
+  template:
+    src: cgu-platform-ibu-rollback.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-rollback-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_rollback_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+
 - name: Template CGU ibu-finalize object(s)
   template:
     src: cgu-platform-ibu-finalize.yml.j2
@@ -87,5 +93,7 @@
     dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-prep-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
   - src: apply-cgu-platform-ibu-upgrade.sh
     dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-cgu-platform-ibu-rollback.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-rollback-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
   - src: apply-cgu-platform-ibu-finalize.sh
     dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-') }}.sh"

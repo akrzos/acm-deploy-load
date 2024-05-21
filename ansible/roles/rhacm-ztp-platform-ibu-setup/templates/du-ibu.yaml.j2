@@ -66,6 +66,14 @@ spec:
             status: "True"
             type: UpgradeCompleted
     - fileName: ibu/ImageBasedUpgrade.yaml
+      policyName: rollback-policy
+      spec:
+        stage: Rollback
+      status:
+        conditions:
+          - status: "True"
+            type: RollbackCompleted
+    - fileName: ibu/ImageBasedUpgrade.yaml
       policyName: finalize-policy
       spec:
         stage: Idle
