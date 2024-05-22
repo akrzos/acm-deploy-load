@@ -336,6 +336,8 @@ def main():
       ibu_prep_started_time = ""
       ibu_prep_completed_time = ""
       ibu_upgrade_completed_time = ""
+      ibu_rollback_started_time = ""
+      ibu_rollback_completed_time = ""
       if "status" in ibu_data:
         if "conditions" in ibu_data["status"]:
           for condition in ibu_data["status"]["conditions"]:
@@ -343,8 +345,15 @@ def main():
               ibu_prep_started_time = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
             if condition["type"] == "PrepCompleted" and condition["status"] == "True":
               ibu_prep_completed_time = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
+            # Upgrade Completed time, gone if rollback is applied
             if condition["type"] == "UpgradeCompleted" and condition["status"] == "True":
               ibu_upgrade_completed_time = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
+            # Rollback started time
+            if condition["type"] == "UpgradeCompleted" and condition["status"] == "False" and condition["message"] == "Rollback requested":
+              ibu_rollback_started_time = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
+            # Rollback completed time
+            if condition["type"] == "RollbackCompleted" and condition["status"] == "True":
+              ibu_rollback_completed_time = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
 
       # Match timestamps from IBU data to the correct cluster
       for stage in stages:
@@ -363,6 +372,11 @@ def main():
                 stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"] = ibu_upgrade_completed_time
                 if ibu_upgrade_completed_time != "":
                   duration = (ibu_upgrade_completed_time - ibu_cgu_upgrade_started_time).total_seconds()
+              elif stage == "rollback":
+                stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["rollbackStarted"] = ibu_rollback_started_time
+                stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["rollbackCompleted"] = ibu_rollback_completed_time
+                if ibu_rollback_started_time != "" and ibu_rollback_completed_time != "":
+                  duration = (ibu_rollback_completed_time - ibu_rollback_started_time).total_seconds()
               stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] = duration
               if duration > 0:
                 stages[stage]["ibu_succeeded_durations"].append(duration)
@@ -398,6 +412,19 @@ def main():
               upgrade_completed = stages["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"]
               duration = stages["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
               csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, cgu_started, upgrade_completed, duration))
+
+    if "rollback" in stages:
+      logger.info("Writing CSV: {}".format(ibu_rollback_csv_file))
+      with open(ibu_rollback_csv_file, "a") as csv_file:
+        csv_file.write("name,status,cgu,batch,rollbackStarted,rollbackCompleted,duration\n")
+        for cgu in stages["rollback"]["cgus"]:
+          for batch in stages["rollback"]["cgus"][cgu]["remediationPlan"]:
+            for cluster in stages["rollback"]["cgus"][cgu]["remediationPlan"][batch]:
+              status = stages["rollback"]["cgus"][cgu]["remediationPlan"][batch][cluster]["status"]
+              rollback_started = stages["rollback"]["cgus"][cgu]["remediationPlan"][batch][cluster]["rollbackStarted"]
+              rollback_completed = stages["rollback"]["cgus"][cgu]["remediationPlan"][batch][cluster]["rollbackCompleted"]
+              duration = stages["rollback"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
+              csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, rollback_started, rollback_completed, duration))
   # End ibu_analysis
 
   # Display summary of the collected CGU data
