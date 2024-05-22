@@ -37,24 +37,24 @@ logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 
-def examine_ibu_cgu(phases, phase, cgu_data, ibu_cgu_csv_file):
-  phases[phase] = {}
-  phases[phase]["cgus"] = {}
-  phases[phase]["cgus_count"] = len(cgu_data["items"])
-  phases[phase]["cgus_completed_count"] = 0
-  phases[phase]["cgus_timedout_count"] = 0
-  phases[phase]["creationTimestamp"] = ""
-  phases[phase]["startedAt"] = ""
-  phases[phase]["completedAt"] = ""
-  phases[phase]["succeeded_durations"] = []
-  phases[phase]["ibu_succeeded_durations"] = []
-  phases[phase]["batches_count"] = 0
-  phases[phase]["clusters_count"] = 0
-  phases[phase]["clusters_completed_count"] = 0
-  phases[phase]["clusters_timedout_count"] = 0
-  phases[phase]["clusters_timedout"] = []
+def examine_ibu_cgu(stages, stage, cgu_data, ibu_cgu_csv_file):
+  stages[stage] = {}
+  stages[stage]["cgus"] = {}
+  stages[stage]["cgus_count"] = len(cgu_data["items"])
+  stages[stage]["cgus_completed_count"] = 0
+  stages[stage]["cgus_timedout_count"] = 0
+  stages[stage]["creationTimestamp"] = ""
+  stages[stage]["startedAt"] = ""
+  stages[stage]["completedAt"] = ""
+  stages[stage]["succeeded_durations"] = []
+  stages[stage]["ibu_succeeded_durations"] = []
+  stages[stage]["batches_count"] = 0
+  stages[stage]["clusters_count"] = 0
+  stages[stage]["clusters_completed_count"] = 0
+  stages[stage]["clusters_timedout_count"] = 0
+  stages[stage]["clusters_timedout"] = []
 
-  current_phase_completed_clusters = []
+  current_stage_completed_clusters = []
 
   for item in cgu_data["items"]:
     cgu_name = item["metadata"]["name"]
@@ -71,27 +71,27 @@ def examine_ibu_cgu(phases, phase, cgu_data, ibu_cgu_csv_file):
     cgu_clusters_timedout_count = 0
     cgu_clusters_timedout = []
     logger.info("Name: {}".format(cgu_name))
-    if phases[phase]["creationTimestamp"] == "":
-      phases[phase]["creationTimestamp"] = cgu_created
-    elif phases[phase]["creationTimestamp"] > cgu_created:
-      logger.info("Replacing cgu created time {} with earlier time {}".format(phases[phase]["creationTimestamp"], cgu_created))
-      phases[phase]["creationTimestamp"] = cgu_created
+    if stages[stage]["creationTimestamp"] == "":
+      stages[stage]["creationTimestamp"] = cgu_created
+    elif stages[stage]["creationTimestamp"] > cgu_created:
+      logger.info("Replacing cgu created time {} with earlier time {}".format(stages[stage]["creationTimestamp"], cgu_created))
+      stages[stage]["creationTimestamp"] = cgu_created
     if "startedAt" in item["status"]["status"]:
       # Determine earliest startedAt time for the cgus in this namespace
       cgu_startedAt = datetime.strptime(item["status"]["status"]["startedAt"], "%Y-%m-%dT%H:%M:%SZ")
-      if phases[phase]["startedAt"] == "":
-        phases[phase]["startedAt"] = cgu_startedAt
-      elif phases[phase]["startedAt"] > cgu_startedAt:
-        logger.info("Replacing cgu started time {} with earlier time {}".format(phases[phase]["startedAt"], cgu_startedAt))
-        phases[phase]["startedAt"] = cgu_startedAt
+      if stages[stage]["startedAt"] == "":
+        stages[stage]["startedAt"] = cgu_startedAt
+      elif stages[stage]["startedAt"] > cgu_startedAt:
+        logger.info("Replacing cgu started time {} with earlier time {}".format(stages[stage]["startedAt"], cgu_startedAt))
+        stages[stage]["startedAt"] = cgu_startedAt
     if "completedAt" in item["status"]["status"]:
       # Determine latest populated completed time
       cgu_completedAt = datetime.strptime(item["status"]["status"]["completedAt"], "%Y-%m-%dT%H:%M:%SZ")
-      if phases[phase]["completedAt"] == "":
-        phases[phase]["completedAt"] = cgu_completedAt
-      elif phases[phase]["completedAt"] < cgu_completedAt:
-        logger.info("Replacing cgu completed time {} with later time {}".format(phases[phase]["completedAt"], cgu_completedAt))
-        phases[phase]["completedAt"] = cgu_completedAt
+      if stages[stage]["completedAt"] == "":
+        stages[stage]["completedAt"] = cgu_completedAt
+      elif stages[stage]["completedAt"] < cgu_completedAt:
+        logger.info("Replacing cgu completed time {} with later time {}".format(stages[stage]["completedAt"], cgu_completedAt))
+        stages[stage]["completedAt"] = cgu_completedAt
       cgu_duration = (cgu_completedAt - cgu_startedAt).total_seconds()
 
     if "conditions" in item["status"]:
@@ -104,90 +104,93 @@ def examine_ibu_cgu(phases, phase, cgu_data, ibu_cgu_csv_file):
             cgu_status = "InProgress"
           if condition["type"] == "Succeeded" and condition["status"] == "False" and condition["reason"] == "TimedOut":
             cgu_status = "TimedOut"
-            phases[phase]["cgus_timedout_count"] += 1
+            stages[stage]["cgus_timedout_count"] += 1
           if condition["type"] == "Succeeded" and condition["status"] == "True" and condition["reason"] == "Completed":
             cgu_status = "Completed"
-            phases[phase]["cgus_completed_count"] += 1
-            phases[phase]["succeeded_durations"].append(cgu_duration)
+            stages[stage]["cgus_completed_count"] += 1
+            stages[stage]["succeeded_durations"].append(cgu_duration)
 
     if "clusters" in item["status"]:
       cgu_clusters_count = len(item["status"]["clusters"])
       for cluster in item["status"]["clusters"]:
         if cluster["state"] == "complete":
           cgu_clusters_completed_count += 1
-          current_phase_completed_clusters.append(cluster["name"])
+          current_stage_completed_clusters.append(cluster["name"])
         elif cluster["state"] == "timedout":
           cgu_clusters_timedout_count += 1
           cgu_clusters_timedout.append(cluster["name"])
         else:
           logger.warn("Unexpected cluster state: {}".format(cluster["state"]))
 
-      phases[phase]["clusters_count"] += cgu_clusters_count
-      phases[phase]["clusters_completed_count"] += cgu_clusters_completed_count
-      phases[phase]["clusters_timedout_count"] += cgu_clusters_timedout_count
-      phases[phase]["clusters_timedout"].extend(cgu_clusters_timedout)
+      stages[stage]["clusters_count"] += cgu_clusters_count
+      stages[stage]["clusters_completed_count"] += cgu_clusters_completed_count
+      stages[stage]["clusters_timedout_count"] += cgu_clusters_timedout_count
+      stages[stage]["clusters_timedout"].extend(cgu_clusters_timedout)
 
-    phases[phase]["cgus"][cgu_name] = {}
-    phases[phase]["cgus"][cgu_name]["remediationPlan"] = OrderedDict()
+    stages[stage]["cgus"][cgu_name] = {}
+    stages[stage]["cgus"][cgu_name]["remediationPlan"] = OrderedDict()
 
     # cgu_batches_count = cgu_clusters_count // cgu_clusters_max_concurrency
     # if (cgu_clusters_count % cgu_clusters_max_concurrency) > 0:
     #   cgu_batches_count += 1
-    # phases[phase]["batches_count"] += cgu_batches_count
+    # stages[stage]["batches_count"] += cgu_batches_count
     #
     # for idx, cluster in enumerate(item["spec"]["clusters"]):
     #   batch_index = idx // cgu_clusters_max_concurrency
-    #   if str(batch_index) not in phases[phase]["cgus"][cgu_name]["remediationPlan"]:
-    #     phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)] = {}
-    #   phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster] = {}
-    #   if cluster in current_phase_completed_clusters:
-    #     phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "succeeded"
+    #   if str(batch_index) not in stages[stage]["cgus"][cgu_name]["remediationPlan"]:
+    #     stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)] = {}
+    #   stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster] = {}
+    #   if cluster in current_stage_completed_clusters:
+    #     stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "succeeded"
     #   else:
-    #     phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "timedout"
-    #   if phase == "prep":
-    #     phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepStarted"] = ""
-    #     phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepCompleted"] = ""
-    #   elif phase == "upgrade":
-    #     phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["cguStarted"] = cgu_startedAt
-    #     phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["upgradeCompleted"] = ""
-    #   phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["duration"] = 0
+    #     stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "timedout"
+    #   if stage == "prep":
+    #     stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepStarted"] = ""
+    #     stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepCompleted"] = ""
+    #   elif stage == "upgrade":
+    #     stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["cguStarted"] = cgu_startedAt
+    #     stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["upgradeCompleted"] = ""
+    #   stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["duration"] = 0
 
     if "remediationPlan" in item["status"]:
       cgu_batches_count = len(item["status"]["remediationPlan"])
-      phases[phase]["batches_count"] += cgu_batches_count
+      stages[stage]["batches_count"] += cgu_batches_count
       for batch_index, batch in enumerate(item["status"]["remediationPlan"]):
         logger.info("Batch Index: {}, {} Clusters".format(batch_index, len(batch)))
         for cluster in sorted(batch):
-          if str(batch_index) not in phases[phase]["cgus"][cgu_name]["remediationPlan"]:
-            phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)] = {}
-          phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster] = {}
-          if cluster in current_phase_completed_clusters:
-            phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "succeeded"
+          if str(batch_index) not in stages[stage]["cgus"][cgu_name]["remediationPlan"]:
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)] = {}
+          stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster] = {}
+          if cluster in current_stage_completed_clusters:
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "succeeded"
           else:
-            phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "timedout"
-          if phase == "prep":
-            phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepStarted"] = ""
-            phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepCompleted"] = ""
-          elif phase == "upgrade":
-            phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["cguStarted"] = cgu_startedAt
-            phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["upgradeCompleted"] = ""
-          phases[phase]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["duration"] = 0
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["status"] = "timedout"
+          if stage == "prep":
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepStarted"] = ""
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["prepCompleted"] = ""
+          elif stage == "upgrade":
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["cguStarted"] = cgu_startedAt
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["upgradeCompleted"] = ""
+          elif stage == "rollback":
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["rollbackStarted"] = cgu_startedAt
+            stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["rollbackCompleted"] = ""
+          stages[stage]["cgus"][cgu_name]["remediationPlan"][str(batch_index)][cluster]["duration"] = 0
 
     with open(ibu_cgu_csv_file, "a") as csv_file:
       csv_file.write("{},{},{},{},{},{},{},{},{},{},{}\n".format(cgu_name, cgu_status, cgu_created, cgu_startedAt, cgu_completedAt, cgu_duration, cgu_timeout, cgu_batches_count, cgu_clusters_count, cgu_clusters_completed_count, cgu_clusters_timedout_count))
 
-    phases[phase]["cgus"][cgu_name]["status"] = cgu_status
-    phases[phase]["cgus"][cgu_name]["creationTimestamp"] = cgu_created
-    phases[phase]["cgus"][cgu_name]["startedAt"] = cgu_startedAt
-    phases[phase]["cgus"][cgu_name]["completedAt"] = cgu_completedAt
-    phases[phase]["cgus"][cgu_name]["duration"] = cgu_duration
-    phases[phase]["cgus"][cgu_name]["max_concurrency"] = cgu_clusters_max_concurrency
-    phases[phase]["cgus"][cgu_name]["timeout"] = cgu_timeout
-    phases[phase]["cgus"][cgu_name]["batches_count"] = cgu_batches_count
-    phases[phase]["cgus"][cgu_name]["clusters_count"] = cgu_clusters_count
-    phases[phase]["cgus"][cgu_name]["clusters_completed_count"] = cgu_clusters_completed_count
-    phases[phase]["cgus"][cgu_name]["clusters_timedout_count"] = cgu_clusters_timedout_count
-    phases[phase]["cgus"][cgu_name]["clusters_timedout"] = cgu_clusters_timedout
+    stages[stage]["cgus"][cgu_name]["status"] = cgu_status
+    stages[stage]["cgus"][cgu_name]["creationTimestamp"] = cgu_created
+    stages[stage]["cgus"][cgu_name]["startedAt"] = cgu_startedAt
+    stages[stage]["cgus"][cgu_name]["completedAt"] = cgu_completedAt
+    stages[stage]["cgus"][cgu_name]["duration"] = cgu_duration
+    stages[stage]["cgus"][cgu_name]["max_concurrency"] = cgu_clusters_max_concurrency
+    stages[stage]["cgus"][cgu_name]["timeout"] = cgu_timeout
+    stages[stage]["cgus"][cgu_name]["batches_count"] = cgu_batches_count
+    stages[stage]["cgus"][cgu_name]["clusters_count"] = cgu_clusters_count
+    stages[stage]["cgus"][cgu_name]["clusters_completed_count"] = cgu_clusters_completed_count
+    stages[stage]["cgus"][cgu_name]["clusters_timedout_count"] = cgu_clusters_timedout_count
+    stages[stage]["cgus"][cgu_name]["clusters_timedout"] = cgu_clusters_timedout
 
 
 def main():
@@ -273,7 +276,7 @@ def main():
     cgu_finalize_data = json.load(cgu_data_file)
 
   # Examine all cgu data for a complete IBU upgrade
-  phases = OrderedDict()
+  stages = OrderedDict()
   ibus = []
 
   if len(cgu_prep_data["items"]) == 0:
@@ -285,8 +288,8 @@ def main():
     csv_file.write("name,status,creationTimestamp,startedAt,completedAt,duration,timeout,batchCount,clusterCount,clusterCompleted,clusterTimedout\n")
 
   logger.info("{} prep cgu(s) to examine".format(len(cgu_prep_data["items"])))
-  examine_ibu_cgu(phases, "prep", cgu_prep_data, ibu_cgu_csv_file)
-  # Use prep phase for all ibu data to collect
+  examine_ibu_cgu(stages, "prep", cgu_prep_data, ibu_cgu_csv_file)
+  # Use prep stage for all ibu data to collect
   for item in cgu_prep_data["items"]:
     for cluster in item["status"]["clusters"]:
       ibus.append(cluster["name"])
@@ -296,19 +299,19 @@ def main():
     logger.info("No upgrade cgu(s) to examine")
   else:
     logger.info("{} upgrade cgu(s) to examine".format(len(cgu_upgrade_data["items"])))
-    examine_ibu_cgu(phases, "upgrade", cgu_upgrade_data, ibu_cgu_csv_file)
+    examine_ibu_cgu(stages, "upgrade", cgu_upgrade_data, ibu_cgu_csv_file)
 
   if len(cgu_rollback_data["items"]) == 0:
     logger.info("No rollback cgu(s) to examine")
   else:
     logger.info("{} rollback cgu(s) to examine".format(len(cgu_rollback_data["items"])))
-    examine_ibu_cgu(phases, "rollback", cgu_rollback_data, ibu_cgu_csv_file)
+    examine_ibu_cgu(stages, "rollback", cgu_rollback_data, ibu_cgu_csv_file)
 
   if len(cgu_finalize_data["items"]) == 0:
     logger.info("No finalize cgu(s) to examine")
   else:
     logger.info("{} finalize cgu(s) to examine".format(len(cgu_finalize_data["items"])))
-    examine_ibu_cgu(phases, "finalize", cgu_finalize_data, ibu_cgu_csv_file)
+    examine_ibu_cgu(stages, "finalize", cgu_finalize_data, ibu_cgu_csv_file)
 
   if ibu_analysis:
     # Get individual cluster IBU data here
@@ -344,56 +347,56 @@ def main():
               ibu_upgrade_completed_time = datetime.strptime(condition["lastTransitionTime"], "%Y-%m-%dT%H:%M:%SZ")
 
       # Match timestamps from IBU data to the correct cluster
-      for phase in phases:
-        for cgu in phases[phase]["cgus"]:
+      for stage in stages:
+        for cgu in stages[stage]["cgus"]:
           found_batch = False
-          for batch in phases[phase]["cgus"][cgu]["remediationPlan"]:
-            if cluster in phases[phase]["cgus"][cgu]["remediationPlan"][batch]:
+          for batch in stages[stage]["cgus"][cgu]["remediationPlan"]:
+            if cluster in stages[stage]["cgus"][cgu]["remediationPlan"][batch]:
               duration = 0
-              if phase == "prep":
-                phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepStarted"] = ibu_prep_started_time
-                phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepCompleted"] = ibu_prep_completed_time
+              if stage == "prep":
+                stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepStarted"] = ibu_prep_started_time
+                stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepCompleted"] = ibu_prep_completed_time
                 if ibu_prep_started_time != "" and ibu_prep_completed_time != "":
                   duration = (ibu_prep_completed_time - ibu_prep_started_time).total_seconds()
-              elif phase == "upgrade" and ibu_upgrade_completed_time != "":
-                ibu_cgu_upgrade_started_time = phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["cguStarted"]
-                phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"] = ibu_upgrade_completed_time
+              elif stage == "upgrade" and ibu_upgrade_completed_time != "":
+                ibu_cgu_upgrade_started_time = stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["cguStarted"]
+                stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"] = ibu_upgrade_completed_time
                 if ibu_upgrade_completed_time != "":
                   duration = (ibu_upgrade_completed_time - ibu_cgu_upgrade_started_time).total_seconds()
-              phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] = duration
+              stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] = duration
               if duration > 0:
-                phases[phase]["ibu_succeeded_durations"].append(duration)
+                stages[stage]["ibu_succeeded_durations"].append(duration)
               found_batch = True
               break
           if found_batch:
             break
-    # Write the IBU data to a CSV for prep phase
+    # Write the IBU data to a CSV for prep stage
     logger.info("Writing CSV: {}".format(ibu_prep_csv_file))
     with open(ibu_prep_csv_file, "a") as csv_file:
       csv_file.write("name,status,cgu,batch,prepStarted,prepCompleted,duration\n")
-      for cgu in phases["prep"]["cgus"]:
-        for batch in phases["prep"]["cgus"][cgu]["remediationPlan"]:
-          for cluster in phases["prep"]["cgus"][cgu]["remediationPlan"][batch]:
-            status = phases["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["status"]
-            prep_started = phases["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepStarted"]
-            prep_completed = phases["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepCompleted"]
-            duration = phases["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
+      for cgu in stages["prep"]["cgus"]:
+        for batch in stages["prep"]["cgus"][cgu]["remediationPlan"]:
+          for cluster in stages["prep"]["cgus"][cgu]["remediationPlan"][batch]:
+            status = stages["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["status"]
+            prep_started = stages["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepStarted"]
+            prep_completed = stages["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["prepCompleted"]
+            duration = stages["prep"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
             # if duration == 0:
             #   logger.error("Cluster with 0 duration: {}".format(cluster))
             csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, prep_started, prep_completed, duration))
 
-    # Write the IBU data to a CSV for upgrade phase
-    if "upgrade" in phases:
+    # Write the IBU data to a CSV for upgrade stage
+    if "upgrade" in stages:
       logger.info("Writing CSV: {}".format(ibu_upgrade_csv_file))
       with open(ibu_upgrade_csv_file, "a") as csv_file:
         csv_file.write("name,status,cgu,batch,cguStarted,upgradeCompleted,duration\n")
-        for cgu in phases["upgrade"]["cgus"]:
-          for batch in phases["upgrade"]["cgus"][cgu]["remediationPlan"]:
-            for cluster in phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch]:
-              status = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["status"]
-              cgu_started = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["cguStarted"]
-              upgrade_completed = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"]
-              duration = phases["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
+        for cgu in stages["upgrade"]["cgus"]:
+          for batch in stages["upgrade"]["cgus"][cgu]["remediationPlan"]:
+            for cluster in stages["upgrade"]["cgus"][cgu]["remediationPlan"][batch]:
+              status = stages["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["status"]
+              cgu_started = stages["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["cguStarted"]
+              upgrade_completed = stages["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["upgradeCompleted"]
+              duration = stages["upgrade"]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"]
               csv_file.write("{},{},{},{},{},{},{}\n".format(cluster, status, cgu, batch, cgu_started, upgrade_completed, duration))
   # End ibu_analysis
 
@@ -404,59 +407,59 @@ def main():
     log_write(stats_file, "##########################################################################################")
     log_write(stats_file, "Stats on imagebasedupgrade clustergroupupgrades CRs in namespace {}".format(cliargs.namespace))
     log_write(stats_file, "Expected OCP Version {}".format(cliargs.ocp_version))
-    cgu_total = sum([phases[x]["cgus_count"] for x in phases ])
-    log_write(stats_file, "Total CGUs for all phases: {}".format(cgu_total))
+    cgu_total = sum([stages[x]["cgus_count"] for x in stages ])
+    log_write(stats_file, "Total CGUs for all stages: {}".format(cgu_total))
     log_write(stats_file, "##########################################################################################")
     # log_write(stats_file, "#############################################")
-    for phase in phases:
-      phase_duration = (phases[phase]["completedAt"] - phases[phase]["creationTimestamp"]).total_seconds()
-      log_write(stats_file, "Phase: {}".format(phase))
-      cgus_completed_p = round(((phases[phase]["cgus_completed_count"] / phases[phase]["cgus_count"]) * 100), 1)
-      cgus_timedout_p = round(((phases[phase]["cgus_timedout_count"] / phases[phase]["cgus_count"]) * 100), 1)
-      log_write(stats_file, "CGUs: {} Total, {} Completed ({}%), {} TimedOut ({}%)".format(phases[phase]["cgus_count"], phases[phase]["cgus_completed_count"], cgus_completed_p, phases[phase]["cgus_timedout_count"], cgus_timedout_p))
-      log_write(stats_file, "Count of Batches for phase: {}".format(phases[phase]["batches_count"]))
-      clusters_completed_p = round(((phases[phase]["clusters_completed_count"] / phases[phase]["clusters_count"]) * 100), 1)
-      clusters_timedout_p = round(((phases[phase]["clusters_timedout_count"] / phases[phase]["clusters_count"]) * 100), 1)
-      log_write(stats_file, "Clusters: {} Total, {} completed ({}%), {} timedout ({}%)".format(phases[phase]["clusters_count"], phases[phase]["clusters_completed_count"], clusters_completed_p, phases[phase]["clusters_timedout_count"], clusters_timedout_p))
-      log_write(stats_file, "Timedout Clusters: {}".format(phases[phase]["clusters_timedout"]))
-      log_write(stats_file, "Earliest CGU creationTimestamp: {}".format(phases[phase]["creationTimestamp"]))
-      log_write(stats_file, "Earliest CGU startedAt timestamp: {}".format(phases[phase]["startedAt"]))
-      log_write(stats_file, "Latest CGU completedAt timestamp: {}".format(phases[phase]["completedAt"]))
-      log_write(stats_file, "Phase duration: {}s :: {}".format(phase_duration, str(timedelta(seconds=phase_duration))))
-      if len(phases[phase]["succeeded_durations"]) > 0:
-        log_write(stats_file, "CGU Success Durations count: {}".format(len(phases[phase]["succeeded_durations"])))
-        log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(phases[phase]["succeeded_durations"])))
-        log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(phases[phase]["succeeded_durations"], False)))
-      log_write(stats_file, "CGU IBU recorded Duration Total Count: {}".format(len(phases[phase]["ibu_succeeded_durations"])))
-      log_write(stats_file, "CGU IBU Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(phases[phase]["ibu_succeeded_durations"])))
-      log_write(stats_file, "CGU IBU Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(phases[phase]["ibu_succeeded_durations"], False)))
-      for cgu in phases[phase]["cgus"]:
+    for stage in stages:
+      stage_duration = (stages[stage]["completedAt"] - stages[stage]["creationTimestamp"]).total_seconds()
+      log_write(stats_file, "Stage: {}".format(stage))
+      cgus_completed_p = round(((stages[stage]["cgus_completed_count"] / stages[stage]["cgus_count"]) * 100), 1)
+      cgus_timedout_p = round(((stages[stage]["cgus_timedout_count"] / stages[stage]["cgus_count"]) * 100), 1)
+      log_write(stats_file, "CGUs: {} Total, {} Completed ({}%), {} TimedOut ({}%)".format(stages[stage]["cgus_count"], stages[stage]["cgus_completed_count"], cgus_completed_p, stages[stage]["cgus_timedout_count"], cgus_timedout_p))
+      log_write(stats_file, "Count of Batches for stage: {}".format(stages[stage]["batches_count"]))
+      clusters_completed_p = round(((stages[stage]["clusters_completed_count"] / stages[stage]["clusters_count"]) * 100), 1)
+      clusters_timedout_p = round(((stages[stage]["clusters_timedout_count"] / stages[stage]["clusters_count"]) * 100), 1)
+      log_write(stats_file, "Clusters: {} Total, {} completed ({}%), {} timedout ({}%)".format(stages[stage]["clusters_count"], stages[stage]["clusters_completed_count"], clusters_completed_p, stages[stage]["clusters_timedout_count"], clusters_timedout_p))
+      log_write(stats_file, "Timedout Clusters: {}".format(stages[stage]["clusters_timedout"]))
+      log_write(stats_file, "Earliest CGU creationTimestamp: {}".format(stages[stage]["creationTimestamp"]))
+      log_write(stats_file, "Earliest CGU startedAt timestamp: {}".format(stages[stage]["startedAt"]))
+      log_write(stats_file, "Latest CGU completedAt timestamp: {}".format(stages[stage]["completedAt"]))
+      log_write(stats_file, "Stage duration: {}s :: {}".format(stage_duration, str(timedelta(seconds=stage_duration))))
+      if len(stages[stage]["succeeded_durations"]) > 0:
+        log_write(stats_file, "CGU Success Durations count: {}".format(len(stages[stage]["succeeded_durations"])))
+        log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(stages[stage]["succeeded_durations"])))
+        log_write(stats_file, "CGU Success Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(stages[stage]["succeeded_durations"], False)))
+      log_write(stats_file, "CGU IBU recorded Duration Total Count: {}".format(len(stages[stage]["ibu_succeeded_durations"])))
+      log_write(stats_file, "CGU IBU Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(stages[stage]["ibu_succeeded_durations"])))
+      log_write(stats_file, "CGU IBU Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(stages[stage]["ibu_succeeded_durations"], False)))
+      for cgu in stages[stage]["cgus"]:
         log_write(stats_file, "#############################################")
-        status = phases[phase]["cgus"][cgu]["status"]
-        created = phases[phase]["cgus"][cgu]["creationTimestamp"]
-        startedAt = phases[phase]["cgus"][cgu]["startedAt"]
-        completedAt = phases[phase]["cgus"][cgu]["completedAt"]
-        duration = phases[phase]["cgus"][cgu]["duration"]
-        timeout = phases[phase]["cgus"][cgu]["timeout"]
-        batches = phases[phase]["cgus"][cgu]["batches_count"]
-        clusters = phases[phase]["cgus"][cgu]["clusters_count"]
-        clusters_completed = phases[phase]["cgus"][cgu]["clusters_completed_count"]
-        clusters_timedout = phases[phase]["cgus"][cgu]["clusters_timedout_count"]
+        status = stages[stage]["cgus"][cgu]["status"]
+        created = stages[stage]["cgus"][cgu]["creationTimestamp"]
+        startedAt = stages[stage]["cgus"][cgu]["startedAt"]
+        completedAt = stages[stage]["cgus"][cgu]["completedAt"]
+        duration = stages[stage]["cgus"][cgu]["duration"]
+        timeout = stages[stage]["cgus"][cgu]["timeout"]
+        batches = stages[stage]["cgus"][cgu]["batches_count"]
+        clusters = stages[stage]["cgus"][cgu]["clusters_count"]
+        clusters_completed = stages[stage]["cgus"][cgu]["clusters_completed_count"]
+        clusters_timedout = stages[stage]["cgus"][cgu]["clusters_timedout_count"]
         completed_p = round(((clusters_completed / clusters) * 100), 1)
         timedout_p = round(((clusters_timedout / clusters) * 100), 1)
         log_write(stats_file, "CGU: {}, Status: {}, Batches: {}".format(cgu, status, batches))
         log_write(stats_file, "Clusters: {}, completed: {} ({}%), timedout: {} ({}%)".format(clusters, clusters_completed, completed_p, clusters_timedout, timedout_p))
-        log_write(stats_file, "Timedout Clusters: {}".format(phases[phase]["cgus"][cgu]["clusters_timedout"]))
+        log_write(stats_file, "Timedout Clusters: {}".format(stages[stage]["cgus"][cgu]["clusters_timedout"]))
         log_write(stats_file, "creationTimestamp: {}".format(created))
         log_write(stats_file, "startedAt: {}".format(startedAt))
         log_write(stats_file, "completedAt: {}".format(completedAt))
         log_write(stats_file, "Duration: {}s :: {}, Timeout: {}".format(duration, str(timedelta(seconds=duration)), timeout))
-        for batch in phases[phase]["cgus"][cgu]["remediationPlan"]:
-          b_clusters = len(phases[phase]["cgus"][cgu]["remediationPlan"][batch])
+        for batch in stages[stage]["cgus"][cgu]["remediationPlan"]:
+          b_clusters = len(stages[stage]["cgus"][cgu]["remediationPlan"][batch])
           recorded_durations = []
-          for cluster in phases[phase]["cgus"][cgu]["remediationPlan"][batch]:
-            if phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] > 0:
-              recorded_durations.append(phases[phase]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"])
+          for cluster in stages[stage]["cgus"][cgu]["remediationPlan"][batch]:
+            if stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"] > 0:
+              recorded_durations.append(stages[stage]["cgus"][cgu]["remediationPlan"][batch][cluster]["duration"])
           log_write(stats_file, "Batch: {}, Clusters: {}, Recorded Samples: {}".format(batch, b_clusters, len(recorded_durations)))
           log_write(stats_file, "(IBU) Batch Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(recorded_durations)))
           log_write(stats_file, "(IBU) Batch Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(recorded_durations, False)))
