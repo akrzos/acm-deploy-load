@@ -202,6 +202,7 @@ def main():
 
   parser.add_argument("-p", "--prep-label", type=str, default="ibu-prep", help="Expected label to equal expected version for preparation cgu(s)")
   parser.add_argument("-u", "--upgrade-label", type=str, default="ibu-upgrade", help="Expected label to equal expected version for upgrade cgu(s)")
+  parser.add_argument("-r", "--rollback-label", type=str, default="ibu-rollback", help="Expected label to equal expected version for rollback cgu(s)")
   parser.add_argument("-f", "--finalize-label", type=str, default="ibu-finalize", help="Expected label to equal expected version for finalize cgu(s)")
 
   parser.add_argument("--offline-process", action="store_true", default=False, help="Uses previously stored raw data")
@@ -234,54 +235,43 @@ def main():
   ibu_cgu_csv_file = "{}/ibu-{}-cgus-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
   ibu_prep_csv_file = "{}/ibu-{}-prep-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
   ibu_upgrade_csv_file = "{}/ibu-{}-upgrade-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
+  ibu_rollback_csv_file = "{}/ibu-{}-rollback-{}.csv".format(cliargs.results_directory, cliargs.ocp_version, ts)
   ibu_cgu_stats_file = "{}/ibu-{}-cgus-{}.stats".format(cliargs.results_directory, cliargs.ocp_version, ts)
 
-  # Gather all CGU data for an IBU upgrade
-  prep_label = "{}={}".format(cliargs.prep_label, cliargs.ocp_version)
-  upgrade_label = "{}={}".format(cliargs.upgrade_label, cliargs.ocp_version)
-  finalize_label = "{}={}".format(cliargs.finalize_label, cliargs.ocp_version)
+  # Gather all CGU data for an IBU upgrade, Stage label = file
+  gather_stages = OrderedDict()
+  gather_stages[cliargs.prep_label] = "prep-cgus.json"
+  gather_stages[cliargs.upgrade_label] = "upgrade-cgus.json"
+  gather_stages[cliargs.rollback_label] = "rollback-cgus.json"
+  gather_stages[cliargs.finalize_label] = "finalize-cgus.json"
 
-  if not cliargs.offline_process:
-    oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", cliargs.namespace, "-l", prep_label, "-o", "json"]
-    rc, output = command(oc_cmd, False, retries=3, no_log=True)
-    if rc != 0:
-      logger.error("analyze-imagebasedupgrade, oc get clustergroupupgrades -n {} -l {} rc: {}".format(cliargs.namespace, prep_label, cliargs.ocp_version, rc))
-      sys.exit(1)
-    with open("{}/prep-cgus.json".format(raw_data_dir), "w") as cgu_data_file:
-      cgu_data_file.write(output)
-  else:
-    logger.info("Reading {}/prep-cgus.json".format(raw_data_dir))
+  for stage_label in gather_stages:
+    if not cliargs.offline_process:
+      label_selector = "{}={}".format(stage_label, cliargs.ocp_version)
+      oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", cliargs.namespace, "-l", label_selector, "-o", "json"]
+      rc, output = command(oc_cmd, False, retries=3, no_log=True)
+      if rc != 0:
+        logger.error("analyze-imagebasedupgrade, oc get clustergroupupgrades -n {} -l {} rc: {}".format(cliargs.namespace, label_selector, cliargs.ocp_version, rc))
+        sys.exit(1)
+      with open("{}/{}".format(raw_data_dir, gather_stages[stage_label]), "w") as cgu_data_file:
+        cgu_data_file.write(output)
 
+  logger.info("Reading {}/prep-cgus.json".format(raw_data_dir))
   with open("{}/prep-cgus.json".format(raw_data_dir), "r") as cgu_data_file:
     cgu_prep_data = json.load(cgu_data_file)
 
-  if not cliargs.offline_process:
-    oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", cliargs.namespace, "-l", upgrade_label, "-o", "json"]
-    rc, output = command(oc_cmd, False, retries=3, no_log=True)
-    if rc != 0:
-      logger.error("analyze-imagebasedupgrade, oc get clustergroupupgrades -n {} -l {} rc: {}".format(cliargs.namespace, upgrade_label, cliargs.ocp_version, rc))
-      sys.exit(1)
-    with open("{}/upgrade-cgus.json".format(raw_data_dir), "w") as cgu_data_file:
-      cgu_data_file.write(output)
-  else:
-    logger.info("Reading {}/upgrade-cgus.json".format(raw_data_dir))
-
+  logger.info("Reading {}/upgrade-cgus.json".format(raw_data_dir))
   with open("{}/upgrade-cgus.json".format(raw_data_dir), "r") as cgu_data_file:
     cgu_upgrade_data = json.load(cgu_data_file)
 
-  if not cliargs.offline_process:
-    oc_cmd = ["oc", "get", "clustergroupupgrades", "-n", cliargs.namespace, "-l", finalize_label, "-o", "json"]
-    rc, output = command(oc_cmd, False, retries=3, no_log=True)
-    if rc != 0:
-      logger.error("analyze-imagebasedupgrade, oc get clustergroupupgrades -n {} -l {} rc: {}".format(cliargs.namespace, finalize_label, cliargs.ocp_version, rc))
-      sys.exit(1)
-    with open("{}/finalize-cgus.json".format(raw_data_dir), "w") as cgu_data_file:
-      cgu_data_file.write(output)
-  else:
-    logger.info("Reading {}/finalize-cgus.json".format(raw_data_dir))
+  logger.info("Reading {}/rollback-cgus.json".format(raw_data_dir))
+  with open("{}/rollback-cgus.json".format(raw_data_dir), "r") as cgu_data_file:
+    cgu_rollback_data = json.load(cgu_data_file)
 
+  logger.info("Reading {}/finalize-cgus.json".format(raw_data_dir))
   with open("{}/finalize-cgus.json".format(raw_data_dir), "r") as cgu_data_file:
     cgu_finalize_data = json.load(cgu_data_file)
+
   # Examine all cgu data for a complete IBU upgrade
   phases = OrderedDict()
   ibus = []
@@ -307,6 +297,12 @@ def main():
   else:
     logger.info("{} upgrade cgu(s) to examine".format(len(cgu_upgrade_data["items"])))
     examine_ibu_cgu(phases, "upgrade", cgu_upgrade_data, ibu_cgu_csv_file)
+
+  if len(cgu_rollback_data["items"]) == 0:
+    logger.info("No rollback cgu(s) to examine")
+  else:
+    logger.info("{} rollback cgu(s) to examine".format(len(cgu_rollback_data["items"])))
+    examine_ibu_cgu(phases, "rollback", cgu_rollback_data, ibu_cgu_csv_file)
 
   if len(cgu_finalize_data["items"]) == 0:
     logger.info("No finalize cgu(s) to examine")
