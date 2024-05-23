@@ -148,6 +148,16 @@
     debug:
       msg: "{{ check_csvs.stdout_lines }}"
 
+  - name: Get operator pods for display
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get po --no-headers -n {{ item.namespace }}
+    register: check_operator_pods
+    loop: "{{ operators_to_upgrade }}"
+  - name: Display operator pods prior to Operator upgrade
+    debug:
+      msg: "{{ item.stdout_lines }}"
+    loop: "{{ check_operator_pods.results }}"
+
   - name: Check that the catalogsource for operator upgrade is ready
     shell: |
       KUBECONFIG={{ seedcluster_kubeconfig }} oc get catalogsource -n openshift-marketplace {{ catalogsource_name }} -o json | jq -r '.status.connectionState.lastObservedState'
@@ -180,12 +190,32 @@
     shell: |
       KUBECONFIG={{ seedcluster_kubeconfig }} oc get csvs -A
     register: check_csvs
-  - name: Display CSVs prior to Operator upgrade
+  - name: Display CSVs after Operator upgrade
     debug:
       msg: "{{ check_csvs.stdout_lines }}"
+
+  - name: Get operator pods for display
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get po --no-headers -n {{ item.namespace }}
+    register: check_operator_pods
+    loop: "{{ operators_to_upgrade }}"
+  - name: Display operator pods after the Operator upgrade
+    debug:
+      msg: "{{ item.stdout_lines }}"
+    loop: "{{ check_operator_pods.results }}"
 
   # Operators have more pods than just the operator pod which can take significant time to be replaced after operator
   # upgrade claims the install is completed. Pausing ensures those pods are replaced after operator upgrade for IBU.
   - name: Pause for 10 minutes for remaining operator pod replacement
     pause:
       seconds: 600
+
+  - name: Get operator pods for display
+    shell: |
+      KUBECONFIG={{ seedcluster_kubeconfig }} oc get po --no-headers -n {{ item.namespace }}
+    register: check_operator_pods
+    loop: "{{ operators_to_upgrade }}"
+  - name: Display operator pods 10 minutes after the Operator upgrade
+    debug:
+      msg: "{{ item.stdout_lines }}"
+    loop: "{{ check_operator_pods.results }}"
