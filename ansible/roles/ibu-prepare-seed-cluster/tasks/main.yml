@@ -73,7 +73,7 @@
   register: check_cluster_namespace
   ignore_errors: true
   until: check_cluster_namespace.rc != 0
-  retries: 36
+  retries: 180
   delay: 5
 
 - name: Template the gen_checksum.sh script
