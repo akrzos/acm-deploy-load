@@ -71,13 +71,19 @@ spec:
         stage: Rollback
       status:
         conditions:
-          - status: "True"
+          - message: Rollback completed
+            reason: Completed
+            status: "True"
             type: RollbackCompleted
     - fileName: ibu/ImageBasedUpgrade.yaml
       policyName: finalize-policy
+      complianceType: mustonlyhave
       spec:
         stage: Idle
+    - fileName: ibu/ImageBasedUpgrade.yaml
+      policyName: finalize-policy
       status:
         conditions:
-          - status: "True"
+          - reason: Idle
+            status: "True"
             type: Idle

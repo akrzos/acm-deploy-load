@@ -8,7 +8,12 @@ metadata:
     ibu-upgrade: "{{ ibu_seed_image_version }}"
 spec:
   actions:
+    beforeEnable:
+      addClusterAnnotations:
+        import.open-cluster-management.io/disable-auto-import: "true"
     afterCompletion:
+      removeClusterAnnotations:
+      - import.open-cluster-management.io/disable-auto-import
       addClusterLabels:
         ibu-upgraded: "{{ ibu_seed_image_version }}"
         ibu-upgrade: "{{ ibu_seed_image_version }}-{{ '%04d' | format(item) }}"

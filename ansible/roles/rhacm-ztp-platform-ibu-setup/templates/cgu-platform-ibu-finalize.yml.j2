@@ -7,6 +7,10 @@ metadata:
   labels:
     ibu-finalize: "{{ ibu_seed_image_version }}"
 spec:
+  actions:
+    beforeEnable:
+      removeClusterAnnotations:
+      - import.open-cluster-management.io/disable-auto-import
   managedPolicies:
   - group-ibu-finalize-policy
   clusterSelector:
