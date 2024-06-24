@@ -145,4 +145,7 @@ spec:
         - mirrors:
           - {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}
           source: registry.redhat.io
+        - mirrors:
+          - {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}
+          source: brew.registry.redhat.io
 {% endif %}
