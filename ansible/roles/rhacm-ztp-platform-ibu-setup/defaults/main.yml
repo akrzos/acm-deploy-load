@@ -5,6 +5,9 @@ clusters_label: "ztp-done="
 
 ibu_seed_image_version: "4.15.5"
 
+# Use ibu/ImageBasedUpgrade.yaml for IBU in ztp-site-generator, and just ImageBasedUpgrade.yaml to use the IBU source-cr included in rhacm-ztp-setup role
+ibu_filename: ibu/ImageBasedUpgrade.yaml
+
 common_catalogsource_name: rh-du-operators
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
 operator_index_tag: v4.15

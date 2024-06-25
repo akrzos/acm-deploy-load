@@ -72,8 +72,10 @@ s3_secret_access_key: minio123
 
 # Image Based Upgrades requires the Lifecycle-agent operator to be installed on SNOs
 include_lca_operator: false
-# stable for brew, alpha for 4.15
+# alpha for 4.15, stable for brew
 lifecycle_agent_channel: alpha
+# v1alpha1 (alpha installed operator), v1 for brew (stable)
+ibu_source_crs_apiversion: v1alpha1
 
 # Only implemented for SNOs, organizes the CRs into 13 policies instead of the default of 5 policies
 manyPolicies: false

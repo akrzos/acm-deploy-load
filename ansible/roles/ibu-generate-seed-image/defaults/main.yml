@@ -1,7 +1,10 @@
 ---
 # ibu-generate-seed-image default vars
 
-# Alwasy set with a cluster you previously used as a seed cluster
+# v1 for brew (stable), v1alpha1 (alpha installed operator)
+seedgenerator_apiversion: v1alpha1
+
+# Always set with a cluster you previously used as a seed cluster
 seed_cluster: ""
 
 # The kubeconfig to the cluster being generated into a ibu seed image

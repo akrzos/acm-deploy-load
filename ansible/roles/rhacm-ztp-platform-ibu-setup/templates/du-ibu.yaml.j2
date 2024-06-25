@@ -12,7 +12,7 @@ spec:
     compliant: 10s
     noncompliant: 10s
   sourceFiles:
-    - fileName: ibu/ImageBasedUpgrade.yaml
+    - fileName: {{ ibu_filename }}
       policyName: prep-policy
 {% if ibu_rollback_annotations and (ibu_auto_rollback_disabledForPostRebootConfig or ibu_auto_rollback_disabledForUpgradeCompletion or ibu_auto_rollback_disabledInitMonitor) %}
       metadata:
@@ -56,7 +56,7 @@ spec:
       data:
         seedAuth: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
         .dockerconfigjson: {{ lookup('template', './seedgen-auth.j2') | to_json | b64encode }}
-    - fileName: ibu/ImageBasedUpgrade.yaml
+    - fileName: {{ ibu_filename }}
       policyName: upgrade-policy
       spec:
         stage: Upgrade
@@ -65,7 +65,7 @@ spec:
           - reason: Completed
             status: "True"
             type: UpgradeCompleted
-    - fileName: ibu/ImageBasedUpgrade.yaml
+    - fileName: {{ ibu_filename }}
       policyName: rollback-policy
       spec:
         stage: Rollback
@@ -75,12 +75,12 @@ spec:
             reason: Completed
             status: "True"
             type: RollbackCompleted
-    - fileName: ibu/ImageBasedUpgrade.yaml
+    - fileName: {{ ibu_filename }}
       policyName: finalize-policy
       complianceType: mustonlyhave
       spec:
         stage: Idle
-    - fileName: ibu/ImageBasedUpgrade.yaml
+    - fileName: {{ ibu_filename }}
       policyName: finalize-policy
       status:
         conditions:
