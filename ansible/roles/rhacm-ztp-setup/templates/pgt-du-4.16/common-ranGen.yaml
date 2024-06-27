@@ -11,6 +11,36 @@ spec:
     # du-profile: "latest"
   sourceFiles:
     # Create operators policies that will be installed in all clusters
+{% if include_oadp_operator %}
+    - fileName: OadpSubscriptionNS.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: OadpSubscriptionOperGroup.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: OadpSubscription.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+      spec:
+        channel: stable-1.3
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
+        source: {{ common_catalogsource_name }}
+{% endif %}
+    - fileName: OadpOperatorStatus.yaml
+      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+{% endif %}
+{% if include_lca_operator %}
+    - fileName: LcaSubscriptionNS.yaml
+      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: LcaSubscriptionOperGroup.yaml
+      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: LcaSubscription.yaml
+      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
+      spec:
+        channel: {{ lifecycle_agent_channel }}
+{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
+        source: {{ common_catalogsource_name }}
+{% endif %}
+    - fileName: LcaOperatorStatus.yaml
+      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
+{% endif %}
     - fileName: SriovSubscriptionNS.yaml
       policyName: "{{ 'sriov-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: SriovSubscriptionOperGroup.yaml
@@ -103,60 +133,15 @@ spec:
     #   policyName: "subscriptions-policy"
     # - fileName: BareMetalEventRelaySubscription.yaml
     #   policyName: "subscriptions-policy"
-    #
-    # LCA operator is used for orchestrating Image Based Upgrade for SNO
-{% if include_lca_operator %}
-    - fileName: LcaSubscriptionNS.yaml
-      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: LcaSubscriptionOperGroup.yaml
-      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: LcaSubscription.yaml
-      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
-      spec:
-        channel: {{ lifecycle_agent_channel }}
-{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
-        source: {{ common_catalogsource_name }}
-{% endif %}
-    - fileName: LcaOperatorStatus.yaml
-      policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% else %}
-    # - fileName: LcaSubscriptionNS.yaml
-    #   policyName: "subscriptions-policy"
-    # - fileName: LcaSubscriptionOperGroup.yaml
-    #   policyName: "subscriptions-policy"
-    # - fileName: LcaSubscription.yaml
-    #   policyName: "subscriptions-policy"
-    # - fileName: LcaOperatorStatus.yaml
-    #   policyName: "subscriptions-policy"
-    #
-{% endif %}
-{% if include_oadp_operator %}
-    - fileName: OadpSubscriptionNS.yaml
-      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: OadpSubscriptionOperGroup.yaml
-      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
-    - fileName: OadpSubscription.yaml
-      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
-      spec:
-        channel: stable-1.3
-{% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
-        source: {{ common_catalogsource_name }}
-{% endif %}
-    - fileName: OadpOperatorStatus.yaml
-      policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
-{% else %}
-    # - fileName: OadpSubscriptionNS.yaml
-    #   policyName: "subscriptions-policy"
-    # - fileName: OadpSubscriptionOperGroup.yaml
-    #   policyName: "subscriptions-policy"
-    # - fileName: OadpSubscription.yaml
-    #   policyName: "subscriptions-policy"
-    # - fileName: OadpOperatorStatus.yaml
-    #   policyName: "subscriptions-policy"
-    #
-{% endif %}
     - fileName: ReduceMonitoringFootprint.yaml
       policyName: "{{ 'monitoring-config' if manyPolicies else 'config' }}-policy"
+{% if include_clo_fix %}
+    - fileName: logging-openshift-io_elasticsearches.yaml
+      policyName: "config-policy"
+{% else %}
+    #- fileName: logging-openshift-io_elasticsearches.yaml
+    #  policyName: "config-policy"
+{% endif %}
 {% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
     #
     # These CRs are in support of installation from a disconnected registry
