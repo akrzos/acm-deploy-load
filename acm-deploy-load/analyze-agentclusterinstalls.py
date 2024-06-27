@@ -60,6 +60,12 @@ def main():
   aci_installcompleted_values = []
   for item in aci_data["items"]:
     aci_name = item["metadata"]["name"]
+    if aci_name == "local-agent-cluster-cluster-install":
+      logger.info("analyze-agentclusterinstalls, Skipping local-agent-cluster-cluster-install")
+      continue
+    if aci_name == "local-cluster":
+      logger.info("analyze-agentclusterinstalls, Skipping local-cluster")
+      continue
     aci_status = "unknown"
     aci_creationTimestamp = item["metadata"]["creationTimestamp"]
     aci_completed_ltt = ""
