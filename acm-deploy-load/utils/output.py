@@ -82,7 +82,8 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     phase_break(True, report)
     log_write(report, "Versions")
     log_write(report, " * ACM: {}".format(cliargs.acm_version))
-    log_write(report, " * AAP: {}".format(cliargs.aap_version))
+    if cliargs.aap_version != "null" and cliargs.aap_version != "":
+      log_write(report, " * AAP: {}".format(cliargs.aap_version))
     log_write(report, " * Test: {}".format(cliargs.test_version))
     log_write(report, " * Hub OCP: {}".format(cliargs.hub_version))
     log_write(report, " * Deployed OCP: {}".format(cliargs.deploy_version))
