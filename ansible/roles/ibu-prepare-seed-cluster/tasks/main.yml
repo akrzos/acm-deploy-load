@@ -92,14 +92,23 @@
     src: "{{ install_directory }}/rhacm-ztp/ibu/seed/checksum-{{ ibu_seed_image_version }}.yaml"
   register: image_signature_data
 
-- name: Template the seed cluster release-image-signature
+- name: Template the seed cluster release-image-signature and admin-acks
   template:
-    src: release-image-signature.yml.j2
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: admin-ack.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/admin-ack.yaml"
+  - src: release-image-signature.yml.j2
     dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/cm-release-image-signature-{{ ibu_seed_image_version }}.yml"
 
 - name: Apply the release-image-signature to the seed cluster
   shell: |
     KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/cm-release-image-signature-{{ ibu_seed_image_version }}.yml
+
+- name: Apply the admin-acks
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/admin-ack.yaml
 
 - name: Patch seed cluster to prepare for upgrade
   shell: |
