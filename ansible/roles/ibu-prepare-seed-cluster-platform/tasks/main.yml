@@ -1,0 +1,71 @@
+---
+# ibu-prepare-seed-cluster-platform tasks
+
+- name: Create directories for IBU seed cluster preparation
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp"
+  - "{{ install_directory }}/rhacm-ztp/ibu"
+  - "{{ install_directory }}/rhacm-ztp/ibu/seed"
+
+- name: Template the gen_checksum.sh script
+  template:
+    src: gen_checksum.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/gen_checksum-{{ ibu_seed_image_version }}.sh"
+    mode: 0744
+
+- name: Run the generate checksum script
+  shell: |
+    cd {{ install_directory }}/rhacm-ztp/ibu/seed
+    {{ install_directory }}/rhacm-ztp/ibu/seed/gen_checksum-{{ ibu_seed_image_version }}.sh
+
+- name: Get generate checksum script output
+  slurp:
+    src: "{{ install_directory }}/rhacm-ztp/ibu/seed/checksum-{{ ibu_seed_image_version }}.yaml"
+  register: image_signature_data
+
+- name: Template the seed cluster admin-acks and release-image-signature
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: admin-ack.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/admin-ack.yaml"
+  - src: release-image-signature.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/seed/cm-release-image-signature-{{ ibu_seed_image_version }}.yml"
+
+- name: Apply the admin-acks
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/admin-ack.yaml
+
+- name: Apply the release-image-signature to the seed cluster
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibu/seed/cm-release-image-signature-{{ ibu_seed_image_version }}.yml
+
+- name: Patch seed cluster to prepare for upgrade
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc patch clusterversion version --type merge -p '{"spec": {"channel": "{{ ibu_upgrade_channel }}", "upstream": "http://{{ rhacm_disconnected_registry }}:8081/upgrade/upgrade-graph_{{ ibu_upgrade_channel }}"}}'
+
+- name: Check if seed cluster has availableUpdates or conditionalUpdates with the version
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc get clusterversion version -o json | jq -e '[.status.availableUpdates[]?.version] + [.status.conditionalUpdates[]?.release.version] | index("{{ ibu_seed_image_version }}")'
+  register: check_availableupdates
+  until: check_availableupdates.rc == 0
+  retries: 60
+  delay: 1
+
+- name: Trigger seed cluster to upgrade via oc adm
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc adm upgrade --allow-not-recommended --to "{{ ibu_seed_image_version }}"
+
+# Wait 1 hour to see if completed upgrading
+- name: Check if seed cluster is upgraded
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc get clusterversion version -o json | jq -r '.status.history[] | select(.version=="{{ ibu_seed_image_version }}").state'
+  register: check_cluster_version
+  ignore_errors: true
+  until: check_cluster_version.stdout == "Completed"
+  retries: 360
+  delay: 10

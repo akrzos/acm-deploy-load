@@ -14,6 +14,11 @@
   - vars/all.yml
   roles:
   - http-upgrade-graphs
-  - ibu-prepare-seed-cluster
+  - role: ibu-prepare-seed-cluster-unmanage
+    when: ibu_prepare_cluster_unmanage | default(true)
+  - role: ibu-prepare-seed-cluster-platform
+    when: ibu_prepare_upgrade_platform | default(true)
+  - role: ibu-prepare-seed-cluster-operators
+    when: ibu_prepare_upgrade_operators | default(true)
   - role: ibu-generate-seed-image
     when: generate_seed_image_after_upgrade | default(true)
