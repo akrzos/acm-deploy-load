@@ -50,22 +50,22 @@ oc get agentclusterinstall -A --no-headers -o custom-columns=NAME:'.metadata.nam
 oc describe agentclusterinstall -A > ${output_dir}/aci.describe
 oc get agentclusterinstall -A -o yaml > ${output_dir}/aci.yaml
 
-cat ${output_dir}/aci.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/aci.status_count
+cat ${output_dir}/aci.status | grep -v local-agent-cluster | grep -v local-cluster | awk '{print $2}' | sort | uniq -c > ${output_dir}/aci.status_count
 cat ${output_dir}/aci.status | grep "InstallationFailed" | awk '{print $1}' > ${output_dir}/aci.InstallationFailed
 cat ${output_dir}/aci.status | grep "InstallationNotStarted" | awk '{print $1}' > ${output_dir}/aci.InstallationNotStarted
 cat ${output_dir}/aci.status | grep "InstallationInProgress" | awk '{print $1}' > ${output_dir}/aci.InstallationInProgress
 
 # Get 2 Deployed cluster's install-configs
-cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
 # Copy two SiteConfigs
 ls  /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
 ls  /root/hv-vm/*/siteconfigs/*-resources.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
 # Ping 2 deployed clusters
-cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "ping6 -c 2 % > ${output_dir}/%.ping"
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "ping6 -c 2 % > ${output_dir}/%.ping"
 # Get 2 Deployed cluster's clusterversion objects
-cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version -o yaml > ${output_dir}/%.clusterversion.yaml"
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version -o yaml > ${output_dir}/%.clusterversion.yaml"
 # Get 2 Deployed cluster's pods
-cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get po -A > ${output_dir}/%.pods"
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get po -A > ${output_dir}/%.pods"
 
 echo "$(date -u) :: Collecting managedcluster data"
 
