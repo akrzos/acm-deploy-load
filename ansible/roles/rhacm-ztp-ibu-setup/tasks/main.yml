@@ -1,5 +1,5 @@
 ---
-# rhacm-ztp-platform-ibu-setup tasks
+# rhacm-ztp-ibu-setup tasks
 
 - name: Create directories for IBU
   file:
@@ -15,12 +15,12 @@
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc get managedclusters -l {{ clusters_label }} --no-headers -o custom-columns=NAME:'.metadata.name' | grep -v local-cluster
   register: ztp_done_clusters
 
-- name: Template the platform IBU PGT
+- name: Template the IBU PGT
   template:
     src: du-ibu.yaml.j2
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/du-ibu.yaml"
 
-- name: Enable platform IBU PGT in the kustomization.yaml file
+- name: Enable IBU PGT in the kustomization.yaml file
   replace:
     path: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/kustomization.yaml"
     replace: "- du-ibu.yaml"
@@ -52,7 +52,7 @@
   shell: |
     cd {{ install_directory }}/rhacm-ztp/cnf-features-deploy
     git add ztp/gitops-subscriptions/argocd/policy/
-    git commit -a -m "Add Platform IBU PGT to {{ ibu_seed_image_version }}"
+    git commit -a -m "Add IBU PGT to {{ ibu_seed_image_version }}"
     git push origin-gogs
 
 - name: Trigger policy application policy-common-and-group for refresh
@@ -61,27 +61,27 @@
 
 - name: Template CGU ibu-prep object(s)
   template:
-    src: cgu-platform-ibu-prep.yml.j2
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-prep-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
-  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_prep_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+    src: cgu-ibu-prep.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-ibu-prep-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / ibu_prep_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
 
 - name: Template CGU ibu-upgrade object(s)
   template:
-    src: cgu-platform-ibu-upgrade.yml.j2
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
-  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_upgrade_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+    src: cgu-ibu-upgrade.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / ibu_upgrade_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
 
 - name: Template CGU ibu-rollback object(s)
   template:
-    src: cgu-platform-ibu-rollback.yml.j2
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-rollback-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
-  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_rollback_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+    src: cgu-ibu-rollback.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-ibu-rollback-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / ibu_rollback_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
 
 - name: Template CGU ibu-finalize object(s)
   template:
-    src: cgu-platform-ibu-finalize.yml.j2
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-platform-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
-  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / platform_ibu_finalize_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
+    src: cgu-ibu-finalize.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/cgu-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / ibu_finalize_clusters_per_cgu) | round(0, 'ceil') | int) | list }}"
 
 - name: Template CGU apply scripts
   template:
@@ -89,11 +89,11 @@
     dest: "{{ item.dest }}"
     mode: "0744"
   loop:
-  - src: apply-cgu-platform-ibu-prep.sh
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-prep-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
-  - src: apply-cgu-platform-ibu-upgrade.sh
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
-  - src: apply-cgu-platform-ibu-rollback.sh
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-rollback-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
-  - src: apply-cgu-platform-ibu-finalize.sh
-    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-platform-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-cgu-ibu-prep.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-ibu-prep-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-cgu-ibu-upgrade.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-cgu-ibu-rollback.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-ibu-rollback-{{ ibu_seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-cgu-ibu-finalize.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibu/scripts/apply-cgu-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-') }}.sh"

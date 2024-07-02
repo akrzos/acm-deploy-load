@@ -2,20 +2,20 @@
 apiVersion: ran.openshift.io/v1alpha1
 kind: ClusterGroupUpgrade
 metadata:
-  name: platform-ibu-finalize-{{ ibu_seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
+  name: ibu-rollback-{{ ibu_seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
   namespace: ztp-platform-upgrade
   labels:
-    ibu-finalize: "{{ ibu_seed_image_version }}"
+    ibu-rollback: "{{ ibu_seed_image_version }}"
 spec:
   actions:
     beforeEnable:
       removeClusterAnnotations:
       - import.open-cluster-management.io/disable-auto-import
   managedPolicies:
-  - group-ibu-finalize-policy
+  - group-ibu-rollback-policy
   clusterSelector:
   - 'ibu-upgraded={{ ibu_seed_image_version }}'
   remediationStrategy:
-    maxConcurrency: {{ platform_ibu_finalize_concurrency }}
-    timeout: {{ platform_ibu_finalize_timeout }}
-  enable: {{ platform_ibu_finalize_enable }}
+    maxConcurrency: {{ ibu_rollback_concurrency }}
+    timeout: {{ ibu_rollback_timeout }}
+  enable: {{ ibu_rollback_enable }}

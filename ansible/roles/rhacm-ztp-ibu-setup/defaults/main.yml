@@ -1,5 +1,5 @@
 ---
-# rhacm-ztp-platform-ibu-setup default vars
+# rhacm-ztp-ibu-setup default vars
 
 clusters_label: "ztp-done="
 
@@ -12,25 +12,25 @@ common_catalogsource_name: rh-du-operators
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
 operator_index_tag: v4.15
 
-platform_ibu_prep_clusters_per_cgu: 500
-platform_ibu_prep_concurrency: 500
-platform_ibu_prep_timeout: 60
-platform_ibu_prep_enable: true
+ibu_prep_clusters_per_cgu: 500
+ibu_prep_concurrency: 500
+ibu_prep_timeout: 60
+ibu_prep_enable: true
 
-platform_ibu_upgrade_clusters_per_cgu: 500
-platform_ibu_upgrade_concurrency: 500
-platform_ibu_upgrade_timeout: 30
-platform_ibu_upgrade_enable: true
+ibu_upgrade_clusters_per_cgu: 500
+ibu_upgrade_concurrency: 500
+ibu_upgrade_timeout: 30
+ibu_upgrade_enable: true
 
-platform_ibu_rollback_clusters_per_cgu: 500
-platform_ibu_rollback_concurrency: 500
-platform_ibu_rollback_timeout: 30
-platform_ibu_rollback_enable: true
+ibu_rollback_clusters_per_cgu: 500
+ibu_rollback_concurrency: 500
+ibu_rollback_timeout: 30
+ibu_rollback_enable: true
 
-platform_ibu_finalize_clusters_per_cgu: 500
-platform_ibu_finalize_concurrency: 500
-platform_ibu_finalize_timeout: 20
-platform_ibu_finalize_enable: true
+ibu_finalize_clusters_per_cgu: 500
+ibu_finalize_concurrency: 500
+ibu_finalize_timeout: 20
+ibu_finalize_enable: true
 
 # IBU rollback annotations are only used for 4.16 LCA or newer
 ibu_rollback_annotations: false
@@ -40,11 +40,11 @@ ibu_auto_rollback_disabledInitMonitor: false
 
 # Amount of time to sleep between applying CGUs for each IBU "step"
 # Setting to 0 would mean apply all of the CGUs for that step at "almost" the same time
-platform_ibu_prep_sleep: 0
-platform_ibu_upgrade_sleep: 30
-platform_ibu_finalize_sleep: 0
+ibu_prep_sleep: 0
+ibu_upgrade_sleep: 30
+ibu_finalize_sleep: 0
 
 # Extra minutes to add between CGU applys in each script
-platform_ibu_prep_offset: 0
-platform_ibu_upgrade_offset: 0
-platform_ibu_finalize_offset: 0
+ibu_prep_offset: 0
+ibu_upgrade_offset: 0
+ibu_finalize_offset: 0

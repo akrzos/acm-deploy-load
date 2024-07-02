@@ -2,7 +2,7 @@
 apiVersion: ran.openshift.io/v1alpha1
 kind: ClusterGroupUpgrade
 metadata:
-  name: platform-ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
+  name: ibu-upgrade-{{ ibu_seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
   namespace: ztp-platform-upgrade
   labels:
     ibu-upgrade: "{{ ibu_seed_image_version }}"
@@ -22,6 +22,6 @@ spec:
   clusterSelector:
   - 'ibu-prep={{ ibu_seed_image_version }}-{{ '%04d' | format(item) }}'
   remediationStrategy:
-    maxConcurrency: {{ platform_ibu_upgrade_concurrency }}
-    timeout: {{ platform_ibu_upgrade_timeout }}
-  enable: {{ platform_ibu_upgrade_enable }}
+    maxConcurrency: {{ ibu_upgrade_concurrency }}
+    timeout: {{ ibu_upgrade_timeout }}
+  enable: {{ ibu_upgrade_enable }}

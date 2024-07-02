@@ -2,7 +2,7 @@
 apiVersion: ran.openshift.io/v1alpha1
 kind: ClusterGroupUpgrade
 metadata:
-  name: platform-ibu-prep-{{ ibu_seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
+  name: ibu-prep-{{ ibu_seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
   namespace: ztp-platform-upgrade
   labels:
     ibu-prep: "{{ ibu_seed_image_version }}"
@@ -14,12 +14,12 @@ spec:
   managedPolicies:
   - group-ibu-prep-policy
   clusters:
-{% for cluster in range(item * platform_ibu_prep_clusters_per_cgu, (item + 1) * platform_ibu_prep_clusters_per_cgu) %}
+{% for cluster in range(item * ibu_prep_clusters_per_cgu, (item + 1) * ibu_prep_clusters_per_cgu) %}
 {% if ztp_done_clusters.stdout_lines | length > cluster %}
   - {{ ztp_done_clusters.stdout_lines[cluster] }}
 {% endif %}
 {% endfor %}
   remediationStrategy:
-    maxConcurrency: {{ platform_ibu_prep_concurrency }}
-    timeout: {{ platform_ibu_prep_timeout }}
-  enable: {{ platform_ibu_prep_enable }}
+    maxConcurrency: {{ ibu_prep_concurrency }}
+    timeout: {{ ibu_prep_timeout }}
+  enable: {{ ibu_prep_enable }}
