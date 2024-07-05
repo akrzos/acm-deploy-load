@@ -3,6 +3,10 @@ kind: Kustomization
 generators:
 # This is common to all RAN deployments
 - common-ranGen.yaml
+{% if du_profile_version is version('4.15', '>=') %}
+# This is common for MNO (Multi-Node OpenShift) RAN deployments (3-node and standard clusters)
+- common-mno-ranGen.yaml
+{% endif %}
 # This group policy is for all single-node deployments:
 - group-du-sno-ranGen.yaml
 # This group validator policy is for all single-node deployments:

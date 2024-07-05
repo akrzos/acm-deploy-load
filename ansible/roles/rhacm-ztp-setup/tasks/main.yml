@@ -213,6 +213,8 @@
   loop:
   - src: pgt-du-{{ du_profile_version }}/common-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/common-ranGen.yaml"
+  - src: pgt-du-{{ du_profile_version }}/common-mno-ranGen.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/common-mno-ranGen.yaml"
   - src: pgt-du-{{ du_profile_version }}/group-du-sno-ranGen.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/group-du-sno-ranGen.yaml"
   - src: pgt-du-{{ du_profile_version }}/group-du-sno-validator-ranGen.yaml
