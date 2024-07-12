@@ -75,6 +75,9 @@ oc get managedcluster -A --no-headers -o custom-columns=NAME:'.metadata.name',AV
 
 cat ${output_dir}/managedcluster.available | grep "Unknown" > ${output_dir}/mc.Unknown
 
+oc get observabilityaddon -A -o json | jq -r '.items[] | "\(.metadata.namespace) Available: \(.status.conditions[] | select(.type=="Available" and .status=="True").status), lastTransitionTime: \(.status.conditions[] | select(.type=="Available" and .status=="True").lastTransitionTime), message: \(.status.conditions[] | select(.type=="Available" and .status=="True").message)"' > ${output_dir}/obs.available.clusters
+oc get observabilityaddon -A -o json | jq -r '.items[] | "\(.metadata.namespace) Degraded: \(.status.conditions[] | select(.type=="Degraded" and .status=="True").status), lastTransitionTime: \(.status.conditions[] | select(.type=="Degraded" and .status=="True").lastTransitionTime), message: \(.status.conditions[] | select(.type=="Degraded" and .status=="True").message)"' > ${output_dir}/obs.degraded.clusters
+
 echo "$(date -u) :: Collecting mch/mce/mco data"
 
 oc get mch -A > ${output_dir}/mch
@@ -262,6 +265,9 @@ for cluster in $(cat ${output_dir}/cgu.TimedOut); do
   oc get catalogsources -A > ${output_dir}/cgu-failures/${cluster}/catalogsources
   oc get catalogsources -A -o yaml > ${output_dir}/cgu-failures/${cluster}/catalogsources.yaml
   oc describe catalogsources -A > ${output_dir}/cgu-failures/${cluster}/catalogsources.describe
+
+  oc logs -n open-cluster-management-agent-addon -l app=config-policy-controller --tail=-1 > ${output_dir}/cgu-failures/${cluster}/config-policy-controller.log
+  oc logs -n open-cluster-management-agent-addon -l app=governance-policy-framework --tail=-1 > ${output_dir}/cgu-failures/${cluster}/governance-policy-framework.log
 
   if [ "$examined_cgu_failures" -ge "40" ]; then
     break
