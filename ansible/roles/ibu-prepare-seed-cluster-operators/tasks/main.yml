@@ -1,7 +1,7 @@
 ---
 # ibu-prepare-seed-cluster-operators tasks
 
-- name: Create directories for IBU seed cluster preparation
+- name: Create directories for IBU seed cluster operator upgrade
   file:
     path: "{{ item }}"
     state: directory

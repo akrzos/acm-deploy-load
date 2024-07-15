@@ -1,7 +1,7 @@
 ---
 # ibu-prepare-seed-cluster-unmanage tasks
 
-- name: Create directories for IBU seed cluster preparation
+- name: Create directories for IBU seed cluster to detach cluster
   file:
     path: "{{ item }}"
     state: directory
@@ -77,8 +77,8 @@
   delay: 5
 
 # ignore_errors in the event the namespace has already been removed
-- name: Delete open-cluster-management-addon-observability from managedcluster
-  shell: |
-    KUBECONFIG={{ seedcluster_kubeconfig }} oc delete ns open-cluster-management-addon-observability
-  when: delete_mc_obs_ns_workaround
-  ignore_errors: true
+# - name: Delete open-cluster-management-addon-observability from managedcluster
+#   shell: |
+#     KUBECONFIG={{ seedcluster_kubeconfig }} oc delete ns open-cluster-management-addon-observability
+#   when: delete_mc_obs_ns_workaround
+#   ignore_errors: true

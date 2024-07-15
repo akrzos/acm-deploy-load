@@ -14,22 +14,19 @@
     url: "{{ item.url }}"
     dest: "{{ http_store_path }}/data/upgrade/{{ item.name }}"
   loop:
-  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.12
-    name: upgrade-graph_stable-4.12
-  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.13
-    name: upgrade-graph_stable-4.13
   - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.14
     name: upgrade-graph_stable-4.14
   - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.15
     name: upgrade-graph_stable-4.15
-  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.12
-    name: upgrade-graph_fast-4.12
-  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.13
-    name: upgrade-graph_fast-4.13
+  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=stable-4.16
+    name: upgrade-graph_stable-4.16
+
   - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.14
     name: upgrade-graph_fast-4.14
   - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.15
     name: upgrade-graph_fast-4.15
+  - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=fast-4.16
+    name: upgrade-graph_fast-4.16
 
   - url: https://api.openshift.com/api/upgrades_info/v1/graph?channel=candidate-4.15
     name: upgrade-graph_candidate-4.15
