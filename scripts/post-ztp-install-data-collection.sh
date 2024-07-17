@@ -63,7 +63,15 @@ ls  /root/hv-vm/*/siteconfigs/*-resources.yml | head -n 2 | xargs -I % sh -c "cp
 # Ping 2 deployed clusters
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "ping6 -c 2 % > ${output_dir}/%.ping"
 # Get 2 Deployed cluster's clusterversion objects
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version > ${output_dir}/%.clusterversion"
+# Get 2 Deployed cluster's clusterversion objects yaml
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version -o yaml > ${output_dir}/%.clusterversion.yaml"
+# Get 2 Deployed cluster's clusterserviceversion objects
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get csv -A > ${output_dir}/%.clusterserviceversion"
+# Get 2 Deployed cluster's clusteroperators objects
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get co -A > ${output_dir}/%.clusteroperators"
+# Get 2 Deployed cluster's clusteroperators objects yaml
+cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get co -A -o yaml > ${output_dir}/%.clusteroperators.yaml"
 # Get 2 Deployed cluster's pods
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get po -A > ${output_dir}/%.pods"
 
