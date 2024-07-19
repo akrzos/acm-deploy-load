@@ -4,10 +4,20 @@ set -e
 set -o pipefail
 
 iteration=1
+
+# Rate 500/1hr
 interval_period=3600
 batch=500
-clusters_per_app=100
+# Rate 40/5m
+# interval_period=300
+# batch=40
 
+# SNO or Mixed SNOs and MNOs
+clusters_per_app=100
+# SNOs (only)
+# clusters_per_app=300
+
+# WAN Emulation can only be run with SNOs
 wan_em="(None)"
 # wan_em="(50ms/0.02)"
 # wan_em="(50ms/0.02) / 100Mbps"
