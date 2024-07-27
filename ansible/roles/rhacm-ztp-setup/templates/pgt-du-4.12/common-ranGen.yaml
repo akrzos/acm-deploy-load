@@ -92,13 +92,6 @@ spec:
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: ReduceMonitoringFootprint.yaml
       policyName: "{{ 'monitoring-config' if manyPolicies else 'config' }}-policy"
-{% if include_clo_fix %}
-    - fileName: logging-openshift-io_elasticsearches.yaml
-      policyName: "config-policy"
-{% else %}
-    #- fileName: logging-openshift-io_elasticsearches.yaml
-    #  policyName: "config-policy"
-{% endif %}
 {% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
     #
     # These CRs are in support of installation from a disconnected registry

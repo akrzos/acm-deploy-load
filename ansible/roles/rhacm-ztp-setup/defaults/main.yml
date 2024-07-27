@@ -51,11 +51,6 @@ siteconfig_list: []
 # https://bugzilla.redhat.com/show_bug.cgi?id=2074612
 common_catalogsource_name: rh-du-operators
 
-# https://issues.redhat.com/browse/LOG-3406
-# https://access.redhat.com/solutions/6990588
-# Prevents CLO on SNO from crashlooping over missing CRD (Fixed in v5.6.0 of CLO)
-include_clo_fix: false
-
 # These policy names were adjusted to increase the number of ztp generated policies to match as if performanceprofile
 # was enabled.  The original names are commented below.
 group_policy_logforwarder_name: "config-log-policy"

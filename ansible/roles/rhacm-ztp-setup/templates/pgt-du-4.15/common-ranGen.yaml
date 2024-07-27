@@ -119,6 +119,7 @@ spec:
 {% endif %}
     - fileName: LcaOperatorStatus.yaml
       policyName: "{{ 'lca-subs' if manyPolicies else 'subscriptions' }}-policy"
+
 {% else %}
     # - fileName: LcaSubscriptionNS.yaml
     #   policyName: "subscriptions-policy"
@@ -130,6 +131,7 @@ spec:
     #   policyName: "subscriptions-policy"
     #
 {% endif %}
+    # OADP operator is used for backing up and restoring application during Image Based Upgrade
 {% if include_oadp_operator %}
     - fileName: OadpSubscriptionNS.yaml
       policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
@@ -144,6 +146,7 @@ spec:
 {% endif %}
     - fileName: OadpOperatorStatus.yaml
       policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
+
 {% else %}
     # - fileName: OadpSubscriptionNS.yaml
     #   policyName: "subscriptions-policy"

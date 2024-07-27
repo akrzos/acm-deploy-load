@@ -239,8 +239,6 @@
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy-applications/common-and-group.yaml"
   - src: hub-template-maps.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/hub-template-maps.yaml"
-  - src: source-crs/logging-openshift-io_elasticsearches.yaml
-    dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/logging-openshift-io_elasticsearches.yaml"
   - src: source-crs/OadpSubscriptionNS.yaml
     dest: "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/policy/common-and-group/source-crs/OadpSubscriptionNS.yaml"
   - src: source-crs/OadpSubscriptionOperGroup.yaml
