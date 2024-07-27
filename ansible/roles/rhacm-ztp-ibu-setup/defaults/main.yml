@@ -3,14 +3,14 @@
 
 clusters_label: "ztp-done="
 
-ibu_seed_image_version: "4.15.5"
+ibu_seed_image_version: "4.16.3"
 
 # Use ibu/ImageBasedUpgrade.yaml for IBU in ztp-site-generator, and just ImageBasedUpgrade.yaml to use the IBU source-cr included in rhacm-ztp-setup role
 ibu_filename: ImageBasedUpgrade.yaml
 
 common_catalogsource_name: rh-du-operators
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
-operator_index_tag: v4.15
+operator_index_tag: v4.16
 
 ibu_prep_clusters_per_cgu: 500
 ibu_prep_concurrency: 500
@@ -32,8 +32,8 @@ ibu_finalize_concurrency: 500
 ibu_finalize_timeout: 20
 ibu_finalize_enable: true
 
-# IBU rollback annotations are only used for 4.16 LCA or newer
-ibu_rollback_annotations: false
+# IBU rollback annotations are for 4.16 LCA or newer
+ibu_rollback_annotations: true
 ibu_auto_rollback_disabledForPostRebootConfig: false
 ibu_auto_rollback_disabledForUpgradeCompletion: false
 ibu_auto_rollback_disabledInitMonitor: false
@@ -41,10 +41,12 @@ ibu_auto_rollback_disabledInitMonitor: false
 # Amount of time to sleep between applying CGUs for each IBU "step"
 # Setting to 0 would mean apply all of the CGUs for that step at "almost" the same time
 ibu_prep_sleep: 0
-ibu_upgrade_sleep: 30
+ibu_upgrade_sleep: 15
+ibu_rollback_sleep: 0
 ibu_finalize_sleep: 0
 
 # Extra minutes to add between CGU applys in each script
 ibu_prep_offset: 0
 ibu_upgrade_offset: 0
+ibu_rollback_offset: 0
 ibu_finalize_offset: 0
