@@ -41,10 +41,10 @@ talm_operator_source: redhat-operator-index
 # Deploy TALM via Repo
 setup_talm_repo: true
 talm_repo: https://github.com/openshift-kni/cluster-group-upgrades-operator.git
-talm_repo_branch: release-4.14
-talm_image: quay.io/openshift-kni/cluster-group-upgrades-operator:4.14.0
-talm_precache_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-precache:4.14.0"
-talm_recovery_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-recovery:4.14.0"
+talm_repo_branch: release-4.16
+talm_image: quay.io/openshift-kni/cluster-group-upgrades-operator:4.16.0
+talm_precache_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-precache:4.16.0"
+talm_recovery_image: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/cluster-group-upgrades-operator-recovery:4.16.0"
 
 # Apply ZTP argocd patches and create the argocd applications
 setup_rhacm_ztp_patches: true
@@ -53,11 +53,15 @@ setup_ztp_policy_application: true
 gitops_redis_mem_patch: true
 
 # MCE Assisted-installer items (Installed with RHACM)
-mce_assisted_ocp_version: quay.io/openshift-release-dev/ocp-release:4.14.7-x86_64
+mce_assisted_ocp_versions:
+- quay.io/openshift-release-dev/ocp-release:4.16.1-x86_64
+- quay.io/openshift-release-dev/ocp-release:4.16.3-x86_64
 mce_assisted_service_namespace: multicluster-engine
 mce_clusterimagesets:
-- name: openshift-4.14.7
-  releaseImage: quay.io/openshift-release-dev/ocp-release:4.14.7-x86_64
+- name: openshift-4.16.1
+  releaseImage: quay.io/openshift-release-dev/ocp-release:4.16.1-x86_64
+- name: openshift-4.16.3
+  releaseImage: quay.io/openshift-release-dev/ocp-release:4.16.3-x86_64
 
 # AAP deploy/configure vars
 # Place the license file in the base directory of the cloned acm-deploy-load repo, Example:

@@ -1,0 +1,76 @@
+---
+# mce-ocp-version tasks
+
+# Ex: quay.io/openshift-release-dev/ocp-release:4.15.2-x86_64 becomes 4.15
+- name: Determine OCP version in "{{ item }}"
+  set_fact:
+    openshift_version: "{{ item.split(':')[1].split('.')[0:2] | join('.') }}"
+    openshift_version_patch: "{{ item.split(':')[1].split('.')[0:3] | join('.') }}"
+
+- name: Create directory for OCP Version {{ openshift_version_patch }}
+  file:
+    path: "{{ install_directory }}/mce-assisted-installer/{{ openshift_version_patch }}"
+    state: directory
+
+- name: Extract/Download the openshift-install binary for the specific release
+  shell: |
+    cd {{ install_directory }}/mce-assisted-installer/{{ openshift_version_patch }}
+    rm -rf openshift-install-linux-*.tar.gz openshift-client-linux-*.tar.gz
+    oc adm release extract --tools {{ item }}
+    tar -xvf openshift-install-linux-*.tar.gz openshift-install
+    {% if openshift_version is version('4.15', ">=") %}
+    {% if ansible_facts['distribution_major_version'] is version('8', '==') %}
+    tar -xvf openshift-client-linux-amd64-rhel8-*.tar.gz oc kubectl
+    {% else %}
+    tar -xvf openshift-client-linux-amd64-rhel9-*.tar.gz oc kubectl
+    {% endif %}
+    {% else %}
+    tar -xvf openshift-client-linux-*.tar.gz oc kubectl
+    {% endif %}
+
+- name: Get display/release name/version
+  shell: |
+    {{ install_directory }}/mce-assisted-installer/{{ openshift_version_patch }}/oc version -o json | jq -r .releaseClientVersion
+  register: ocp_version_display_name
+
+- name: Get rhcos version
+  shell: |
+    {{ install_directory }}/mce-assisted-installer/{{ openshift_version_patch }}/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.release
+  register: ocp_version_rhcos_version
+
+- name: Get iso disk image location
+  shell: |
+    {{ install_directory }}/mce-assisted-installer/{{ openshift_version_patch }}/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.formats.iso.disk.location
+  register: ocp_version_disk_location
+
+- name: Get rootfs image location
+  shell: |
+    {{ install_directory }}/mce-assisted-installer/{{ openshift_version_patch }}/openshift-install coreos print-stream-json | jq -r .architectures.x86_64.artifacts.metal.formats.pxe.rootfs.location
+  register: ocp_version_rootfs_location
+
+- name: Make directory for image and rootfs for bastion http server
+  file:
+    path: "{{ http_store_path }}/data/{{ ocp_version_display_name.stdout }}"
+    state: directory
+
+- name: Download OpenShift RHCOS Image
+  get_url:
+    url: "{{ ocp_version_disk_location.stdout }}"
+    dest: "{{ http_store_path }}/data/{{ ocp_version_display_name.stdout }}/{{ ocp_version_disk_location.stdout | basename }}"
+
+- name: Download OpenShift rootfs
+  get_url:
+    url: "{{ ocp_version_rootfs_location.stdout }}"
+    dest: "{{ http_store_path }}/data/{{ ocp_version_display_name.stdout }}/{{ ocp_version_rootfs_location.stdout | basename }}"
+
+- name: Create os_image
+  set_fact:
+    os_image:
+    - openshiftVersion: "{{ ocp_version_display_name.stdout.split('.')[0:2] | join('.') }}"
+      version: "{{ ocp_version_rhcos_version.stdout }}"
+      url: "http://{{ http_store_host }}:{{ http_store_port }}/{{ ocp_version_display_name.stdout }}/{{ ocp_version_disk_location.stdout | basename }}"
+      rootFSUrl: "http://{{ http_store_host }}:{{ http_store_port }}/{{ ocp_version_display_name.stdout }}/{{ ocp_version_rootfs_location.stdout | basename }}"
+
+- name: Append os_image to mce_os_images
+  set_fact:
+    mce_os_images: "{{ mce_os_images | default([]) + os_image }}"
