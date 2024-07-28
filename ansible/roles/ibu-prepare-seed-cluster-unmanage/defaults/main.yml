@@ -6,6 +6,3 @@ seed_cluster: ""
 
 # The kubeconfig to the cluster being generated into a ibu seed image
 seedcluster_kubeconfig: "{{ install_directory }}/rhacm-ztp/ibu/seed/{{ seed_cluster }}.kubeconfig"
-
-# Leave enabled until https://issues.redhat.com/browse/ACM-12025 if fixed
-delete_mc_obs_ns_workaround: true

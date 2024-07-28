@@ -13,9 +13,10 @@
   vars_files:
   - vars/all.yml
   roles:
-  - http-upgrade-graphs
   - role: ibu-prepare-seed-cluster-unmanage
     when: ibu_prepare_cluster_unmanage | default(true)
+  - role: http-upgrade-graphs
+    when: ibu_prepare_upgrade_platform | default(true)
   - role: ibu-prepare-seed-cluster-platform
     when: ibu_prepare_upgrade_platform | default(true)
   - role: ibu-prepare-seed-cluster-operators

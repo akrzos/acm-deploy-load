@@ -76,9 +76,8 @@
   retries: 180
   delay: 5
 
-# ignore_errors in the event the namespace has already been removed
-# - name: Delete open-cluster-management-addon-observability from managedcluster
-#   shell: |
-#     KUBECONFIG={{ seedcluster_kubeconfig }} oc delete ns open-cluster-management-addon-observability
-#   when: delete_mc_obs_ns_workaround
-#   ignore_errors: true
+# ignore_errors in the event the dpa has already been removed
+- name: Delete dataprotectionapplications from seed cluster
+  shell: |
+    KUBECONFIG={{ seedcluster_kubeconfig }} oc delete dataprotectionapplications -n openshift-adp --all
+  ignore_errors: true
