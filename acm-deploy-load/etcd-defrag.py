@@ -40,6 +40,7 @@ def main():
                       help="Changes which kubeconfig to connect to a cluster")
 
   parser.add_argument("-a", "--disarm-alarms", action="store_true", default=False, help="Disarm alarms")
+  parser.add_argument("-c", "--compact", action="store_true", default=False, help="Compact etcd keyspace")
 
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
   cliargs = parser.parse_args()
@@ -66,7 +67,7 @@ def main():
     pod_ip = pod["status"]["podIP"]
     if etcd_pod == "":
       etcd_pod = pod_name
-    pods[pod_name] = pod_ip
+    pods[pod_name] = {"ip": pod_ip, "revision": 0}
     logger.info("Etcd pod: {} has IP: {}".format(pod_name, pod_ip))
 
   # Get etcd endpoints
@@ -83,24 +84,37 @@ def main():
   for etcd_ep in etcd_ep_status:
     endpoint = etcd_ep["Endpoint"]
     member_id = etcd_ep["Status"]["header"]["member_id"]
+    revision = etcd_ep["Status"]["header"]["revision"]
     leader_id = etcd_ep["Status"]["leader"]
-    logger.info("Etcd endpoint: {}, Member ID: {}, Leader ID: {}".format(endpoint, member_id, leader_id))
-    if member_id == leader_id:
-      logger.info("Leader endpoint is: {}".format(endpoint))
-      for pod in pods:
-        if pods[pod] in endpoint:
+    logger.info("Etcd endpoint: {}, Member ID: {}, Leader ID: {}, Revision: {}".format(endpoint, member_id, leader_id, revision))
+    for pod in pods:
+      if pods[pod]["ip"] in endpoint:
+        pods[pod]["revision"] = str(revision)
+        if member_id == leader_id:
+          logger.info("Leader endpoint is: {}".format(endpoint))
           leader_pod = pod
-          break;
+        break;
   if leader_pod != "":
     logger.info("Leader pod identified: {}".format(leader_pod))
   else:
     logger.error("No leader pod identified")
     sys.exit(1)
 
-
-  defrag_cmd = "env -u ETCDCTL_ENDPOINTS etcdctl --command-timeout 30s --endpoints=https://localhost:2379 defrag".split(" ")
+  # Compact the etcd keyspace on the leader
+  compact_cmd = "env -u ETCDCTL_ENDPOINTS etcdctl --command-timeout 30s --endpoints=https://localhost:2379 compact".split(" ")
+  if cliargs.compact:
+    logger.info("Compacting etcd keyspace")
+    # for pod in pods:
+    logger.info("Compacting keyspace on pod: {}".format(leader_pod))
+    oc_cmd = ["oc", "--kubeconfig", cliargs.kubeconfig, "rsh", "-n", "openshift-etcd", leader_pod] + compact_cmd + [pods[pod]["revision"]]
+    rc, output = command(oc_cmd, False, no_log=True)
+    if rc != 0:
+      logger.error("etcd-defrag, oc rsh -n openshift-etcd {} etcdctl ... compact rc: {}".format(pod, rc))
+      sys.exit(1)
+    logger.info(output.rstrip())
 
   # Defrag etcd databases (Not leader)
+  defrag_cmd = "env -u ETCDCTL_ENDPOINTS etcdctl --command-timeout 30s --endpoints=https://localhost:2379 defrag".split(" ")
   for pod in pods:
     if pod == leader_pod:
       logger.info("Skipping leader pod: {} to defrag last".format(pod))
