@@ -1,25 +1,19 @@
 ---
-# Playbook to prepare a seed cluster to be create a seed image
+# Playbook to unmanage a seed cluster and create a seed image
 #
 # Example Usage:
 #
 # time ansible-playbook -i ansible/inventory/cloud30.local ansible/ibu-prepare-seed-cluster.yml
 #
 
-- name: Prepare IBU Seed Cluster
+- name: Prepare IBU Seed Cluster and Image
   hosts: bastion
   vars:
     seedcluster_kubeconfig: ""
   vars_files:
   - vars/all.yml
   roles:
-  - role: ibu-prepare-seed-cluster-unmanage
-    when: ibu_prepare_cluster_unmanage | default(true)
-  - role: http-upgrade-graphs
-    when: ibu_prepare_upgrade_platform | default(true)
-  - role: ibu-prepare-seed-cluster-platform
-    when: ibu_prepare_upgrade_platform | default(true)
-  - role: ibu-prepare-seed-cluster-operators
-    when: ibu_prepare_upgrade_operators | default(true)
+  - role: ibu-prepare-unmanage-seed-cluster
+    when: ibu_prepare_unmanage_cluster | default(true)
   - role: ibu-generate-seed-image
-    when: generate_seed_image_after_upgrade | default(true)
+    when: ibu_generate_seed_image | default(true)
