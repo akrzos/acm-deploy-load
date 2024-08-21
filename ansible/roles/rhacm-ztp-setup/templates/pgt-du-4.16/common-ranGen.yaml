@@ -140,7 +140,7 @@ spec:
     - fileName: OadpSubscription.yaml
       policyName: "{{ 'oadp-subs' if manyPolicies else 'subscriptions' }}-policy"
       spec:
-        channel: stable-1.3
+        channel: stable-1.4
 {% if rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 %}
         source: {{ common_catalogsource_name }}
 {% endif %}
