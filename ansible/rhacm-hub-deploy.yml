@@ -27,4 +27,5 @@
   roles:
   - rhacm-hub-deploy
   - mce-assisted-installer
+  - mce-image-based-install
   - mce-add-clusterimagesets
