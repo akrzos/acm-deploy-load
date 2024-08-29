@@ -1,0 +1,17 @@
+---
+# Playbook to Prepare SNO for IBI
+#
+# Note: This playbook runs with Jetlag's inventory so it knows all the SNO details to use
+#
+# Example Usage:
+#
+# time ansible-playbook -i ../jetlag/ansible/inventory/cloud30.local ansible/ibi-create-prep-iso.yml
+#
+
+- name: Prepare SNO for IBI
+  hosts: bastion
+  vars_files:
+  - vars/all.yml
+  roles:
+  - ibi-create-prep-iso
+  - ibi-install-prep

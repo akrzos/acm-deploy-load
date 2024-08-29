@@ -1,0 +1,52 @@
+---
+# ibi-create-prep-iso tasks
+
+- name: Create directories for IBI Prep ISO generation
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp"
+  - "{{ install_directory }}/rhacm-ztp/ibi"
+  - "{{ install_directory }}/rhacm-ztp/ibi/prep-iso"
+  - "{{ http_store_path }}/data/ibi"
+
+- name: Get bastion registry certificate
+  slurp:
+    src: "{{ registry_path }}/certs/domain.crt"
+  register: mirror_cert
+  when: rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1
+
+- name: Template the IBI Prep ISO file
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: image-based-installation-config.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/ibi/prep-iso/image-based-installation-config.yaml"
+  - src: image-based-installation-config.yaml
+    dest: "{{ install_directory }}/rhacm-ztp/ibi/prep-iso/image-based-installation-config.yaml.{{ hv_vm_target }}.backup"
+
+- name: Check if openshift-install already extracted
+  stat:
+    path: "{{ install_directory }}/rhacm-ztp/ibi/openshift-install"
+  register: stat_openshift_install
+
+- name: Extract/Download the openshift-install binary for an OCP Version compatiable with IBI
+  shell: |
+    cd {{ install_directory }}/rhacm-ztp/ibi
+    rm -rf openshift-install-linux-*.tar.gz openshift-client-linux-*.tar.gz ccoctl-linux-*.tar.gz
+    oc adm release extract --tools {{ ocp_ibi_version }}
+    tar -xvf openshift-install-linux-*.tar.gz openshift-install
+  when: not stat_openshift_install.stat.exists or force_extract | default(false)
+
+- name: Create IBI Prep ISO file
+  shell: |
+    cd {{ install_directory }}/rhacm-ztp/ibi
+    ./openshift-install image-based create image --dir {{ install_directory }}/rhacm-ztp/ibi/prep-iso/ --log-level debug
+
+- name: Copy IBI Prep ISO into http server directory
+  copy:
+    src: "{{ install_directory }}/rhacm-ztp/ibi/prep-iso/rhcos-ibi.iso"
+    dest: "{{ http_store_path }}/data/ibi/rhcos-ibi-prep-{{ hv_vm_target }}-{{ seed_image_version }}.iso"
+    remote_src: true

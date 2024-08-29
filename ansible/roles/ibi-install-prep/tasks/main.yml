@@ -1,0 +1,119 @@
+---
+# ibi-install-prep tasks
+
+- name: Set BMC base URL for ipv6
+  set_fact:
+    base_url: "http://[{{ hostvars[hv_vm_target].hv_ip }}]:{{ redfish_bmc_port }}/redfish/v1/Systems/{{  hostvars[hv_vm_target].domain_uuid }}"
+  when: hostvars[hv_vm_target].ip | ansible.utils.ipv6
+
+- name: Set BMC base URL for ipv4
+  set_fact:
+    base_url: "http://{{ hostvars[hv_vm_target].hv_ip }}:{{ redfish_bmc_port }}/redfish/v1/Systems/{{  hostvars[hv_vm_target].domain_uuid }}"
+  when: hostvars[hv_vm_target].ip | ansible.utils.ipv4
+
+- name: Power Down SNO
+  uri:
+    url: "{{ base_url }}/Actions/ComputerSystem.Reset"
+    user: "{{ redfish_user }}"
+    password: "{{ redfish_password }}"
+    method: Post
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"ResetType": "ForceOff"}
+    body_format: json
+    status_code: [204]
+    return_content: yes
+
+- name: Insert Virtual Media
+  uri:
+    url: "{{ base_url }}/VirtualMedia/Cd/Actions/VirtualMedia.InsertMedia"
+    user: "{{ redfish_user }}"
+    password: "{{ redfish_password }}"
+    method: Post
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"Image":"http://{{ http_store_host }}:{{ http_store_port }}/ibi/rhcos-ibi-prep-{{ hv_vm_target }}-{{ seed_image_version }}.iso", "Inserted": true}
+    body_format: json
+    status_code: [204]
+    return_content: yes
+
+- name: Set Virtual Media to Boot
+  uri:
+    url: "{{ base_url }}"
+    user: "{{ redfish_user }}"
+    password: "{{ redfish_password }}"
+    method: Patch
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"Boot": { "BootSourceOverrideTarget": "Cd", "BootSourceOverrideMode": "UEFI", "BootSourceOverrideEnabled": "Continuous"}}
+    body_format: json
+    status_code: [204]
+    return_content: yes
+
+- name: Power On SNO
+  uri:
+    url: "{{ base_url }}/Actions/ComputerSystem.Reset"
+    user: "{{ redfish_user }}"
+    password: "{{ redfish_password }}"
+    method: Post
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"ResetType": "On"}
+    body_format: json
+    status_code: [204]
+    return_content: yes
+
+- name: Wait until powered On
+  uri:
+    url: "{{ base_url }}"
+    user: "{{ redfish_user }}"
+    password: "{{ redfish_password }}"
+    method: Get
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {}
+    body_format: json
+    status_code: [200]
+    return_content: yes
+  register: check_state
+  until: check_state.json.PowerState == "On"
+  retries: 5
+  delay: 1
+
+- name: Wait until powered Off
+  uri:
+    url: "{{ base_url }}"
+    user: "{{ redfish_user }}"
+    password: "{{ redfish_password }}"
+    method: Get
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {}
+    body_format: json
+    status_code: [200]
+    return_content: yes
+  register: check_state
+  until: check_state.json.PowerState == "Off"
+  retries: 60
+  delay: 10
+
+- name: Eject Virtual Media
+  uri:
+    url: "{{ base_url }}/VirtualMedia/Cd/Actions/VirtualMedia.EjectMedia"
+    user: "{{ redfish_user }}"
+    password: "{{ redfish_password }}"
+    method: Post
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {}
+    body_format: json
+    status_code: [204]
+    return_content: yes
+  register: eject_cd
