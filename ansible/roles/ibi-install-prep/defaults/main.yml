@@ -6,7 +6,8 @@ http_store_host: "{{ groups['bastion'][0] }}"
 http_store_port: 8081
 
 # SNO to prepare, data is sourced from jetlag inventory file
-hv_vm_target: vm00006
+# Ideal to use VM hosted on NVMe for disk speed
+hv_vm_target: vm00005
 
 # Default BMC port for sushy emulator is 9000
 redfish_bmc_port: 9000

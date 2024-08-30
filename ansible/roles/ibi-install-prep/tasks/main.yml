@@ -117,3 +117,12 @@
     status_code: [204]
     return_content: yes
   register: eject_cd
+
+- name: Create directory for ibi disk files on Bastion
+  file:
+    path: /root/ibi-disk
+    state: directory
+
+- name: Copy prepared disk file from target SNO Hypervisor to Bastion
+  shell: |
+    scp {{ hostvars[hv_vm_target]['ansible_host'] }}:{{ hostvars[hv_vm_target]['disk_location'] }}/{{ hv_vm_target }}.qcow2 /root/ibi-disk/prepared-{{ seed_image_version }}.qcow2

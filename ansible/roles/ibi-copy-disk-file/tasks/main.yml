@@ -1,0 +1,18 @@
+---
+# ibi-copy-disk-file tasks
+
+- name: Clean up directory for ibi disk files
+  file:
+    path: "{{ hv_ibi_disk_dir }}"
+    state: absent
+
+- name: Create directory for ibi disk files
+  file:
+    path: "{{ hv_ibi_disk_dir }}"
+    state: directory
+
+# From the Bastion copy the disk file to each hypervisor
+- name: Copy prepared disk file to each Hypervisor
+  shell: |
+    scp /root/ibi-disk/prepared-{{ seed_image_version }}.qcow2 {{ inventory_hostname }}:{{ hv_ibi_disk_dir }}/prepared-{{ seed_image_version }}.qcow2
+  delegate_to: "{{ groups['bastion'][0] }}"

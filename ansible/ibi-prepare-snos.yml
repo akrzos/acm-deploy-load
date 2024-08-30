@@ -1,0 +1,36 @@
+---
+# Playbook to prepare an IBI disk file and propgate that disk file to all available VM SNOs
+#
+# Note: This playbook runs with Jetlag's inventory so it knows all the SNO details to use
+#
+# Example Usage:
+#
+# time ansible-playbook -i ../jetlag/ansible/inventory/cloud30.local ansible/ibi-create-prep-iso.yml
+#
+
+- name: Prepare an IBI disk file by preparing a single SNO for IBI
+  hosts: bastion
+  vars_files:
+  - vars/all.yml
+  roles:
+  - ibi-create-prep-iso
+  - ibi-install-prep
+
+- name: Copy prepared IBI SNO disk file to all hypervisors
+  hosts: hv
+  vars_files:
+  - vars/all.yml
+  roles:
+  - ibi-copy-disk-file
+
+- name: Replace all SNO disk files with prepared IBI disk file
+  hosts: hv_vm
+  gather_facts: false
+  vars:
+    hv_ibi_disk_dir: /mnt/disk2/libvirt/ibi-disk
+  vars_files:
+  - vars/all.yml
+  tasks:
+  - name: Replace each SNO's disk file with the prepared disk file
+    shell: |
+      cp {{ hv_ibi_disk_dir }}/prepared-{{ seed_image_version }}.qcow2 {{ hostvars[inventory_hostname]['disk_location'] }}/{{ inventory_hostname }}.qcow2
