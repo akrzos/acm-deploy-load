@@ -1,0 +1,19 @@
+---
+# ibi-create-manifests default vars
+
+hv_vm_manifests_directory: /root/hv-vm
+
+# sushy emulator bmc username/password
+bmc_username_base64: "{{ 'redhat' | b64encode }}"
+bmc_password_base64: "{{ 'password' | b64encode }}"
+
+# Typical VM NIC Interface name
+ibi_config_nic_interface: enp1s0
+
+ibi_auth_encoded: "{{ (registry_user + ':' + registry_password) | b64encode }}"
+ibi_pull_secret: ' {"auths": {"{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}": {"auth": "{{ ibi_auth_encoded }}"}}}'
+
+# Enable observability for IBI manifests install
+ibi_mc_observability: true
+
+cluster_image_set: openshift-4.17.0-rc.0

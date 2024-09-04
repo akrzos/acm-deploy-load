@@ -1,0 +1,166 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ inventory_hostname }}
+  labels:
+    name: {{ inventory_hostname }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ibi-pull-secret
+  namespace: {{ inventory_hostname }}
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: "{{ ibi_pull_secret | b64encode }}"
+---
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  name: {{ inventory_hostname }}
+  namespace: openshift-machine-api
+  annotations:
+    inspect.metal3.io: disabled
+spec:
+  automatedCleaningMode: disabled
+  bmc:
+{% if hostvars[inventory_hostname]['hv_ip'] | ansible.utils.ipv6 %}
+    address: redfish-virtualmedia+http://[{{ hostvars[inventory_hostname]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% else %}
+    address: redfish-virtualmedia+http://{{ hostvars[inventory_hostname]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% endif %}
+    credentialsName: {{ inventory_hostname }}-bmc-secret
+  bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+  bootMode: "UEFI"
+  online: true
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ inventory_hostname }}-bmc-secret
+  namespace: openshift-machine-api
+type: Opaque
+data:
+  password: {{ bmc_password_base64 }}
+  username: {{ bmc_username_base64 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nmstate-config
+  namespace: {{ inventory_hostname }}
+data:
+  network-config: |
+    interfaces:
+    - name: {{ ibi_config_nic_interface }}
+      type: ethernet
+      state: up
+      identifier: mac-address
+      mac-address: {{ hostvars[inventory_hostname]['mac_address'] }}
+{% if hostvars[hv_vm_target].ip | ansible.utils.ipv4 %}
+      ipv4:
+        enabled: true
+        autoconf: false
+        dhcp: false
+        address:
+        - ip: {{ hostvars[inventory_hostname]['ip'] }}
+          prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+      ipv6:
+        enabled: false
+{% else %}
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: true
+        autoconf: false
+        dhcp: false
+        address:
+        - ip: {{ hostvars[inventory_hostname]['ip'] }}
+          prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+{% endif %}
+    dns-resolver:
+      config:
+        server:
+        - {{ hostvars[inventory_hostname]['hv_ip'] }}
+    routes:
+      config:
+      - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+        next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
+        next-hop-interface: {{ ibi_config_nic_interface }}
+---
+apiVersion: extensions.hive.openshift.io/v1alpha1
+kind: ImageClusterInstall
+metadata:
+  name: {{ inventory_hostname }}
+  namespace: {{ inventory_hostname }}
+spec:
+  bareMetalHostRef:
+    name: {{ inventory_hostname }}
+    namespace: openshift-machine-api
+  clusterDeploymentRef:
+    name: {{ inventory_hostname }}
+  hostname: {{ inventory_hostname }}
+  imageSetRef:
+    name: {{ cluster_image_set }}
+  machineNetwork: {{ hostvars[inventory_hostname]['machine_network'] }}
+  networkConfigRef:
+    name: nmstate-config
+---
+apiVersion: hive.openshift.io/v1
+kind: ClusterDeployment
+metadata:
+  name: {{ inventory_hostname }}
+  namespace: {{ inventory_hostname }}
+spec:
+  baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
+  clusterInstallRef:
+    group: extensions.hive.openshift.io
+    kind: ImageClusterInstall
+    name: {{ inventory_hostname }}
+    version: v1alpha1
+  clusterName: {{ inventory_hostname }}
+  platform:
+    none: {}
+  pullSecretRef:
+    name: ibi-pull-secret
+---
+apiVersion: agent.open-cluster-management.io/v1
+kind: KlusterletAddonConfig
+metadata:
+  name: {{ inventory_hostname }}
+  namespace: {{inventory_hostname }}
+spec:
+  clusterName: {{ inventory_hostname }}
+  clusterNamespace: {{ inventory_hostname }}
+  clusterLabels:
+    cloud: auto-detect
+    vendor: auto-detect
+  applicationManager:
+    enabled: false
+  certPolicyController:
+    enabled: false
+  iamPolicyController:
+    enabled: false
+  policyController:
+    enabled: true
+  searchCollector:
+    enabled: {{ setup_ztp_searchcollector_enabled }}
+---
+apiVersion: cluster.open-cluster-management.io/v1
+kind: ManagedCluster
+metadata:
+  name: {{ inventory_hostname }}
+  labels:
+    common: 'true'
+    group-du-sno: ''
+    name: {{ inventory_hostname }}
+{% if ibi_mc_observability %}
+    observability: enabled
+{% else %}
+    observability: disabled
+{% endif %}
+    sites: {{ inventory_hostname }}
+    vendor: OpenShift
+spec:
+  hubAcceptsClient: true

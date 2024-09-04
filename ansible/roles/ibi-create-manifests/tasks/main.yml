@@ -1,0 +1,22 @@
+---
+# ibi-create-manifests tasks
+
+- name: Create directories for hv-vm IBI manifests on bastion for SNOs
+  file:
+    path: "{{ item }}"
+    state: directory
+  delegate_to: "{{ groups['bastion'][0] }}"
+  run_once: true
+  loop:
+  - "{{ hv_vm_manifests_directory }}/"
+  - "{{ hv_vm_manifests_directory }}/sno"
+  - "{{ hv_vm_manifests_directory }}/sno/ibi-manifests"
+
+- name: Template a manifest per hv-vm on bastion as an SNO
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: manifest.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/ibi-manifests/{{ inventory_hostname }}-manifests.yml"
+  delegate_to: "{{ groups['bastion'][0] }}"
