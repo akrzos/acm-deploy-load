@@ -1,0 +1,27 @@
+---
+# rhacm-siteconfig-operator tasks
+# SiteConfig Operator is included with ACM 2.12
+
+- name: Enable SiteConfig Operator
+  shell: |
+    export KUBECONFIG={{ hub_cluster_kubeconfig }}
+    oc get mch -n open-cluster-management multiclusterhub -o json | jq '.spec.overrides.components[] |= (select(.name=="siteconfig-preview").enabled = true)' | oc replace -f -
+  when: acm_enable_siteconfig
+
+- name: Wait for SiteConfig Operator pod exists
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get pods -n open-cluster-management -l app.kubernetes.io/name=siteconfig-controller
+  when: acm_enable_siteconfig
+  retries: 150
+  delay: 2
+  register: as_pod
+  until: as_pod.failed == false
+
+- name: Wait for SiteConfig Operator pod running
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get pods -n open-cluster-management -l app.kubernetes.io/name=siteconfig-controller -o jsonpath='{.items[0].status.phase}'
+  when: acm_enable_siteconfig
+  retries: 150
+  delay: 2
+  register: as_pod
+  until: as_pod.stdout == "Running"

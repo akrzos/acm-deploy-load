@@ -26,6 +26,7 @@
   - vars/all.yml
   roles:
   - rhacm-hub-deploy
+  - rhacm-siteconfig-operator
   - mce-assisted-installer
   - mce-image-based-install
   - mce-add-clusterimagesets

@@ -1,0 +1,4 @@
+---
+# rhacm-siteconfig-operator default vars
+
+acm_enable_siteconfig: false
