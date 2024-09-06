@@ -93,7 +93,7 @@ def main():
         if member_id == leader_id:
           logger.info("Leader endpoint is: {}".format(endpoint))
           leader_pod = pod
-        break;
+        break
   if leader_pod != "":
     logger.info("Leader pod identified: {}".format(leader_pod))
   else:

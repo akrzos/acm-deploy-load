@@ -289,13 +289,13 @@ def main():
                           if datetime.strptime(csv_operator_last_update_time, "%Y-%m-%dT%H:%M:%SZ") < operator_installed_ts:
                             csv_operator_last_update_time = item["status"]["lastUpdateTime"]
 
-                        break;
+                        break
                     if not operator_found:
                       logger.error("Cluster: {} failed to have Operator CSV: {} installed with phase Succeeded".format(cluster, operator))
                       cgus[cgu_name]["batches"][batch_index]["operator_incomplete"].append(cluster)
                       csv_operator_last_update_time = ""
                       # Don't bother checking the rest of the operators, the cluster already failed on an operator
-                      break;
+                      break
                   if operator_found:
                     cgus[cgu_name]["batches"][batch_index]["operator_completed"].append(cluster)
                     # csv_operator_duration = (datetime.strptime(csv_operator_last_update_time, "%Y-%m-%dT%H:%M:%SZ") - datetime.strptime(csv_operator_creation_timestamp, "%Y-%m-%dT%H:%M:%SZ")).total_seconds()

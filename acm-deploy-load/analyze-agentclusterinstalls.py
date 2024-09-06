@@ -75,7 +75,7 @@ def main():
         if condition["status"] == "True":
           aci_completed_ltt = condition["lastTransitionTime"]
         aci_status = condition["reason"]
-        break;
+        break
 
     if aci_status == "InstallationCompleted":
       start = datetime.strptime(aci_creationTimestamp, "%Y-%m-%dT%H:%M:%SZ")

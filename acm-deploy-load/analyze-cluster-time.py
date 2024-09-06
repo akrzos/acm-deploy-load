@@ -203,7 +203,7 @@ def main():
         if not event_noncompliant:
           # Policy found compliant, record timing
           policy_report_data[event_last_timestamp] = {"name": policy_name}
-          break;
+          break
 
   # Correctly order policy items by datetime stamp sorting
   for key, value in sorted(policy_report_data.items()):

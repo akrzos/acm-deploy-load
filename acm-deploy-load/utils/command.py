@@ -64,7 +64,7 @@ def command(cmd, dry_run, cmd_directory="", retries=1, retry_backoff=True, no_lo
     tries += 1
     # Break from retry loop if successful
     if retries > 1 and return_code == 0:
-      break;
+      break
   if cmd_directory != "":
     os.chdir(working_directory)
   return return_code, output

@@ -70,7 +70,7 @@ def main():
         if condition["status"] == "True":
           if condition["reason"] == "InstallationCompleted":
             clusters.append(aci_name)
-        break;
+        break
 
   clusters_total = len(clusters)
   logger.info("Number of cluster clusterversions to examine: {}".format(clusters_total))
