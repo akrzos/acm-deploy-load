@@ -137,7 +137,10 @@ def main():
   for condition in aci_data["status"]["conditions"]:
     cond_lpt = condition["lastProbeTime"]
     cond_ltt = condition["lastTransitionTime"]
-    cond_message = condition["message"]
+    if "message" in condition:
+      cond_message = condition["message"]
+    else:
+      cond_message = "(No Message)"
     cond_reason = condition["reason"]
     cond_status = condition["status"]
     cond_type = condition["type"]
@@ -203,7 +206,7 @@ def main():
         if not event_noncompliant:
           # Policy found compliant, record timing
           policy_report_data[event_last_timestamp] = {"name": policy_name}
-          break
+          # break
 
   # Correctly order policy items by datetime stamp sorting
   for key, value in sorted(policy_report_data.items()):
