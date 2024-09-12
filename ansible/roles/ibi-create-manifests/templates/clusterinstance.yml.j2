@@ -1,0 +1,127 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ inventory_hostname }}
+  labels:
+    name: {{ inventory_hostname }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ibi-pull-secret
+  namespace: {{ inventory_hostname }}
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: "{{ disconnected_pull_secret | b64encode }}"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ inventory_hostname }}-bmc-secret
+  namespace: {{ inventory_hostname }}
+type: Opaque
+data:
+  password: {{ bmc_password_base64 }}
+  username: {{ bmc_username_base64 }}
+---
+apiVersion: siteconfig.open-cluster-management.io/v1alpha1
+kind: ClusterInstance
+metadata:
+  name: {{ inventory_hostname }}
+  namespace: {{ inventory_hostname }}
+spec:
+  additionalNTPSources:
+  - {{ hostvars[inventory_hostname]['hv_ip'] }}
+  baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
+  clusterImageSetNameRef: {{ cluster_image_set }}
+  clusterLabels:
+    common: 'true'
+    group-du-sno: ''
+    name: {{ inventory_hostname }}
+{% if sno_mc_observability %}
+    observability: enabled
+{% else %}
+    observability: disabled
+{% endif %}
+    sites: {{ inventory_hostname }}
+    vendor: OpenShift
+  clusterName: {{ inventory_hostname }}
+  clusterNetwork:
+  - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
+    hostPrefix: {{ sno_cluster_network_host_prefix }}
+  clusterType: SNO
+  holdInstallation: false
+{% if sno_du_profile == "4.15" %}
+  installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"NodeTuning\" ] }}"
+{% elif sno_du_profile == "4.16" %}
+  installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"Ingress\", \"NodeTuning\" ] }}"
+{% endif %}
+  machineNetwork:
+  - cidr: {{ hostvars[inventory_hostname]['machine_network'] }}
+  networkType: OVNKubernetes
+  nodes:
+  - automatedCleaningMode: disabled
+{% if hostvars[inventory_hostname]['hv_ip'] | ansible.utils.ipv6 %}
+    bmcAddress: redfish-virtualmedia+http://[{{ hostvars[inventory_hostname]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% else %}
+    bmcAddress: redfish-virtualmedia+http://{{ hostvars[inventory_hostname]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% endif %}
+    bmcCredentialsName:
+      name: {{ inventory_hostname }}-bmc-secret
+    bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+    bootMode: UEFI
+    hostName: {{ inventory_hostname }}
+    ironicInspect: disabled
+    nodeNetwork:
+      interfaces:
+      - name: {{ sno_nic_interface }}
+        macAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+      config:
+        interfaces:
+        - name: {{ sno_nic_interface }}
+          type: ethernet
+          state: up
+          identifier: mac-address
+          mac-address: {{ hostvars[inventory_hostname]['mac_address'] }}
+{% if hostvars[hv_vm_target].ip | ansible.utils.ipv4 %}
+          ipv4:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+            - ip: {{ hostvars[inventory_hostname]['ip'] }}
+              prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+          ipv6:
+            enabled: false
+{% else %}
+          ipv4:
+            enabled: false
+          ipv6:
+            enabled: true
+            autoconf: false
+            dhcp: false
+            address:
+            - ip: {{ hostvars[inventory_hostname]['ip'] }}
+              prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+{% endif %}
+        dns-resolver:
+          config:
+            server:
+            - {{ hostvars[inventory_hostname]['hv_ip'] }}
+        routes:
+          config:
+          - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+            next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
+            next-hop-interface: {{ sno_nic_interface }}
+    templateRefs:
+      - name: ibi-node-templates-v1
+        namespace: open-cluster-management
+  pullSecretRef:
+    name: ibi-pull-secret
+  serviceNetwork:
+  - cidr: {{ "fd02::/112" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
+  sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
+  templateRefs:
+    - name: ibi-cluster-templates-v1
+      namespace: open-cluster-management

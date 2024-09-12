@@ -11,6 +11,7 @@
   - "{{ hv_vm_manifests_directory }}/"
   - "{{ hv_vm_manifests_directory }}/sno"
   - "{{ hv_vm_manifests_directory }}/sno/ibi-manifests"
+  - "{{ hv_vm_manifests_directory }}/sno/clusterinstance"
 
 - name: Template a manifest per hv-vm on bastion as an SNO
   template:
@@ -19,4 +20,6 @@
   loop:
   - src: manifest.yml.j2
     dest: "{{ hv_vm_manifests_directory }}/sno/ibi-manifests/{{ inventory_hostname }}-manifests.yml"
+  - src: clusterinstance.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/clusterinstance/{{ inventory_hostname }}-clusterinstance.yml"
   delegate_to: "{{ groups['bastion'][0] }}"
