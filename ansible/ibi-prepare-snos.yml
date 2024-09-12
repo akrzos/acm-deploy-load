@@ -37,5 +37,7 @@
   - name: Replace each SNO's disk file with the prepared disk file
     shell: |
       cp {{ hv_ibi_disk_dir }}/prepared-{{ seed_image_version }}.qcow2 {{ hostvars[inventory_hostname]['disk_location'] }}/{{ inventory_hostname }}.qcow2
+    when: ibi_replace_sno_disk_file | default(true)
   roles:
-  - ibi-create-manifests
+  - role: ibi-create-manifests
+    when: ibi_create_manifests | default(true)
