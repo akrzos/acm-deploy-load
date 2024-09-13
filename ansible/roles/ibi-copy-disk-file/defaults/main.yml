@@ -3,3 +3,6 @@
 
 # Default to the 2nd disk in the ZTP Scale environments due to the disk often being NVMe and thus much faster
 hv_ibi_disk_dir: /mnt/disk2/libvirt/ibi-disk
+
+# Version of the seed image was used dto prepare SNO disk file
+seed_image_version: 4.17.0-rc.2

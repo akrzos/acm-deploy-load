@@ -16,7 +16,7 @@ disconnected_pull_secret: ' {"auths": {"{{ rhacm_disconnected_registry }}:{{ rha
 # Enable observability for SNos installed via these manifests/clusterinstance
 sno_mc_observability: true
 
-cluster_image_set: openshift-4.17.0-rc.0
+cluster_image_set: openshift-4.17.0-rc.2
 
 # 64 is a prefix for ipv6, 24 would work for ipv4
 sno_cluster_network_host_prefix: 64

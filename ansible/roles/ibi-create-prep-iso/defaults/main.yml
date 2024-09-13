@@ -5,7 +5,7 @@
 ocp_ibi_version: quay.io/openshift-release-dev/ocp-release:4.17.0-rc.0-x86_64
 
 # Version of the seed image we are using for this ibi iso file
-seed_image_version: 4.17.0-rc.0
+seed_image_version: 4.17.0-rc.2
 
 # Path to Registry on the Bastion machine
 registry_path: /opt/registry

@@ -15,3 +15,6 @@ redfish_bmc_port: 9000
 # Default sushy emulator user/password
 redfish_user: redhat
 redfish_password: password
+
+# Version of the seed image was used during the prep iso creation
+seed_image_version: 4.17.0-rc.2
