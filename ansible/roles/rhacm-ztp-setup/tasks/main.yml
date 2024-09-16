@@ -15,7 +15,6 @@
   loop:
   - "{{ install_directory }}/rhacm-ztp"
   - "{{ install_directory }}/rhacm-ztp/cnf-features-deploy"
-  - "{{ install_directory }}/rhacm-ztp/scripts"
 
 - name: Clone cnf-features-deploy
   git:
