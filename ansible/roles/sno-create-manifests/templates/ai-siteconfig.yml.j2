@@ -1,0 +1,129 @@
+---
+{% if ai_siteconfig_map_site_data %}
+apiVersion: ran.openshift.io/v2
+{% else %}
+apiVersion: ran.openshift.io/v1
+{% endif %}
+kind: SiteConfig
+metadata:
+  name: {{ inventory_hostname }}
+  namespace: {{ inventory_hostname }}
+spec:
+  baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
+  pullSecretRef:
+    name: "ai-pull-secret"
+  clusterImageSetNameRef: {{ cluster_image_set }}
+  sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
+  clusters:
+  - clusterName: {{ inventory_hostname }}
+    networkType: "OVNKubernetes"
+    extraManifestPath: extra-manifests
+{% if sno_du_profile == "4.15" %}
+    # 4.15
+    installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"NodeTuning\" ] }}"
+    # 4.16, 4.17
+    # installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"Ingress\", \"NodeTuning\" ] }}"
+{% elif sno_du_profile in ["4.16", "4.17"] %}
+    # 4.15
+    # installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"NodeTuning\" ] }}"
+    # 4.16, 4.17
+    installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"Ingress\", \"NodeTuning\" ] }}"
+{% else %}
+{% if ai_siteconfig_fips %}
+    installConfigOverrides: '{ "fips": true }'
+{% endif %}
+{% endif %}
+    clusterLabels:
+      common: 'true'
+{% if sno_du_profile in ["4.15", "4.16", "4.17"] %}
+      du-profile: "{{ sno_du_profile }}"
+{% endif %}
+      group-du-sno: ''
+      name: {{ inventory_hostname }}
+{% if sno_mc_observability %}
+      observability: enabled
+{% else %}
+      observability: disabled
+{% endif %}
+      sites: {{ inventory_hostname }}
+      vendor: OpenShift
+    clusterNetwork:
+    - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
+      hostPrefix: {{ sno_cluster_network_host_prefix }}
+    machineNetwork:
+    - cidr: {{ hostvars[inventory_hostname]['machine_network'] }}
+    serviceNetwork:
+    - {{ "fd02::/112" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
+    additionalNTPSources:
+    - {{ hostvars[inventory_hostname]['hv_ip'] }}
+    crTemplates:
+      KlusterletAddonConfig: "KlusterletAddonConfigOverride.yaml"
+{% if ai_siteconfig_map_site_data %}
+    siteConfigMap:
+      name: site-{{ inventory_hostname }}
+      namespace: {{ ai_site_data_namespace }}
+      data:
+        sitekey1: "sitevalue1"
+        sitekey2: "sitevalue2"
+        sitekey3: "sitevalue3"
+        sitekey4: "sitevalue4"
+{% endif %}
+    nodes:
+    - hostName: "{{ inventory_hostname }}"
+{% if ai_siteconfig_ironic_inspect %}
+      ironicInspect: enabled
+{% else %}
+      ironicInspect: disabled
+{% endif %}
+{% if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv4 %}
+      bmcAddress: redfish-virtualmedia+http://{{ hostvars[inventory_hostname]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% else %}
+      bmcAddress: redfish-virtualmedia+http://[{{ hostvars[inventory_hostname]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% endif %}
+      bmcCredentialsName:
+        name: {{ inventory_hostname }}-bmc-secret
+      bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+      bootMode: "UEFI"
+      # rootDeviceHints:
+      #   hctl: '0:0:0:0'
+{% if ai_siteconfig_enable_cpuset %}
+      cpuset: "{{ ai_siteconfig_cpuset }}"
+{% else %}
+      # cpuset: "{{ ai_siteconfig_cpuset }}"
+{% endif %}
+      nodeNetwork:
+        interfaces:
+        - name: eno1
+          macAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+        config:
+          interfaces:
+          - name: eno1
+            type: ethernet
+            state: up
+{% if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv4 %}
+            ipv4:
+              enabled: true
+              address:
+              - ip: "{{ hostvars[inventory_hostname]['ip'] }}"
+                prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+            ipv6:
+              enabled: false
+{% else %}
+            ipv4:
+              enabled: false
+            ipv6:
+              enabled: true
+              address:
+              - ip: "{{ hostvars[inventory_hostname]['ip'] }}"
+                prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+{% endif %}
+          dns-resolver:
+            config:
+              server:
+              - {{ hostvars[inventory_hostname]['hv_ip'] }}
+          routes:
+            config:
+            - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+              next-hop-interface: eno1
+              next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
+              table-id: 254

@@ -13,7 +13,7 @@ metadata:
   namespace: {{ inventory_hostname }}
 type: kubernetes.io/dockerconfigjson
 data:
-  .dockerconfigjson: "{{ disconnected_pull_secret | b64encode }}"
+  .dockerconfigjson: "{{ pull_secret | b64encode }}"
 ---
 apiVersion: v1
 kind: Secret
@@ -37,6 +37,9 @@ spec:
   clusterImageSetNameRef: {{ cluster_image_set }}
   clusterLabels:
     common: 'true'
+{% if sno_du_profile in ["4.15", "4.16", "4.17"] %}
+    du-profile: "{{ sno_du_profile }}"
+{% endif %}
     group-du-sno: ''
     name: {{ inventory_hostname }}
 {% if sno_mc_observability %}
@@ -54,7 +57,7 @@ spec:
   holdInstallation: false
 {% if sno_du_profile == "4.15" %}
   installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"NodeTuning\" ] }}"
-{% elif sno_du_profile == "4.16" %}
+{% elif sno_du_profile in ["4.16", "4.17"]  %}
   installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"Ingress\", \"NodeTuning\" ] }}"
 {% endif %}
   machineNetwork:
@@ -84,7 +87,7 @@ spec:
           state: up
           identifier: mac-address
           mac-address: {{ hostvars[inventory_hostname]['mac_address'] }}
-{% if hostvars[hv_vm_target].ip | ansible.utils.ipv4 %}
+{% if hostvars[inventory_hostname].ip | ansible.utils.ipv4 %}
           ipv4:
             enabled: true
             autoconf: false
@@ -115,13 +118,13 @@ spec:
             next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
             next-hop-interface: {{ sno_nic_interface }}
     templateRefs:
-      - name: ibi-node-templates-v1
-        namespace: open-cluster-management
+      - name: {{ ibi_clusterinstance_node_templates }}
+        namespace: {{ ibi_clusterinstance_node_templates_ns }}
   pullSecretRef:
     name: ibi-pull-secret
   serviceNetwork:
   - cidr: {{ "fd02::/112" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
   sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
   templateRefs:
-    - name: ibi-cluster-templates-v1
-      namespace: open-cluster-management
+    - name: {{ ibi_clusterinstance_cluster_templates }}
+      namespace: {{ ibi_clusterinstance_cluster_templates_ns }}

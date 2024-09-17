@@ -1,0 +1,65 @@
+---
+# sno-create-manifests default vars
+
+hv_vm_manifests_directory: /root/hv-vm
+
+# Control what manifests are templatized, avoid creating manifests you won't use to save time
+create_ai_siteconfigs: true
+create_ai_clusterinstances: true
+create_ai_manifests: true
+create_ibi_clusterinstances: true
+create_ibi_manifests: true
+
+# sushy emulator bmc username/password
+bmc_username_base64: "{{ 'redhat' | b64encode }}"
+bmc_password_base64: "{{ 'password' | b64encode }}"
+
+# Typical VM NIC Interface name
+sno_nic_interface: enp1s0
+
+# Provide pull-secret for connected manifests
+pull_secret: "{{ lookup('file', '../pull_secret.txt') }}"
+
+auth_encoded: "{{ (registry_user + ':' + registry_password) | b64encode }}"
+disconnected_pull_secret: ' {"auths": {"{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}": {"auth": "{{ auth_encoded }}"}}}'
+
+# Enable observability for SNOs installed via these manifests
+sno_mc_observability: true
+
+cluster_image_set: openshift-4.17.0-rc.2
+
+# 64 is a prefix for ipv6, 24 would work for ipv4
+sno_cluster_network_host_prefix: 64
+
+# Enable DU profile SNO installConfigOverrides
+# Can be set to "none", "4.15", "4.16", or "4.17"
+sno_du_profile: "4.16"
+
+# SSH Key to access machine thathas booted IBI Prep ISO
+ssh_public_key_file: ~/.ssh/id_rsa.pub
+
+# AI manifest options
+ai_resource_site_data: false
+ai_siteconfig_map_site_data: false
+# Place the site specific configmap data in this namespace
+ai_site_data_namespace: ztp-group
+# Enable fips via installConfigOverrides (Can not be done with du-profile)
+ai_siteconfig_fips: false
+# Used when converged flow is enabled
+ai_siteconfig_ironic_inspect: false
+# Used in conjunction with including the PerformanceProfile in the DU profile
+ai_siteconfig_enable_cpuset: false
+ai_siteconfig_cpuset: "0-3"
+
+
+# Defaults for AI clusterinstance templates
+ai_clusterinstance_cluster_templates_ns: open-cluster-management
+ai_clusterinstance_cluster_templates: ai-cluster-templates-v1
+ai_clusterinstance_node_templates_ns: open-cluster-management
+ai_clusterinstance_node_templates: ai-node-templates-v1
+
+# Defaults for IBI clusterinstance templates
+ibi_clusterinstance_cluster_templates_ns: open-cluster-management
+ibi_clusterinstance_cluster_templates: ibi-cluster-templates-v1
+ibi_clusterinstance_node_templates_ns: open-cluster-management
+ibi_clusterinstance_node_templates: ibi-node-templates-v1

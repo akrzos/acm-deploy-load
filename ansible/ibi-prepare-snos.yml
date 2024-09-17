@@ -32,6 +32,9 @@
   vars:
     hv_ibi_disk_dir: /mnt/disk2/libvirt/ibi-disk
     seed_image_version: 4.17.0-rc.2
+    create_ai_siteconfigs: false
+    create_ai_clusterinstances: false
+    create_ai_manifests: false
   vars_files:
   - vars/all.yml
   pre_tasks:
@@ -40,5 +43,5 @@
       cp {{ hv_ibi_disk_dir }}/prepared-{{ seed_image_version }}.qcow2 {{ hostvars[inventory_hostname]['disk_location'] }}/{{ inventory_hostname }}.qcow2
     when: ibi_replace_sno_disk_file | default(true)
   roles:
-  - role: ibi-create-manifests
+  - role: sno-create-manifests
     when: ibi_create_manifests | default(true)
