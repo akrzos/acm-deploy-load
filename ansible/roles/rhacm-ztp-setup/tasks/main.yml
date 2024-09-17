@@ -67,6 +67,9 @@
   - replace: "acm-d"
     regexp: "rhacm2"
     enabled: "{{ rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 }}"
+  # release-4.17 cnf-features-deploy
+  - replace: "{{ rhacm_policy_generator_image_tag }}"
+    regexp: "v2.11"
   - replace: "{{ rhacm_policy_generator_image_tag }}"
     regexp: "v2.7"
   # release-4.11 cnf-features-deploy

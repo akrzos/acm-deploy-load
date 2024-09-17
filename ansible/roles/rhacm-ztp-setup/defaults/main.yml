@@ -2,7 +2,7 @@
 # rhacm-ztp-setup default vars
 
 cnf_features_deploy_repo: https://github.com/openshift-kni/cnf-features-deploy.git
-cnf_features_deploy_branch: release-4.15
+cnf_features_deploy_branch: release-4.16
 
 # Pre-creates manifests for the desired number of argocd cluster applications
 cluster_applications_count: 35
@@ -35,14 +35,14 @@ include_varlibcontainers_partitioned_extra_manifests: false
 # DU Profile Options
 #####
 # Currently can choose between 4.16, 4.15, 4.14, 4.13, and 4.12
-du_profile_version: 4.15
+du_profile_version: 4.16
 
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
-operator_index_tag: v4.15
+operator_index_tag: v4.16
 
-ztp_site_generator_image_tag: v4.15.0-36
+ztp_site_generator_image_tag: v4.16.0-34
 
-rhacm_policy_generator_image_tag: v2.9.0-34
+rhacm_policy_generator_image_tag: v2.12.0-15
 
 # Initialize the siteconfig list so it can be sorted later
 siteconfig_list: []
@@ -72,7 +72,7 @@ lifecycle_agent_channel: stable
 # v1alpha1 (alpha installed operator), v1 for brew (stable)
 ibu_source_crs_apiversion: v1
 
-# Only implemented for SNOs, organizes the CRs into 13 policies instead of the default of 5 policies
+# Only implemented for SNOs, organizes the CRs into 13-18 policies instead of the default of 5 policies
 manyPolicies: false
 
 # When enabled, creates extra annotations in common PGT which use hub side templating
