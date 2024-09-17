@@ -2,7 +2,7 @@
 # rhacm-ztp-setup default vars
 
 cnf_features_deploy_repo: https://github.com/openshift-kni/cnf-features-deploy.git
-cnf_features_deploy_branch: release-4.16
+cnf_features_deploy_branch: release-4.17
 
 # Pre-creates manifests for the desired number of argocd cluster applications
 cluster_applications_count: 35
@@ -34,8 +34,8 @@ include_varlibcontainers_partitioned_extra_manifests: false
 #####
 # DU Profile Options
 #####
-# Currently can choose between 4.16, 4.15, 4.14, 4.13, and 4.12
-du_profile_version: 4.16
+# Currently can choose between 4.17, 4.16, 4.15, 4.14, 4.13, and 4.12
+du_profile_version: 4.17
 
 disconnected_operator_index_name: olm-mirror/redhat-operator-index
 operator_index_tag: v4.16
