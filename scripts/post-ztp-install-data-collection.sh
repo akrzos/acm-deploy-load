@@ -8,7 +8,7 @@ mkdir -p ${output_dir}
 
 if [ "$1" == "-k" ]; then
   echo "$(date -u) :: Getting sno cluster kubeconfigs"
-  ls /root/hv-vm/sno/manifests/ | xargs -I % sh -c "mkdir -p /root/hv-vm/kc/% ;oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/kc/%/kubeconfig"
+  ls /root/hv-vm/sno/ai-manifests/ | sed 's/-manifests.yml//g' | xargs -I % sh -c "mkdir -p /root/hv-vm/kc/% ;oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/kc/%/kubeconfig"
   echo "$(date -u) :: Getting compact cluster kubeconfigs"
   ls /root/hv-vm/compact/manifests/ | xargs -I % sh -c "mkdir -p /root/hv-vm/kc/%; oc get secret %-admin-kubeconfig -n % -o json | jq -r '.data.kubeconfig' | base64 -d > /root/hv-vm/kc/%/kubeconfig"
   echo "$(date -u) :: Getting standard cluster kubeconfigs"
