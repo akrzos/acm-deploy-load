@@ -33,7 +33,7 @@ sno_cluster_network_host_prefix: 64
 
 # Enable DU profile SNO installConfigOverrides
 # Can be set to "none", "4.15", "4.16", or "4.17"
-sno_du_profile: "4.16"
+sno_du_profile: "4.17"
 
 # SSH Key to access machine thathas booted IBI Prep ISO
 ssh_public_key_file: ~/.ssh/id_rsa.pub
