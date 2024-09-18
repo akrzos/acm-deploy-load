@@ -5,7 +5,7 @@
 - name: Enable SiteConfig Operator
   shell: |
     export KUBECONFIG={{ hub_cluster_kubeconfig }}
-    oc get mch -n open-cluster-management multiclusterhub -o json | jq '.spec.overrides.components[] |= (select(.name=="siteconfig-preview").enabled = true)' | oc replace -f -
+    oc get mch -n open-cluster-management multiclusterhub -o json | jq '.spec.overrides.components[] |= (select(.name=="siteconfig").enabled = true)' | oc replace -f -
   when: acm_enable_siteconfig
 
 - name: Wait for SiteConfig Operator pod exists
