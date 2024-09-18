@@ -59,11 +59,42 @@ type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: {{ pull_secret | b64encode }}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ inventory_hostname }}-marketplace-namespace
+  namespace: {{ inventory_hostname }}
+data:
+  namespace.yml: |
+    # Taken from https://github.com/operator-framework/operator-marketplace/blob/53c124a3f0edfd151652e1f23c87dd39ed7646bb/manifests/01_namespace.yaml
+    # Update it as the source evolves.
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      annotations:
+        openshift.io/node-selector: ""
+        workload.openshift.io/allowed: "management"
+      labels:
+        openshift.io/cluster-monitoring: "true"
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: v1.25
+        pod-security.kubernetes.io/audit: baseline
+        pod-security.kubernetes.io/audit-version: v1.25
+        pod-security.kubernetes.io/warn: baseline
+        pod-security.kubernetes.io/warn-version: v1.25
+      name: "openshift-marketplace"
+---
 apiVersion: extensions.hive.openshift.io/v1beta1
 kind: AgentClusterInstall
 metadata:
   annotations:
+{% if sno_du_profile == "4.15" %}
+    agent-install.openshift.io/install-config-overrides: '{"networking":{"networkType":"OVNKubernetes"},"capabilities":{"baselineCapabilitySet":"None","additionalEnabledCapabilities":["OperatorLifecycleManager","NodeTuning"]}}'
+{% elif sno_du_profile in ["4.16", "4.17"] %}
+    agent-install.openshift.io/install-config-overrides: '{"networking":{"networkType":"OVNKubernetes"},"capabilities":{"baselineCapabilitySet":"None","additionalEnabledCapabilities":["OperatorLifecycleManager","Ingress","NodeTuning"]}}'
+{% else %}
     agent-install.openshift.io/install-config-overrides: '{"networking":{"networkType":"OVNKubernetes"}}'
+{% endif %}
   name: {{ inventory_hostname }}
   namespace: {{ inventory_hostname }}
 spec:
@@ -83,12 +114,22 @@ spec:
     controlPlaneAgents: 1
     workerAgents: 0
   sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
+{% if sno_du_profile in ["4.15", "4.16", "4.17"] %}
+  manifestsConfigMapRefs:
+  - name: {{ inventory_hostname }}-marketplace-namespace
 {% if ai_siteconfig_enable_cpuset %}
-  manifestsConfigMapRef:
-    name: "sno-workload-partitioning-configmap"
+  - name: sno-workload-partitioning-configmap
 {% else %}
-  # manifestsConfigMapRef:
-  #   name: "sno-workload-partitioning-configmap"
+  # - name: sno-workload-partitioning-configmap
+{% endif %}
+{% else %}
+{% if ai_siteconfig_enable_cpuset %}
+  manifestsConfigMapRefs:
+  - name: sno-workload-partitioning-configmap
+{% else %}
+  # manifestsConfigMapRefs:
+  # - name: sno-workload-partitioning-configmap
+{% endif %}
 {% endif %}
 ---
 apiVersion: hive.openshift.io/v1
