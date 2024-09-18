@@ -25,6 +25,31 @@ data:
   password: {{ bmc_password_base64 }}
   username: {{ bmc_username_base64 }}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ inventory_hostname }}-marketplace-namespace
+  namespace: {{ inventory_hostname }}
+data:
+  namespace.yml: |
+    # Taken from https://github.com/operator-framework/operator-marketplace/blob/53c124a3f0edfd151652e1f23c87dd39ed7646bb/manifests/01_namespace.yaml
+    # Update it as the source evolves.
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      annotations:
+        openshift.io/node-selector: ""
+        workload.openshift.io/allowed: "management"
+      labels:
+        openshift.io/cluster-monitoring: "true"
+        pod-security.kubernetes.io/enforce: baseline
+        pod-security.kubernetes.io/enforce-version: v1.25
+        pod-security.kubernetes.io/audit: baseline
+        pod-security.kubernetes.io/audit-version: v1.25
+        pod-security.kubernetes.io/warn: baseline
+        pod-security.kubernetes.io/warn-version: v1.25
+      name: "openshift-marketplace"
+---
 apiVersion: siteconfig.open-cluster-management.io/v1alpha1
 kind: ClusterInstance
 metadata:
@@ -54,6 +79,8 @@ spec:
   - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
     hostPrefix: {{ sno_cluster_network_host_prefix }}
   clusterType: SNO
+  extraManifestsRefs:
+  - name: {{ inventory_hostname }}-marketplace-namespace
   holdInstallation: false
 {% if sno_du_profile == "4.15" %}
   installConfigOverrides:  "{\"capabilities\":{\"baselineCapabilitySet\": \"None\", \"additionalEnabledCapabilities\": [ \"OperatorLifecycleManager\", \"NodeTuning\" ] }}"
@@ -75,7 +102,12 @@ spec:
     bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
     bootMode: UEFI
     hostName: {{ inventory_hostname }}
+{% if ai_clusterinstance_ironic_inspect %}
+    # Can not actually set enabled, unset is enabled
+    # ironicInspect: enabled
+{% else %}
     ironicInspect: disabled
+{% endif %}
     nodeNetwork:
       interfaces:
       - name: {{ sno_nic_interface }}
@@ -118,13 +150,13 @@ spec:
             next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
             next-hop-interface: {{ sno_nic_interface }}
     templateRefs:
-      - name: {{ ai_clusterinstance_node_templates }}
-        namespace: {{ ai_clusterinstance_node_templates_ns }}
+    - name: {{ ai_clusterinstance_node_templates }}
+      namespace: {{ ai_clusterinstance_node_templates_ns }}
   pullSecretRef:
     name: ai-pull-secret
   serviceNetwork:
   - cidr: {{ "fd02::/112" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
   sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
   templateRefs:
-    - name: {{ ai_clusterinstance_cluster_templates }}
-      namespace: {{ ai_clusterinstance_cluster_templates_ns }}
+  - name: {{ ai_clusterinstance_cluster_templates }}
+    namespace: {{ ai_clusterinstance_cluster_templates_ns }}

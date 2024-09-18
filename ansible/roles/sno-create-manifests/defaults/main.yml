@@ -28,7 +28,7 @@ sno_mc_observability: true
 
 cluster_image_set: openshift-4.17.0-rc.2
 
-# 64 is a prefix for ipv6, 24 would work for ipv4
+# 64 is a prefix for ipv6, 24 for ipv4
 sno_cluster_network_host_prefix: 64
 
 # Enable DU profile SNO installConfigOverrides
@@ -46,7 +46,8 @@ ai_site_data_namespace: ztp-group
 # Enable fips via installConfigOverrides (Can not be done with du-profile)
 ai_siteconfig_fips: false
 # Used when converged flow is enabled
-ai_siteconfig_ironic_inspect: false
+ai_siteconfig_ironic_inspect: true
+ai_clusterinstance_ironic_inspect: true
 # Used in conjunction with including the PerformanceProfile in the DU profile
 ai_siteconfig_enable_cpuset: false
 ai_siteconfig_cpuset: "0-3"
