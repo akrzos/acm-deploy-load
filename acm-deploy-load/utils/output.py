@@ -123,7 +123,8 @@ def generate_report(start_time, end_time, deploy_start_time, deploy_end_time, wa
     log_write(report, " * Overall Success Percent: {}%".format(success_overall_percent))
     log_write(report, " * Overall Failed Percent: {}%".format(failed_overall_percent))
     log_write(report, "Deployed Cluster Orchestration")
-    log_write(report, " * Method: {}".format(cliargs.rate))
+    log_write(report, " * Method: {}".format(cliargs.method))
+    log_write(report, " * Rate: {}".format(cliargs.rate))
     log_write(report, " * Cluster Start: {} End: {}".format(cliargs.start, cliargs.end))
     log_write(report, " * {} cluster(s) per ZTP argoCD application".format(cliargs.clusters_per_app))
     if cliargs.rate == "interval":

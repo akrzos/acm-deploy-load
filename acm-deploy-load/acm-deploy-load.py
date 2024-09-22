@@ -18,7 +18,7 @@
 
 import argparse
 from collections import OrderedDict
-from datetime import datetime
+import datetime
 from datetime import timedelta
 import glob
 from jinja2 import Template
@@ -43,7 +43,7 @@ import time
 # * Upgrade script orchestration and monitoring
 
 
-kustomization_template = """---
+kustomization_siteconfig_template = """---
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 generators:
@@ -54,6 +54,18 @@ generators:
 resources:
 {%- for cluster in clusters %}
 - ./{{ cluster }}-resources.yml
+{%- endfor %}
+
+"""
+
+kustomization_clusterinstance_template = """---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+generators:
+
+resources:
+{%- for cluster in clusters %}
+- ./{{ cluster }}-clusterinstance.yml
 {%- endfor %}
 
 """
@@ -83,13 +95,22 @@ data:
 # Scan all three directories for clusters and add to cluster list
 cluster_types = ["sno", "compact", "standard"]
 
+install_methods = [
+    "ai-manifest",
+    "ai-clusterinstance",
+    "ai-clusterinstance-gitops",
+    "ai-siteconfig-gitops",
+    "ibi-manifest",
+    "ibi-clusterinstance",
+    "ibi-clusterinstance-gitops"
+]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s : %(levelname)s : %(threadName)s : %(message)s")
 logger = logging.getLogger("acm-deploy-load")
 logging.Formatter.converter = time.gmtime
 
 
-def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clusters_per_app, argocd_dir, dry_run, ztp_client_templates):
+def deploy_ztp_clusters(clusters, manifest_type, ztp_deploy_apps, start_index, end_index, clusters_per_app, argocd_dir, dry_run, ztp_client_templates):
   git_files = []
   last_ztp_app_index = math.floor((start_index) / clusters_per_app)
   for idx, cluster in enumerate(clusters[start_index:end_index]):
@@ -98,7 +119,10 @@ def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clust
     # If number of clusters batched rolls into the next application, render the kustomization file
     if last_ztp_app_index < ztp_app_index:
       logger.info("Rendering {}/kustomization.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"]))
-      t = Template(kustomization_template)
+      if manifest_type == "siteconfig":
+        t = Template(kustomization_siteconfig_template)
+      else:
+        t = Template(kustomization_clusterinstance_template)
       kustomization_rendered = t.render(
           clusters=ztp_deploy_apps[last_ztp_app_index]["clusters"])
       if not dry_run:
@@ -107,23 +131,40 @@ def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clust
       git_files.append("{}/kustomization.yaml".format(ztp_deploy_apps[last_ztp_app_index]["location"]))
       last_ztp_app_index = ztp_app_index
 
-    siteconfig_name = os.path.basename(cluster)
-    siteconfig_dir = os.path.dirname(cluster)
-    cluster_name = siteconfig_name.replace("-siteconfig.yml", "")
-    ztp_deploy_apps[ztp_app_index]["clusters"].append(cluster_name)
-    logger.debug("Clusters: {}".format(ztp_deploy_apps[ztp_app_index]["clusters"]))
+    if manifest_type == "siteconfig":
+      siteconfig_name = os.path.basename(cluster)
+      siteconfig_dir = os.path.dirname(cluster)
+      cluster_name = siteconfig_name.replace("-siteconfig.yml", "")
+      ztp_deploy_apps[ztp_app_index]["clusters"].append(cluster_name)
+      logger.debug("Clusters: {}".format(ztp_deploy_apps[ztp_app_index]["clusters"]))
 
-    logger.debug("Copying {}-siteconfig.yml and {}-resources.yml from {} to {}".format(
-        cluster_name, cluster_name, siteconfig_dir, ztp_deploy_apps[last_ztp_app_index]["location"]))
-    if not dry_run:
-      shutil.copy2(
-          "{}/{}-siteconfig.yml".format(siteconfig_dir, cluster_name),
-          "{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
-      shutil.copy2(
-          "{}/{}-resources.yml".format(siteconfig_dir, cluster_name),
-          "{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
-    git_files.append("{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
-    git_files.append("{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
+      logger.debug("Copying {}-siteconfig.yml and {}-resources.yml from {} to {}".format(
+          cluster_name, cluster_name, siteconfig_dir, ztp_deploy_apps[last_ztp_app_index]["location"]))
+      if not dry_run:
+        shutil.copy2(
+            "{}/{}-siteconfig.yml".format(siteconfig_dir, cluster_name),
+            "{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
+        shutil.copy2(
+            "{}/{}-resources.yml".format(siteconfig_dir, cluster_name),
+            "{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
+      git_files.append("{}/{}-siteconfig.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
+      git_files.append("{}/{}-resources.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
+    else:
+      # clusterinstance deployment
+      clusterinstance_name = os.path.basename(cluster)
+      clusterinstance_dir = os.path.dirname(cluster)
+      cluster_name = clusterinstance_name.replace("-clusterinstance.yml", "")
+      ztp_deploy_apps[ztp_app_index]["clusters"].append(cluster_name)
+      logger.debug("Clusters: {}".format(ztp_deploy_apps[ztp_app_index]["clusters"]))
+
+      logger.debug("Copying {}-clusterinstance.yml from {} to {}".format(
+          cluster_name, clusterinstance_dir, ztp_deploy_apps[last_ztp_app_index]["location"]))
+      if not dry_run:
+        shutil.copy2(
+            "{}/{}-clusterinstance.yml".format(clusterinstance_dir, cluster_name),
+            "{}/{}-clusterinstance.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
+      git_files.append("{}/{}-clusterinstance.yml".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name))
+
 
     if ztp_client_templates:
       extra_manifests_dir = "{}/extra-manifests/{}".format(ztp_deploy_apps[last_ztp_app_index]["location"], cluster_name)
@@ -143,7 +184,10 @@ def deploy_ztp_clusters(clusters, ztp_deploy_apps, start_index, end_index, clust
 
   # Always render a kustomization.yaml file at conclusion of the enumeration
   logger.info("Rendering {}/kustomization.yaml".format(ztp_deploy_apps[ztp_app_index]["location"]))
-  t = Template(kustomization_template)
+  if manifest_type == "siteconfig":
+    t = Template(kustomization_siteconfig_template)
+  else:
+    t = Template(kustomization_clusterinstance_template)
   kustomization_rendered = t.render(
       clusters=ztp_deploy_apps[ztp_app_index]["clusters"])
   if not dry_run:
@@ -189,23 +233,26 @@ def main():
       description="Tool to load ACM with Cluster deployments via manifests or GitOps ZTP",
       prog="acm-deploy-load.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
+  parser.add_argument("-m", "--method", choices=install_methods, default="ai-siteconfig-gitops",
+                      help="The method of cluster install, ai - Assisted-Installer, ibi - Image-Based-Installer")
+
   # "Global" args
-  parser.add_argument("-m", "--cluster-manifests-siteconfigs", type=str, default="/root/hv-vm/",
+  parser.add_argument("-cm", "--cluster-manifests", type=str, default="/root/hv-vm/",
                       help="The location of the cluster manifests, siteconfigs and resource files")
-  parser.add_argument("-a", "--argocd-base-directory", type=str,
+  parser.add_argument("-a", "--argocd-directory", type=str,
                       default="/root/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd",
                       help="The location of the ArgoCD cluster and cluster applications directories")
   parser.add_argument("-s", "--start", type=int, default=0,
                       help="Cluster start index, follows array logic starting at 0 for '00001'")
   parser.add_argument("-e", "--end", type=int, default=0, help="Cluster end index (0 = total manifest count)")
   parser.add_argument("-n", "--no-shuffle", action="store_true", default=False,
-                      help="Do not shuffle the list of discovered siteconfigs")
+                      help="Do not shuffle the list of discovered installable clusters")
   parser.add_argument("--start-delay", type=int, default=15,
                       help="Delay to starting deploys, allowing monitor thread to gather data (seconds)")
   parser.add_argument("--end-delay", type=int, default=120,
                       help="Delay on end, allows monitor thread to gather additional data points (seconds)")
   parser.add_argument("--clusters-per-app", type=int, default=100,
-                      help="Maximum number of cluster siteconfigs per cluster application")
+                      help="Maximum number of clusters per cluster application")
   parser.add_argument("--wait-cluster-max", type=int, default=10800,
                       help="Maximum amount of time to wait for cluster install completion (seconds)")
   parser.add_argument("--wait-du-profile-max", type=int, default=18000,
@@ -219,11 +266,11 @@ def main():
   parser.add_argument("-i", "--monitor-interval", type=int, default=60,
                       help="Interval to collect monitoring data (seconds)")
   # The version of talm determines how we monitor for du profile applying/compliant/timeout
-  parser.add_argument("--talm-version", type=str, default="4.14",
+  parser.add_argument("--talm-version", type=str, default="4.16",
                       help="The version of talm to fall back on in event we can not detect the talm version")
 
   # Report options
-  parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-ztp-0",
+  parser.add_argument("-t", "--results-dir-suffix", type=str, default="int-0",
                       help="Suffix to be appended to results directory name")
   parser.add_argument("--acm-version", type=str, default="", help="Sets ACM version for report")
   parser.add_argument("--aap-version", type=str, default="", help="Sets AAP version for report")
@@ -245,18 +292,15 @@ def main():
                                help="Time in seconds between deploying clusters")
   parser_interval.add_argument("-z", "--skip-wait-install", action="store_true", default=False,
                                help="Skips waiting for cluster install completion phase")
-  subparsers_interval = parser_interval.add_subparsers(dest="method")
-  subparsers_interval.add_parser("manifests")
-  subparsers_interval.add_parser("ztp")
 
-  parser_interval.set_defaults(method="ztp")
-  parser.set_defaults(rate="interval", method="ztp", batch=100, interval=7200, start=0, end=0, skip_wait_install=False)
+  parser.set_defaults(rate="interval", batch=100, interval=7200, start=0, end=0, skip_wait_install=False)
   cliargs = parser.parse_args()
 
   # # From laptop for debugging, should be commented out before commit
   # logger.info("Replacing directories for testing purposes#############################################################")
-  # cliargs.cluster_manifests_siteconfigs = "/home/akrzos/akrh/project-things/20220725-cloud27-stage-acm-2.6/hv-vm/"
-  # cliargs.argocd_base_directory = "/home/akrzos/akrh/project-things/20220725-cloud27-stage-acm-2.6/argocd"
+  # cliargs.cluster_manifests = "/home/akrzos/akrh/project-things/20240820-ibi-install-on-lta/hv-vm/"
+  # cliargs.argocd_directory = "/home/akrzos/akrh/project-things/20240820-ibi-install-on-lta/argocd/"
+  # cliargs.dry_run = True
   # cliargs.start_delay = 1
   # cliargs.end_delay = 1
 
@@ -318,7 +362,7 @@ def main():
   base_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
   base_dir_down = os.path.dirname(base_dir)
   base_dir_results = os.path.join(base_dir_down, "results")
-  report_dir_name = "{}-{}".format(datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S"), cliargs.results_dir_suffix)
+  report_dir_name = "{}-{}-{}".format(datetime.datetime.utcfromtimestamp(start_time).strftime("%Y%m%d-%H%M%S"), cliargs.method, cliargs.results_dir_suffix)
   report_dir = os.path.join(base_dir_results, report_dir_name)
   logger.info("Results data captured in: {}".format("/".join(report_dir.split("/")[-2:])))
 
@@ -333,22 +377,24 @@ def main():
   cluster_list = []
   available_ztp_apps = 0
   ztp_deploy_apps = OrderedDict()
-  if cliargs.method == "manifests":
+  if "manifest" in cliargs.method or "clusterinstance" in cliargs.method:
     for c_type in cluster_types:
-      logger.info("Checking {}{}/manifests/ for manifests".format(cliargs.cluster_manifests_siteconfigs, c_type))
-      temp_cluster_list = glob.glob("{}{}/manifests/*".format(cliargs.cluster_manifests_siteconfigs, c_type))
+      dir_to_check = cliargs.method.replace("-gitops", "")
+      manifest_suffix = dir_to_check.split("-")[1]
+      logger.info("Checking {}{}/{} for {}".format(cliargs.cluster_manifests, c_type, dir_to_check, manifest_suffix))
+      temp_cluster_list = glob.glob("{}{}/{}/*-{}.yml".format(cliargs.cluster_manifests, c_type, dir_to_check, manifest_suffix))
       temp_cluster_list.sort()
-      for manifest_dir in temp_cluster_list:
-        if pathlib.Path("{}/manifest.yml".format(manifest_dir)).is_file():
-          logger.debug("Found {}".format("{}/manifest.yml".format(manifest_dir)))
+      for manifests_file in temp_cluster_list:
+        if pathlib.Path(manifests_file).is_file():
+          logger.debug("Found {}".format(manifests_file))
         else:
-          logger.error("Directory appears to be missing manifest.yml file: {}".format(manifest_dir))
+          logger.error("{} is not a file".format(manifests_file))
           sys.exit(1)
       logger.info("Discovered {} available clusters of type {} for deployment".format(len(temp_cluster_list), c_type))
       cluster_list.extend(temp_cluster_list)
-  elif cliargs.method == "ztp":
+  elif cliargs.method == "ai-siteconfig-gitops":
     for c_type in cluster_types:
-      siteconfig_dir = "{}{}/siteconfigs".format(cliargs.cluster_manifests_siteconfigs, c_type)
+      siteconfig_dir = "{}{}/ai-siteconfig".format(cliargs.cluster_manifests, c_type)
       logger.info("Checking {} for siteconfigs".format(siteconfig_dir))
       temp_cluster_list = glob.glob("{}/*-siteconfig.yml".format(siteconfig_dir))
       temp_cluster_list.sort()
@@ -362,7 +408,9 @@ def main():
           sys.exit(1)
       logger.info("Discovered {} available clusters of type {} for deployment".format(len(temp_cluster_list), c_type))
       cluster_list.extend(temp_cluster_list)
-    ztp_apps = glob.glob("{}/cluster/ztp-*".format(cliargs.argocd_base_directory))
+
+  if "gitops" in cliargs.method:
+    ztp_apps = glob.glob("{}/cluster/ztp-*".format(cliargs.argocd_directory))
     ztp_apps.sort()
     for idx, ztp_app in enumerate(ztp_apps):
       ztp_deploy_apps[idx] = {"location": ztp_app, "clusters": []}
@@ -374,7 +422,7 @@ def main():
     sys.exit(1)
   logger.info("Total {} available clusters for deployment".format(available_clusters))
 
-  if cliargs.method == "ztp":
+  if "gitops" in cliargs.method:
     max_ztp_clusters = available_ztp_apps * cliargs.clusters_per_app
     logger.info("Discovered {} ztp cluster apps with capacity for {} * {} = {} Clusters".format(
         available_ztp_apps, available_ztp_apps, cliargs.clusters_per_app, max_ztp_clusters))
@@ -385,10 +433,10 @@ def main():
   # Now shuffle the list of siteconfigs
   if not cliargs.no_shuffle:
     random.shuffle(cluster_list)
-    logger.info("Randomized the cluster order: {}".format(cluster_list))
+    logger.debug("Randomized the cluster order: {}".format(cluster_list))
 
   # Create the results directory to store data into
-  logger.debug("Creating report directory: {}".format(report_dir))
+  logger.info("Creating report directory: {}".format(report_dir))
   os.mkdir(report_dir)
 
   #############################################################################
@@ -436,8 +484,15 @@ def main():
       logger.info("Deploying interval {} with {} cluster(s) - {}".format(
           total_intervals, end_cluster_index - start_cluster_index, int(start_interval_time * 1000)))
 
-      # Apply the clusters
-      if cliargs.method == "manifests":
+      if "gitops" in cliargs.method:
+        # Gitops method
+        monitor_data["cluster_applied_committed"] += len(cluster_list[start_cluster_index:end_cluster_index])
+        manifest_type = cliargs.method.split("-")[1]
+        deploy_ztp_clusters(
+            cluster_list, manifest_type, ztp_deploy_apps, start_cluster_index, end_cluster_index,
+            cliargs.clusters_per_app, cliargs.argocd_directory, cliargs.dry_run, cliargs.ztp_client_templates)
+      else:
+        # Apply the clusters
         for cluster in cluster_list[start_cluster_index:end_cluster_index]:
           monitor_data["cluster_applied_committed"] += 1
           oc_cmd = ["oc", "apply", "-f", cluster]
@@ -446,11 +501,6 @@ def main():
           if rc != 0:
             logger.error("acm-deploy-load, oc apply rc: {}".format(rc))
             sys.exit(1)
-      elif cliargs.method == "ztp":
-        monitor_data["cluster_applied_committed"] += len(cluster_list[start_cluster_index:end_cluster_index])
-        deploy_ztp_clusters(
-            cluster_list, ztp_deploy_apps, start_cluster_index, end_cluster_index, cliargs.clusters_per_app,
-            cliargs.argocd_base_directory, cliargs.dry_run, cliargs.ztp_client_templates)
 
       start_cluster_index += cliargs.batch
       if start_cluster_index >= available_clusters or end_cluster_index == cliargs.end:
