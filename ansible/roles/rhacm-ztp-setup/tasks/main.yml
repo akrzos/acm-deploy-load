@@ -170,10 +170,12 @@
 - name: Get siteconfig manifest names
   find:
     paths:
-    - "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs"
+    - "{{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ai-siteconfig"
     use_regex: true
     patterns: ['.*-siteconfig.yml']
   register: siteconfigs_find
+
+
 
 - name: Set siteconfig list
   set_fact:
@@ -195,8 +197,8 @@
   shell: |
     {% for sc in range((item - 1) * siteconfigs_per_application, item * siteconfigs_per_application ) %}
     {% if siteconfig_list | length > sc %}
-    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs/{{ siteconfig_list[sc] }}-siteconfig.yml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-siteconfig.yml
-    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/siteconfigs/{{ siteconfig_list[sc] }}-resources.yml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-resources.yml
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ai-siteconfig/{{ siteconfig_list[sc] }}-siteconfig.yml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-siteconfig.yml
+    cp {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ai-siteconfig/{{ siteconfig_list[sc] }}-resources.yml {{ install_directory }}/rhacm-ztp/cnf-features-deploy/ztp/gitops-subscriptions/argocd/cluster/ztp-clusters-{{ '%02d' | format(item) }}/{{ siteconfig_list[sc] }}-resources.yml
     {% endif %}
     {% endfor %}
   loop: "{{ range(1, cluster_applications_count + 1) | list }}"

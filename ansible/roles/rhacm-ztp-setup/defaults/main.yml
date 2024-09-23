@@ -10,7 +10,7 @@ cluster_applications_count: 35
 siteconfigs_per_application: 100
 
 siteconfigs_directories:
-- /root/hv-vm/sno/siteconfigs
+- /root/hv-vm/sno/ai-siteconfig
 - /root/hv-vm/compact/siteconfigs
 - /root/hv-vm/standard/siteconfigs
 

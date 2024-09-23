@@ -93,16 +93,18 @@ spec:
 {% endif %}
       nodeNetwork:
         interfaces:
-        - name: eno1
+        - name: {{ sno_nic_interface }}
           macAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
         config:
           interfaces:
-          - name: eno1
+          - name: {{ sno_nic_interface }}
             type: ethernet
             state: up
 {% if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv4 %}
             ipv4:
               enabled: true
+              autoconf: false
+              dhcp: false
               address:
               - ip: "{{ hostvars[inventory_hostname]['ip'] }}"
                 prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
@@ -113,6 +115,8 @@ spec:
               enabled: false
             ipv6:
               enabled: true
+              autoconf: false
+              dhcp: false
               address:
               - ip: "{{ hostvars[inventory_hostname]['ip'] }}"
                 prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
@@ -124,6 +128,6 @@ spec:
           routes:
             config:
             - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
-              next-hop-interface: eno1
+              next-hop-interface: {{ sno_nic_interface }}
               next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
               table-id: 254
