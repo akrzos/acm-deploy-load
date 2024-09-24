@@ -110,11 +110,8 @@ def main():
       data_file.write(output)
     ici_data = json.loads(output)
 
-  # Get All BareMetalHost data
-  if cliargs.method == "agent":
-    oc_cmd = ["oc", "get", "baremetalhost", "-n", cliargs.cluster, "-o", "json"]
-  elif cliargs.method == "image":
-    oc_cmd = ["oc", "get", "baremetalhost", "-n", "openshift-machine-api", cliargs.cluster, "-o", "json"]
+  # Get BareMetalHost data
+  oc_cmd = ["oc", "get", "baremetalhost", "-n", cliargs.cluster, "-o", "json"]
   rc, output = command(oc_cmd, False, retries=3, no_log=True)
   if rc != 0:
     logger.error("analyze-cluster-time, oc get baremetalhost rc: {}".format(rc))
