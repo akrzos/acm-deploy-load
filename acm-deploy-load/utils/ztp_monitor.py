@@ -107,6 +107,9 @@ class ZTPMonitor(Thread):
               agent_data = json.loads(output)
             except json.decoder.JSONDecodeError:
               logger.warning("agent JSONDecodeError: {}".format(output[:2500]))
+      elif self.method == "image":
+        # No discovered agents collected for image based installs
+        agent_data = {"items": []}
 
       # Get managedcluster data
       oc_cmd = ["oc", "get", "managedcluster", "-A", "-o", "json"]
