@@ -5,6 +5,11 @@ set -o pipefail
 
 iteration=1
 
+# Method to deploy clusters (AI = Assisted Installer, IBI = Image Based Installer)
+method="ai-siteconfig-gitops"
+# method="ai-clusterinstance-gitops"
+# method="ibi-clusterinstance-gitops"
+
 # Rate 500/1hr
 interval_period=3600
 batch=500
@@ -30,9 +35,9 @@ aap_csv=$(oc get csv -n ansible-automation-platform -l operators.coreos.com/ansi
 test_ver="ZTP Scale Run ${iteration}"
 hub_ocp=$(oc version -o json | jq -r '.openshiftVersion')
 # grep will cause error code 141 since it prints only the first match
-cluster_ocp=$(cat /root/hv-vm/*/ai-siteconfig/*-siteconfig.yml | grep "clusterImageSetNameRef:" -m 1 | awk '{print $NF}' | sed 's/openshift-//' || if [[ $? -eq 141 ]]; then true; else exit $?; fi)
+cluster_ocp=$(cat /root/hv-vm/*/*/*.yml | grep "clusterImageSetNameRef:" -m 1 | awk '{print $NF}' | sed 's/openshift-//' || if [[ $? -eq 141 ]]; then true; else exit $?; fi)
 
-time ./acm-deploy-load/acm-deploy-load.py --acm-version "${acm_ver}" --aap-version "${aap_csv}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --deploy-version "${cluster_ocp}" --wan-emulation "${wan_em}" -m "ai-siteconfig-gitops" --clusters-per-app ${clusters_per_app} -w -i 60 -t ${clusters_per_app}cpa-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} 2>&1 | tee ${log_file}
+time ./acm-deploy-load/acm-deploy-load.py --acm-version "${acm_ver}" --aap-version "${aap_csv}" --test-version "${test_ver}" --hub-version "${hub_ocp}" --deploy-version "${cluster_ocp}" --wan-emulation "${wan_em}" -m "${method}" --clusters-per-app ${clusters_per_app} -w -i 60 -t ${clusters_per_app}cpa-${batch}b-${interval_period}i-${iteration} interval -b ${batch} -i ${interval_period} 2>&1 | tee ${log_file}
 
 results_dir=$(grep "Results data captured in:" $log_file | awk '{print $NF}')
 

@@ -461,7 +461,7 @@ def main():
     "playbook_running": 0,
     "playbook_completed": 0
   }
-  monitor_thread = ZTPMonitor(talm_minor, monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
+  monitor_thread = ZTPMonitor(cliargs.method, talm_minor, monitor_data, monitor_data_csv_file, cliargs.dry_run, cliargs.monitor_interval)
   monitor_thread.start()
   if cliargs.start_delay > 0:
     phase_break()
