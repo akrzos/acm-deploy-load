@@ -1,8 +1,8 @@
-ansible
 docopt
 jinja2
 kaleido
 matplotlib
+netaddr
 numpy
 packaging
 pandas
