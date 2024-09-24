@@ -59,6 +59,10 @@ time ./acm-deploy-load/analyze-agentclusterinstalls.py ${results_dir} 2>&1 | tee
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
+time ./acm-deploy-load/analyze-imageclusterinstalls.py ${results_dir} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
 time ./acm-deploy-load/analyze-clustergroupupgrades.py ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
@@ -74,6 +78,11 @@ echo "time ./acm-deploy-load/analyze-prometheus.py -p deploy-pa -s ${start_time}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
+oc adm must-gather --dest-dir="${results_dir}/must-gather-${ts}" 2>&1 | tee -a ${log_file}
+tar caf ${results_dir}/must-gather-${ts}.tar.gz --remove-files ${results_dir}/must-gather-${ts} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
 time ./scripts/post-ztp-gen-day1-csv.sh ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
@@ -85,12 +94,6 @@ echo "##########################################################################
 
 meta=$(kubectl promdump meta -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus </dev/null 2>&1 | tee -a ${log_file})
 kubectl promdump -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus --min-time "$(echo $meta | cut -d \| -f 5 | cut -d \  -f 2,3)" --max-time "$(echo $meta | cut -d \| -f 6 | cut -d \  -f 2,3)" > ${results_dir}/promdump-${ts}.tar.gz
-
-echo "################################################################################" 2>&1 | tee -a ${log_file}
-
-# Moved the must-gather to last since it can occassionally fail and exit this script
-oc adm must-gather --dest-dir="${results_dir}/must-gather-${ts}" 2>&1 | tee -a ${log_file}
-tar caf ${results_dir}/must-gather-${ts}.tar.gz --remove-files ${results_dir}/must-gather-${ts} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 echo "Running ACM-inspector"  2>&1 | tee -a ${log_file}
