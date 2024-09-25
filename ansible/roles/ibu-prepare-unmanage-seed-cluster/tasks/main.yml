@@ -54,6 +54,8 @@
     regexp: "^- ./{{ seed_cluster }}-siteconfig.yml"
   - replace: "#- ./{{ seed_cluster }}-resources.yml"
     regexp: "^- ./{{ seed_cluster }}-resources.yml"
+  - replace: "#- ./{{ seed_cluster }}-clusterinstance.yml"
+    regexp: "^- ./{{ seed_cluster }}-clusterinstance.yml"
 
 - name: Commit and push the above changes to cnf-features-deploy
   shell: |
