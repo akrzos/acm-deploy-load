@@ -77,9 +77,3 @@
   until: check_cluster_namespace.rc != 0
   retries: 180
   delay: 5
-
-# ignore_errors in the event the dpa has already been removed
-- name: Delete dataprotectionapplications from seed cluster
-  shell: |
-    KUBECONFIG={{ seedcluster_kubeconfig }} oc delete dataprotectionapplications -n openshift-adp --all
-  ignore_errors: true
