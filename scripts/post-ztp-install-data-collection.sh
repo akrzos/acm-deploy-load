@@ -44,6 +44,12 @@ oc describe pods -A > ${output_dir}/pods.describe
 oc get ev -A > ${output_dir}/events
 oc get ev -A -o yaml > ${output_dir}/events.yaml
 
+echo "$(date -u) :: Collecting clusterinstance data"
+
+oc get clusterinstance -A > ${output_dir}/clusterinstance.get_default
+oc get clusterinstance -A -o yaml > ${output_dir}/clusterinstance.yaml
+oc describe clusterinstance -A > ${output_dir}/clusterinstance.describe
+
 echo "$(date -u) :: Collecting agentclusterinstall data"
 
 oc get agentclusterinstall -A --no-headers -o custom-columns=NAME:'.metadata.name',COMPLETED:'.status.conditions[?(@.type=="Completed")].reason' > ${output_dir}/aci.status
@@ -55,25 +61,47 @@ cat ${output_dir}/aci.status | grep "InstallationFailed" | awk '{print $1}' > ${
 cat ${output_dir}/aci.status | grep "InstallationNotStarted" | awk '{print $1}' > ${output_dir}/aci.InstallationNotStarted
 cat ${output_dir}/aci.status | grep "InstallationInProgress" | awk '{print $1}' > ${output_dir}/aci.InstallationInProgress
 
+echo "$(date -u) :: Collecting imageclusterinstall data"
+
+oc get imageclusterinstall -A --no-headers -o custom-columns=NAME:'.metadata.name',COMPLETED:'.status.conditions[?(@.type=="Completed")].reason' > ${output_dir}/ici.status
+oc describe imageclusterinstall -A > ${output_dir}/ici.describe
+oc get imageclusterinstall -A -o yaml > ${output_dir}/ici.yaml
+
+cat ${output_dir}/ici.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/ici.status_count
+cat ${output_dir}/ici.status | grep "ClusterInstallationTimedOut" | awk '{print $1}' > ${output_dir}/ici.ClusterInstallationTimedOut
+cat ${output_dir}/ici.status | grep "ClusterInstallationInProgress" | awk '{print $1}' > ${output_dir}/ici.ClusterInstallationInProgress
+
+echo "$(date -u) :: Collecting installed clusters data"
+
 # Get 2 Deployed cluster's install-configs
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
-# Copy two SiteConfigs
-ls  /root/hv-vm/*/siteconfigs/*-siteconfig.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
-ls  /root/hv-vm/*/siteconfigs/*-resources.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get cm -n kube-system cluster-config-v1 -o yaml > ${output_dir}/%.cluster-config-v1"
+# Copy two SiteConfigs/ClusterInstances
+ls  /root/hv-vm/*/ai-siteconfig/*-siteconfig.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
+ls  /root/hv-vm/*/ai-siteconfig/*-resources.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
+ls  /root/hv-vm/*/ai-clusterinstance/*-clusterinstance.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
+ls  /root/hv-vm/*/ibi-clusterinstance/*-clusterinstance.yml | head -n 2 | xargs -I % sh -c "cp % ${output_dir}/"
 # Ping 2 deployed clusters
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "ping6 -c 2 % > ${output_dir}/%.ping"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "ping6 -c 2 % > ${output_dir}/%.ping"
 # Get 2 Deployed cluster's clusterversion objects
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version > ${output_dir}/%.clusterversion"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version > ${output_dir}/%.clusterversion"
 # Get 2 Deployed cluster's clusterversion objects yaml
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version -o yaml > ${output_dir}/%.clusterversion.yaml"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get clusterversion version -o yaml > ${output_dir}/%.clusterversion.yaml"
 # Get 2 Deployed cluster's clusterserviceversion objects
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get csv -A > ${output_dir}/%.clusterserviceversion"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get csv -A > ${output_dir}/%.clusterserviceversion"
 # Get 2 Deployed cluster's clusteroperators objects
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get co -A > ${output_dir}/%.clusteroperators"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get co -A > ${output_dir}/%.clusteroperators"
 # Get 2 Deployed cluster's clusteroperators objects yaml
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get co -A -o yaml > ${output_dir}/%.clusteroperators.yaml"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get co -A -o yaml > ${output_dir}/%.clusteroperators.yaml"
 # Get 2 Deployed cluster's pods
 cat ${output_dir}/aci.status | grep InstallationCompleted | grep -v local-agent-cluster | grep -v local-cluster | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get po -A > ${output_dir}/%.pods"
+cat ${output_dir}/ici.status | grep ClusterInstallationSucceeded | head -n 2 | awk '{print $1}' | xargs -I % sh -c "oc --kubeconfig /root/hv-vm/kc/%/kubeconfig get po -A > ${output_dir}/%.pods"
 
 echo "$(date -u) :: Collecting managedcluster data"
 
@@ -116,38 +144,43 @@ oc get clustergroupupgrades -n ztp-install -o yaml > ${output_dir}/cgu.yaml
 cat ${output_dir}/cgu.status | awk '{print $2}' | sort | uniq -c > ${output_dir}/cgu.status_count
 cat ${output_dir}/cgu.status | grep "TimedOut"  | awk '{print $1}' > ${output_dir}/cgu.TimedOut
 
-echo "$(date -u) :: Collecting ACM application hook data"
 
-oc get applications.app.k8s.io -n ztp-day2-automation > ${output_dir}/applications.app.k8s.io
-oc get applications.app.k8s.io -n ztp-day2-automation -o yaml > ${output_dir}/applications.app.k8s.io.yaml
-oc describe applications.app.k8s.io -n ztp-day2-automation > ${output_dir}/applications.app.k8s.io.describe
+# Only collect AAP data if automation hub exists
+ztp_day2_ns_exists=$(oc get ns ztp-day2-automation --no-headers | wc -l)
+if [[ $ztp_day2_ns_exists > 0 ]]; then
+  echo "$(date -u) :: Collecting ACM application hook data"
 
-oc get subscriptions.apps.open-cluster-management.io -n ztp-day2-automation > ${output_dir}/subscriptions.apps.open-cluster-management.io
-oc get subscriptions.apps.open-cluster-management.io -n ztp-day2-automation -o yaml > ${output_dir}/subscriptions.apps.open-cluster-management.io.yaml
-oc describe subscriptions.apps.open-cluster-management.io -n ztp-day2-automation > ${output_dir}/subscriptions.apps.open-cluster-management.io.describe
+  oc get applications.app.k8s.io -n ztp-day2-automation > ${output_dir}/applications.app.k8s.io
+  oc get applications.app.k8s.io -n ztp-day2-automation -o yaml > ${output_dir}/applications.app.k8s.io.yaml
+  oc describe applications.app.k8s.io -n ztp-day2-automation > ${output_dir}/applications.app.k8s.io.describe
 
-oc get placementrules -n ztp-day2-automation > ${output_dir}/placementrules
-oc get placementrules -n ztp-day2-automation -o yaml > ${output_dir}/placementrules.yaml
-oc describe placementrules -n ztp-day2-automation > ${output_dir}/placementrules.describe
+  oc get subscriptions.apps.open-cluster-management.io -n ztp-day2-automation > ${output_dir}/subscriptions.apps.open-cluster-management.io
+  oc get subscriptions.apps.open-cluster-management.io -n ztp-day2-automation -o yaml > ${output_dir}/subscriptions.apps.open-cluster-management.io.yaml
+  oc describe subscriptions.apps.open-cluster-management.io -n ztp-day2-automation > ${output_dir}/subscriptions.apps.open-cluster-management.io.describe
 
-echo "$(date -u) :: Collecting aap data"
+  oc get placementrules -n ztp-day2-automation > ${output_dir}/placementrules
+  oc get placementrules -n ztp-day2-automation -o yaml > ${output_dir}/placementrules.yaml
+  oc describe placementrules -n ztp-day2-automation > ${output_dir}/placementrules.describe
 
-oc get automationhub -n ansible-automation-platform > ${output_dir}/automationhub
-oc get automationhub -n ansible-automation-platform -o yaml > ${output_dir}/automationhub.yaml
-oc describe automationhub -n ansible-automation-platform  > ${output_dir}/automationhub.describe
+  echo "$(date -u) :: Collecting aap data"
 
-oc get automationcontroller -n ansible-automation-platform > ${output_dir}/automationcontroller
-oc get automationcontroller -n ansible-automation-platform -o yaml > ${output_dir}/automationcontroller.yaml
-oc describe automationcontroller -n ansible-automation-platform  > ${output_dir}/automationcontroller.describe
+  oc get automationhub -n ansible-automation-platform > ${output_dir}/automationhub
+  oc get automationhub -n ansible-automation-platform -o yaml > ${output_dir}/automationhub.yaml
+  oc describe automationhub -n ansible-automation-platform  > ${output_dir}/automationhub.describe
 
-oc get ansiblejobs -A > ${output_dir}/ansiblejobs
-oc get ansiblejobs -A --no-headers | wc -l > ${output_dir}/ansiblejobs.count
-oc get ansiblejobs -A -o yaml > ${output_dir}/ansiblejobs.yaml
-oc describe ansiblejobs -A > ${output_dir}/ansiblejobs.describe
+  oc get automationcontroller -n ansible-automation-platform > ${output_dir}/automationcontroller
+  oc get automationcontroller -n ansible-automation-platform -o yaml > ${output_dir}/automationcontroller.yaml
+  oc describe automationcontroller -n ansible-automation-platform  > ${output_dir}/automationcontroller.describe
+
+  oc get ansiblejobs -A > ${output_dir}/ansiblejobs
+  oc get ansiblejobs -A --no-headers | wc -l > ${output_dir}/ansiblejobs.count
+  oc get ansiblejobs -A -o yaml > ${output_dir}/ansiblejobs.yaml
+  oc describe ansiblejobs -A > ${output_dir}/ansiblejobs.describe
+fi
 
 echo "$(date -u) :: Inspecting failed cluster installs"
 truncate -s 0 ${output_dir}/cluster-install-failures
-for cluster in $(cat ${output_dir}/aci.InstallationFailed); do
+for cluster in $(cat ${output_dir}/aci.InstallationFailed ${output_dir}/ici.ClusterInstallationTimedOut); do
   echo "$(date -u) :: Checking cluster ${cluster}"
   export KUBECONFIG=/root/hv-vm/kc/${cluster}/kubeconfig
   if ! oc get pods 2>/dev/null >/dev/null; then
