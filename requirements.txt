@@ -1,3 +1,4 @@
+ansible
 docopt
 jinja2
 kaleido
