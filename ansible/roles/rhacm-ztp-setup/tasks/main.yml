@@ -175,8 +175,6 @@
     patterns: ['.*-siteconfig.yml']
   register: siteconfigs_find
 
-
-
 - name: Set siteconfig list
   set_fact:
     siteconfig_list: "{{ siteconfig_list + [item.path | basename | replace('-siteconfig.yml', '')] }}"
