@@ -35,20 +35,21 @@ spec:
   - {{ hostvars[inventory_hostname]['hv_ip'] }}
   baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
   clusterImageSetNameRef: {{ cluster_image_set }}
-  clusterLabels:
-    common: 'true'
+  extraLabels:
+    ManagedCluster:
+      common: 'true'
 {% if sno_du_profile in ["4.15", "4.16", "4.17"] %}
-    du-profile: "{{ sno_du_profile }}"
+      du-profile: "{{ sno_du_profile }}"
 {% endif %}
-    group-du-sno: ''
-    name: {{ inventory_hostname }}
+      group-du-sno: ''
+      name: {{ inventory_hostname }}
 {% if sno_mc_observability %}
-    observability: enabled
+      observability: enabled
 {% else %}
-    observability: disabled
+      observability: disabled
 {% endif %}
-    sites: {{ inventory_hostname }}
-    vendor: OpenShift
+      sites: {{ inventory_hostname }}
+      vendor: OpenShift
   clusterName: {{ inventory_hostname }}
   clusterNetwork:
   - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}

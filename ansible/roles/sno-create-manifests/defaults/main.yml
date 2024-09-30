@@ -52,6 +52,8 @@ ai_clusterinstance_ironic_inspect: true
 ai_siteconfig_enable_cpuset: false
 ai_siteconfig_cpuset: "0-3"
 
+# Include a manifest to partition varlibcontainers for IBU/IBI
+ai_clusterinstance_varlibcontainers_partitioned: true
 
 # Defaults for AI clusterinstance templates
 ai_clusterinstance_cluster_templates_ns: open-cluster-management
