@@ -1,7 +1,9 @@
 # acm-deploy-load
 
-Tools and scripts to load and analyze ACM with cluster deployments and upgrades. Clusters are deployed via manifests or
-GitOps using Zero Touch Provisioning (ZTP).
+Tools and scripts to prepare, load, and analyze a large scale OCP cluster with ACM with cluster
+deployments and upgrades. Clusters can be deployed via assisted-installer or via image-based
+installer. Either Manifests, SiteConfigs, or clusterinstances can be deployed or pushed via GitOps
+to deploy clusters.
 
 ## Workload Scripts
 
@@ -9,9 +11,19 @@ GitOps using Zero Touch Provisioning (ZTP).
 
 Tool to load ACM with cluster deployments via manifests or GitOps ZTP
 
+Methods
+
+* `ai-manifest` - Assisted-installer installed clusters via oc apply yaml manifests
+* `ai-clusterinstance` - Assisted-installer installed clusters via oc apply ClusterInstance
+* `ai-clusterinstance-gitops` - Assisted-installer installed clusters via ClusterInstances in GitOps
+* `ai-siteconfig-gitops` - Default - Assisted-installer installed clusters via SiteConfigs in GitOps
+* `ibi-manifest` - Image-based installer installed clusters via oc apply yaml manifests
+* `ibi-clusterinstance` - Image-based installer installed clusters via oc apply ClusterInstance
+* `ibi-clusterinstance-gitops` - Image-based installer installed clusters via ClusterInstances in GitOps
+
 Load/Rate Option
 
-* interval - Deploys X number of clusters (manifests or GitOps ZTP) per Y interval time period
+* interval - Deploys X number of clusters per Y interval time period
 
 Phases of the Workload
 
@@ -19,6 +31,11 @@ Phases of the Workload
 2. Wait for Cluster Install Completion
 3. Wait for DU Profile Completion
 4. Report Card / Graphing
+
+### acm-mc-workload.py
+
+Tool to load ACM with previously deployed clusters and on interval update a configmap that maps to
+policy templates triggering re-enforcing policies.
 
 ### mc-workload.py
 
