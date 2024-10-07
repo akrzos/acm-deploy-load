@@ -100,7 +100,7 @@
     return_content: yes
   register: check_state
   until: check_state.json.PowerState == "Off"
-  retries: 60
+  retries: 360
   delay: 10
 
 - name: Eject Virtual Media

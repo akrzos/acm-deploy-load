@@ -20,28 +20,23 @@
 
 - name: Copy prepared IBI SNO disk file to all hypervisors
   hosts: hv
+  gather_facts: false
   vars_files:
   - vars/all.yml
   roles:
   - role: ibi-copy-disk-file
     when: ibi_hv_copy_disk_file | default(true)
 
-- name: Create IBI manifests and replace all SNO disk files with prepared IBI disk file
+- name: Replace all SNO disk files with prepared IBI disk file
   hosts: hv_vm
   gather_facts: false
   vars:
     hv_ibi_disk_dir: /mnt/disk2/libvirt/ibi-disk
-    seed_image_version: 4.17.0-rc.2
-    create_ai_siteconfigs: false
-    create_ai_clusterinstances: false
-    create_ai_manifests: false
+    seed_image_version: 4.17.0
   vars_files:
   - vars/all.yml
-  pre_tasks:
+  tasks:
   - name: Replace each SNO's disk file with the prepared disk file
     shell: |
       cp {{ hv_ibi_disk_dir }}/prepared-{{ seed_image_version }}.qcow2 {{ hostvars[inventory_hostname]['disk_location'] }}/{{ inventory_hostname }}.qcow2
     when: ibi_replace_sno_disk_file | default(true)
-  roles:
-  - role: sno-create-manifests
-    when: ibi_create_manifests | default(true)
