@@ -38,11 +38,3 @@ oc get deploy -n multicluster-engine ocm-controller -o json | jq '.spec.template
 oc get deploy -n multicluster-engine ocm-controller -o json | jq '.spec.template.spec.containers[] | select(.name=="ocm-controller").image'
 echo "Sleep 15"
 sleep 15
-
-# Patch MCE managedcluster import controller Memory Limits(Requires MCE pause)
-echo "Patching MCE IBIO container image memory limits"
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json |  jq '.spec.template.spec.containers[0].resources.limits.memory = "4Gi"' | oc replace -f -
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
-echo "Sleep 15"
-sleep 15
