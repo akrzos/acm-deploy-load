@@ -189,7 +189,7 @@ for cluster in $(cat ${output_dir}/aci.InstallationFailed ${output_dir}/ici.Clus
         echo "$cluster APIDown" | tee -a ${output_dir}/cluster-install-failures
         continue
     fi
-    echo "$cluster Offline" | tee -a ${output_dir}/cluster-install-failures
+    echo "$cluster Offline/Unreachable" | tee -a ${output_dir}/cluster-install-failures
     continue
   fi
   cluster_installed=$(oc get clusterversion version -o json | jq '.status.conditions[] | select(.type=="Available").status' -r)

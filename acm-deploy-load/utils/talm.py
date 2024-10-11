@@ -40,7 +40,10 @@ def detect_talm_minor(default_talm_version, dry_run):
             break
       if talm_image_ver != "":
         logger.info("Detected TALM Version: {}".format(talm_image_ver))
-        talm_version = talm_image_ver
+        if "." not in talm_image_ver:
+          logger.warning("Unable to detect TALM version, defaulting to: {}".format(talm_version))
+        else:
+          talm_version = talm_image_ver
       else:
         logger.warning("Unable to detect TALM version, defaulting to: {}".format(talm_version))
   return talm_version.split(".")[1]
