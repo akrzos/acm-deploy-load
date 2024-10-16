@@ -55,6 +55,10 @@ time ./scripts/post-ztp-install-data-collection.sh -k 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
 
+time ./acm-deploy-load/analyze-clusterinstances.py ${results_dir} 2>&1 | tee -a ${log_file}
+
+echo "################################################################################" 2>&1 | tee -a ${log_file}
+
 time ./acm-deploy-load/analyze-agentclusterinstalls.py ${results_dir} 2>&1 | tee -a ${log_file}
 
 echo "################################################################################" 2>&1 | tee -a ${log_file}
