@@ -149,7 +149,7 @@ def main():
     log_write(time_file, "Cluster Install Duration (Cluster Install Completed): {}s :: {}".format(cluster_install_duration, str(timedelta(seconds=cluster_install_duration))))
     log_write(time_file, "Deployment Complete Duration (DU Compliant): {}s :: {}".format(deployed_complete_duration, str(timedelta(seconds=deployed_complete_duration))))
     log_write(time_file, "Completed Duration (DU Timeout+Compliant): {}s :: {}".format(completed_duration, str(timedelta(seconds=completed_duration))))
-    log_write(time_file, "Full Duration: {}, :: {}".format(full_duration, str(timedelta(seconds=full_duration))))
+    log_write(time_file, "Full Duration: {}s :: {}".format(full_duration, str(timedelta(seconds=full_duration))))
     log_write(time_file, "################################################################")
     deployed_installed_time_diff = deployed_complete_duration - cluster_install_duration
     log_write(time_file, "Deployment Complete - Cluster Install Completed: {}s :: {}".format(deployed_installed_time_diff, str(timedelta(seconds=deployed_installed_time_diff))))
