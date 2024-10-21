@@ -71,6 +71,12 @@ spec:
 {% endif %}
     - fileName: ClusterLogOperatorStatus.yaml
       policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: ClusterLogServiceAccount.yaml
+      policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: ClusterLogServiceAccountAuditBinding.yaml
+      policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
+    - fileName: ClusterLogServiceAccountInfrastructureBinding.yaml
+      policyName: "{{ 'log-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: StorageNS.yaml
       policyName: "{{ 'storage-subs' if manyPolicies else 'subscriptions' }}-policy"
     - fileName: StorageOperGroup.yaml
