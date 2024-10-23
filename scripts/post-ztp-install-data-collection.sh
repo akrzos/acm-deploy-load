@@ -71,6 +71,10 @@ cat ${output_dir}/ici.status | awk '{print $2}' | sort | uniq -c > ${output_dir}
 cat ${output_dir}/ici.status | grep "ClusterInstallationTimedOut" | awk '{print $1}' > ${output_dir}/ici.ClusterInstallationTimedOut
 cat ${output_dir}/ici.status | grep "ClusterInstallationInProgress" | awk '{print $1}' > ${output_dir}/ici.ClusterInstallationInProgress
 
+echo "$(date -u) :: Collecting openshift-gitops data"
+
+oc get applications.argoproj.io -n openshift-gitops > ${output_dir}/gitops.applications
+
 echo "$(date -u) :: Collecting installed clusters data"
 
 # Get 2 Deployed cluster's install-configs
