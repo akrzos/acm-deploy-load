@@ -49,7 +49,6 @@ spec:
       observability: disabled
 {% endif %}
       sites: {{ inventory_hostname }}
-      vendor: OpenShift
   clusterName: {{ inventory_hostname }}
   clusterNetwork:
   - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}

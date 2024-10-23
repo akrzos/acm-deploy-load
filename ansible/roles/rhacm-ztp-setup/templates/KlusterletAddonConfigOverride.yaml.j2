@@ -8,9 +8,6 @@ metadata:
 spec:
   clusterName: "{% raw %}{{ .Cluster.ClusterName }}{% endraw %}"
   clusterNamespace: "{% raw %}{{ .Cluster.ClusterName }}{% endraw %}"
-  clusterLabels:
-    cloud: auto-detect
-    vendor: auto-detect
   applicationManager:
     enabled: false
   certPolicyController:

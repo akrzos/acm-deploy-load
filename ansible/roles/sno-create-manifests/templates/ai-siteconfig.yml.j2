@@ -34,6 +34,7 @@ spec:
 {% endif %}
 {% endif %}
     clusterLabels:
+      cloud: auto-detect
       common: 'true'
 {% if sno_du_profile in ["4.15", "4.16", "4.17"] %}
       du-profile: "{{ sno_du_profile }}"
@@ -46,7 +47,7 @@ spec:
       observability: disabled
 {% endif %}
       sites: {{ inventory_hostname }}
-      vendor: OpenShift
+      vendor: auto-detect
     clusterNetwork:
     - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
       hostPrefix: {{ sno_cluster_network_host_prefix }}

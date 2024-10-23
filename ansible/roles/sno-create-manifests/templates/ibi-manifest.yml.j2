@@ -132,9 +132,6 @@ metadata:
 spec:
   clusterName: {{ inventory_hostname }}
   clusterNamespace: {{ inventory_hostname }}
-  clusterLabels:
-    cloud: auto-detect
-    vendor: auto-detect
   applicationManager:
     enabled: false
   certPolicyController:
@@ -151,6 +148,7 @@ kind: ManagedCluster
 metadata:
   name: {{ inventory_hostname }}
   labels:
+    cloud: auto-detect
     common: 'true'
 {% if sno_du_profile in ["4.15", "4.16", "4.17"] %}
     du-profile: "{{ sno_du_profile }}"
@@ -163,6 +161,6 @@ metadata:
     observability: disabled
 {% endif %}
     sites: {{ inventory_hostname }}
-    vendor: OpenShift
+    vendor: auto-detect
 spec:
   hubAcceptsClient: true
