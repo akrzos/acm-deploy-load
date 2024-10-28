@@ -123,7 +123,7 @@ def main():
   parser.add_argument("-m", "--cluster-manifests", type=str, default="/root/hv-vm/",
                       help="The location of the cluster manifest files and kubeconfigs")
 
-  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
+  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/mno/kubeconfig",
                       help="Changes which kubeconfig to connect to the hub cluster")
 
   parser.add_argument("--hub-policy-namespace", type=str, default="policies", help="Namespace for the policies")

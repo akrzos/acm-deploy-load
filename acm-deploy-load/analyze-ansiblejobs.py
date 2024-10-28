@@ -43,7 +43,7 @@ def main():
       description="Analyze AnsibleJobs data",
       prog="analyze-ansiblejobs.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
+  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/mno/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
 
   # Graph size

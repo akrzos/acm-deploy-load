@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 3500 MC support
 
-export KUBECONFIG=/root/bm/kubeconfig
+export KUBECONFIG=/root/mno/kubeconfig
 
 # Addresses both:
 # https://issues.redhat.com/browse/ACM-5791

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 2500 MC support
 
-export KUBECONFIG=/root/bm/kubeconfig
+export KUBECONFIG=/root/mno/kubeconfig
 
 echo "Patching MCE managedcluster-import-controller-v2 memory limits to 16Gi"
 oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'

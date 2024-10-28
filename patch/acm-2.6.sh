@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 2500 MC support
 
-export KUBECONFIG=/root/bm/kubeconfig
+export KUBECONFIG=/root/mno/kubeconfig
 
 echo "Patching ACM multicluster-observability-operator memory limits from 1Gi to 2Gi"
 oc get csv -n open-cluster-management advanced-cluster-management.v2.6.0 -o json |  jq '.spec.install.spec.deployments[] | select(.name=="multicluster-observability-operator").spec.template.spec.containers[] | select(.name=="multicluster-observability-operator").resources.limits.memory'

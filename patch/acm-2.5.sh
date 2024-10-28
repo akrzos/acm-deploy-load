@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 2000 MC support
 
-export KUBECONFIG=/root/bm/kubeconfig
+export KUBECONFIG=/root/mno/kubeconfig
 
 echo "Patching ACM multiclusterhub-operator memory limits to 16Gi"
 oc get csv -n open-cluster-management advanced-cluster-management.v2.5.0 -o json |  jq '.spec.install.spec.deployments[] | select(.name=="multiclusterhub-operator").spec.template.spec.containers[] | select(.name=="multiclusterhub-operator").resources.limits.memory'

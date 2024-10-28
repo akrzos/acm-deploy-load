@@ -633,7 +633,7 @@ def main():
       description="Query and Graph Prometheus data off a live OpenShift cluster",
       prog="analyze-prometheus.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
+  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/mno/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
 
   parser.add_argument("-s", "--start-ts", type=valid_datetime, default=default_ap_start_time.strftime('%Y-%m-%dT%H:%M:%SZ'),

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 3500 MC support
 
-export KUBECONFIG=/root/bm/kubeconfig
+export KUBECONFIG=/root/mno/kubeconfig
 
 # Fixed - https://issues.redhat.com/browse/ACM-2275
 # echo "Patching MCE managedcluster-import-controller-v2 memory limits to 16Gi"

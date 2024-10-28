@@ -23,7 +23,7 @@ setup_ztp_sno_site_policy: false
 
 # Install ACM/ZTP vars
 rhacm_disableHubSelfManagement: false
-hub_cluster_kubeconfig: /root/bm/kubeconfig
+hub_cluster_kubeconfig: /root/mno/kubeconfig
 rhacm_icsp_enable_tag_mirror: false
 # When installing RHACM or MCE in a connected environment this pull secret must be populated
 rhacm_quay_pullsecret: ''

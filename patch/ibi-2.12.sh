@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Imaged Based Install Scale Patches
 
-export KUBECONFIG=/root/bm/kubeconfig
+export KUBECONFIG=/root/mno/kubeconfig
 
 bastion=$(hostname)
 

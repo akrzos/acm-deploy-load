@@ -101,7 +101,7 @@ def main():
       description="Check that an ACM Hub is healthy and stable",
       prog="acm-health.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
+  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/mno/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
 
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")

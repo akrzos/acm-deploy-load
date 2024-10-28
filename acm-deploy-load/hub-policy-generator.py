@@ -215,7 +215,7 @@ def main():
       description="Tool to load a hub cluster with policies that creates a workload on the managedclusters",
       prog="hub-policy-generator.py", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/bm/kubeconfig",
+  parser.add_argument("-k", "--kubeconfig", type=str, default="/root/mno/kubeconfig",
                       help="Changes which kubeconfig to connect to a cluster")
 
   subparsers = parser.add_subparsers(dest="action")
