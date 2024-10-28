@@ -5,7 +5,7 @@ cnf_features_deploy_repo: https://github.com/openshift-kni/cnf-features-deploy.g
 cnf_features_deploy_branch: release-4.17
 
 # Pre-creates manifests for the desired number of argocd cluster applications
-cluster_applications_count: 35
+cluster_applications_count: 40
 
 siteconfigs_per_application: 100
 
