@@ -27,21 +27,21 @@ oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '
 echo "Sleep 15"
 sleep 15
 
-# Patch MCE managedcluster-import-controller-v2 Memory Limits (Requires MCE pause)
-# Work on fix for https://issues.redhat.com/browse/ACM-15246
-echo "Patching MCE managedcluster-import-controller-v2  container image memory limits"
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory = "7Gi"' | oc replace -f -
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
-echo "Sleep 15"
-sleep 15
-# Patch MCE managedcluster-import-controller-v2 GOMEMLIMIT env var (Requires MCE pause)
-echo "Patching MCE managedcluster-import-controller-v2 GOMEMLIMIT env var"
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].env[] | select(.name=="GOMEMLIMIT").value'
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].env[] |= (select(.name=="GOMEMLIMIT").value = "6GiB")' | oc replace -f -
-oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].env[] | select(.name=="GOMEMLIMIT").value'
-echo "Sleep 15"
-sleep 15
+# # Patch MCE managedcluster-import-controller-v2 Memory Limits (Requires MCE pause)
+# # Work on fix for https://issues.redhat.com/browse/ACM-15246 (Does not work)
+# echo "Patching MCE managedcluster-import-controller-v2  container image memory limits"
+# oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+# oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory = "7Gi"' | oc replace -f -
+# oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].resources.limits.memory'
+# echo "Sleep 15"
+# sleep 15
+# # Patch MCE managedcluster-import-controller-v2 GOMEMLIMIT env var (Requires MCE pause)
+# echo "Patching MCE managedcluster-import-controller-v2 GOMEMLIMIT env var"
+# oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].env[] | select(.name=="GOMEMLIMIT").value'
+# oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].env[] |= (select(.name=="GOMEMLIMIT").value = "6GiB")' | oc replace -f -
+# oc get deploy -n multicluster-engine managedcluster-import-controller-v2 -o json | jq '.spec.template.spec.containers[0].env[] | select(.name=="GOMEMLIMIT").value'
+# echo "Sleep 15"
+# sleep 15
 
 # # Patch MCE IBIO Memory Limits (Requires MCE pause)
 # # Fixed in ACM 2.12 FC5
