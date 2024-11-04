@@ -199,7 +199,10 @@ def deploy_ztp_clusters(clusters, manifest_type, ztp_deploy_apps, start_index, e
   for file in git_files:
     logger.debug("git add {}".format(file))
     git_add = ["git", "add", file]
-    rc, output = command(git_add, dry_run, cmd_directory=argocd_dir)
+    rc, output = command(git_add, dry_run, retries=3, cmd_directory=argocd_dir)
+    if rc != 0:
+      logger.error("acm-deploy-load, git add rc: {}, Output: {}".format(rc, output))
+      sys.exit(1)
   logger.info("Added {} files in git".format(len(git_files)))
   git_commit = ["git", "commit", "-m", "Deploying Clusters {} to {}".format(start_index, end_index)]
   rc, output = command(git_commit, dry_run, cmd_directory=argocd_dir)
