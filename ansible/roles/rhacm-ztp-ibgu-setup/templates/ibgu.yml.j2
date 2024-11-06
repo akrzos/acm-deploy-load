@@ -1,0 +1,33 @@
+---
+apiVersion: lcm.openshift.io/v1alpha1
+kind: ImageBasedGroupUpgrade
+metadata:
+  name: ibgu-{{ seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
+  namespace: ztp-platform-upgrade
+  labels:
+    ibgu: "{{ seed_image_version }}"
+spec:
+  clusterLabelSelectors:
+  - matchExpressions:
+    - key: name
+      operator: In
+      values:
+{% for cluster in range(item * clusters_per_prep_ibgu, (item + 1) * clusters_per_prep_ibgu) %}
+{% if ztp_done_clusters.stdout_lines | length > cluster %}
+      - {{ ztp_done_clusters.stdout_lines[cluster] }}
+{% endif %}
+{% endfor %}
+  ibuSpec:
+    seedImageRef:
+      image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/ocp-ibu:{{ seed_image_version }}.ibu-x86_64
+      version: 4.17.3
+      pullSecretRef:
+        name: seedgen
+    oadpContent:
+      - name: oadp-cm
+        namespace: openshift-adp
+  plan:
+  - actions: ["Prep"]
+    rolloutStrategy:
+      maxConcurrency: {{ ibgu_prep_concurrency }}
+      timeout: {{ ibgu_prep_timeout }}

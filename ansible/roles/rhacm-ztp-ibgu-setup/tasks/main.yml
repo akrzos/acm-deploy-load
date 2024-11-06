@@ -1,0 +1,39 @@
+---
+# rhacm-ztp-ibgu-setup tasks
+
+- name: Create directories for IBGU
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp"
+  - "{{ install_directory }}/rhacm-ztp/ibgu"
+  - "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}"
+
+- name: Get list of clusters for upgrade
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get managedclusters -l {{ clusters_label }} --no-headers -o custom-columns=NAME:'.metadata.name' | grep -v local-cluster
+  register: ztp_done_clusters
+
+- name: Template IBGU object(s)
+  template:
+    src: ibgu.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/ibgu-{{ seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / clusters_per_prep_ibgu) | round(0, 'ceil') | int) | list }}"
+
+- name: Template IBGU apply scripts
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    mode: "0744"
+  loop:
+  - src: apply-ibgu-prep.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/apply-ibgu-prep-{{ seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-ibgu-upgrade.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/apply-ibgu-upgrade-{{ seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-ibgu-finalizeupgrade.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/apply-ibgu-finalizeupgrade-{{ seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-ibgu-rollback.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/apply-ibgu-rollback-{{ seed_image_version | replace('.', '-') }}.sh"
+  - src: apply-ibgu-finalizerollback.sh
+    dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/apply-ibgu-finalizerollback-{{ seed_image_version | replace('.', '-') }}.sh"
