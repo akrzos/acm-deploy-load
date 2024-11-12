@@ -71,3 +71,13 @@ sleep 15
 # oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
 # oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] |= (select(.name=="manager").image = "'"${bastion}"':5000/acm-d/siteconfig:failed-fix-01")' | oc replace -f -
 # oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
+
+# Patch SiteConfig Operator container image (Requires MCH pause)
+# Attempt to fix siteconfig operator slow down
+# https://issues.redhat.com/browse/ACM-14969
+# echo "Patching ACM SiteConfig Operator container image"
+# oc image mirror -a /opt/registry/pull-secret-bastion.txt quay.io/sakhoury/siteconfig-operator:0.0.10 ${bastion}:5000/acm-d/siteconfig:0.0.10-fix-delay --keep-manifest-list
+#
+# oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
+# oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] |= (select(.name=="manager").image = "'"${bastion}"':5000/acm-d/siteconfig:0.0.10-fix-delay")' | oc replace -f -
+# oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
