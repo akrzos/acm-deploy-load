@@ -20,7 +20,7 @@ spec:
   ibuSpec:
     seedImageRef:
       image: {{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}/openshift-kni/ocp-ibu:{{ seed_image_version }}.ibu-x86_64
-      version: 4.17.3
+      version: {{ seed_image_version }}
       pullSecretRef:
         name: seedgen
     oadpContent:
