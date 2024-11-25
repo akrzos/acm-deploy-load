@@ -8,20 +8,20 @@ bastion=$(hostname)
 echo "Pausing MCE"
 oc annotate multiclusterengine multiclusterengine pause=true
 
-# echo "Pausing MCH"
-# oc annotate mch -n open-cluster-management multiclusterhub mch-pause=True
+echo "Pausing MCH"
+oc annotate mch -n open-cluster-management multiclusterhub mch-pause=True
 
 # Patch MCE IBIO container image (Requires MCE pause)
 echo "Patching MCE IBIO container image"
-# Fixed in ACM 2.12 FC5
-# oc image mirror -a /opt/registry/pull-secret-bastion.txt quay.io/eranco74/image-based-install-operator:MGMT-19033 ${bastion}:5000/ibio/image-based-install-operator:MGMT-19033 --keep-manifest-list
-# Not fixed yet
-oc image mirror -a /opt/registry/pull-secret-bastion.txt quay.io/eranco74/image-based-install-operator:OCPBUGS-43330 ${bastion}:5000/ibio/image-based-install-operator:OCPBUGS-43330 --keep-manifest-list
+# https://issues.redhat.com/browse/MGMT-19188 (Originally OCPBUGS-43330) - IBIO BMO DataImage Mounting Fix
+# oc image mirror -a /opt/registry/pull-secret-bastion.txt quay.io/eranco74/image-based-install-operator:OCPBUGS-43330 ${bastion}:5000/ibio/image-based-install-operator:OCPBUGS-43330 --keep-manifest-list
+# Debug image for https://issues.redhat.com/browse/MGMT-19268 (Although container image is tagged MGMT-19341)
+oc image mirror -a /opt/registry/pull-secret-bastion.txt quay.io/eranco75/image-based-install-operator:MGMT-19341 ${bastion}:5000/ibio/image-based-install-operator:MGMT-19341 --keep-manifest-list
 
 oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
 oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] | select(.name=="server").image'
-oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] |= (select(.name=="manager").image = "'"${bastion}"':5000/ibio/image-based-install-operator:OCPBUGS-43330")' | oc replace -f -
-oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] |= (select(.name=="server").image = "'"${bastion}"':5000/ibio/image-based-install-operator:OCPBUGS-43330")' | oc replace -f -
+oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] |= (select(.name=="manager").image = "'"${bastion}"':5000/ibio/image-based-install-operator:MGMT-19341")' | oc replace -f -
+oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] |= (select(.name=="server").image = "'"${bastion}"':5000/ibio/image-based-install-operator:MGMT-19341")' | oc replace -f -
 oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
 oc get deploy -n multicluster-engine image-based-install-operator -o json | jq '.spec.template.spec.containers[] | select(.name=="server").image'
 echo "Sleep 15"
@@ -75,9 +75,9 @@ sleep 15
 # Patch SiteConfig Operator container image (Requires MCH pause)
 # Attempt to fix siteconfig operator slow down
 # https://issues.redhat.com/browse/ACM-14969
-# echo "Patching ACM SiteConfig Operator container image"
-# oc image mirror -a /opt/registry/pull-secret-bastion.txt quay.io/sakhoury/siteconfig-operator:0.0.10 ${bastion}:5000/acm-d/siteconfig:0.0.10-fix-delay --keep-manifest-list
-#
-# oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
-# oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] |= (select(.name=="manager").image = "'"${bastion}"':5000/acm-d/siteconfig:0.0.10-fix-delay")' | oc replace -f -
-# oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
+echo "Patching ACM SiteConfig Operator container image"
+oc image mirror -a /opt/registry/pull-secret-bastion.txt quay.io/sakhoury/siteconfig-operator:0.0.10 ${bastion}:5000/acm-d/siteconfig:0.0.10-fix-delay --keep-manifest-list
+
+oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
+oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] |= (select(.name=="manager").image = "'"${bastion}"':5000/acm-d/siteconfig:0.0.10-fix-delay")' | oc replace -f -
+oc get deploy -n open-cluster-management siteconfig-controller-manager -o json | jq '.spec.template.spec.containers[] | select(.name=="manager").image'
