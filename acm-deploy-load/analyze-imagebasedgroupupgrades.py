@@ -134,6 +134,8 @@ def main():
             ibgus[ibgu_name]["clusters"][cluster_name]["status"] = "prepared"
           elif action["action"] == "Upgrade":
             ibgus[ibgu_name]["clusters"][cluster_name]["status"] = "upgraded"
+          elif action["action"] == "Rollback":
+            ibgus[ibgu_name]["clusters"][cluster_name]["status"] = "rollback"
           else:
             logger.warning("New completed action: {}".format(action["action"]))
     for condition in item["status"]["conditions"]:
@@ -184,6 +186,11 @@ def main():
                 ibu_upgrade_started_time = datetime.strptime(item["startTime"], "%Y-%m-%dT%H:%M:%SZ")
               if "completionTime" in item:
                 ibu_upgrade_completed_time = datetime.strptime(item["completionTime"], "%Y-%m-%dT%H:%M:%SZ")
+            elif item["stage"] == "Rollback":
+              if "startTime" in item:
+                ibu_rollback_started_time = datetime.strptime(item["startTime"], "%Y-%m-%dT%H:%M:%SZ")
+              if "completionTime" in item:
+                ibu_rollback_completed_time = datetime.strptime(item["completionTime"], "%Y-%m-%dT%H:%M:%SZ")
         else:
           logger.error("History key missing in ibu, check LCA version (Must be 4.17 or newer)")
           sys.exit(1)
@@ -238,7 +245,6 @@ def main():
     log_write(stats_file, "Stats on imagebasedgroupupgrade CRs in namespace {}".format(cliargs.namespace))
     log_write(stats_file, "Expected OCP Version {}".format(cliargs.ocp_version))
     log_write(stats_file, "Total IBGUs: {}".format(len(ibgus)))
-    # Total prepare, total upgrade, total rollback
     total_clusters = 0
     total_prep = 0
     total_upgrade = 0
