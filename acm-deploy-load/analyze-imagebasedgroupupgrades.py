@@ -239,6 +239,28 @@ def main():
     log_write(stats_file, "Expected OCP Version {}".format(cliargs.ocp_version))
     log_write(stats_file, "Total IBGUs: {}".format(len(ibgus)))
     # Total prepare, total upgrade, total rollback
+    total_clusters = 0
+    total_prep = 0
+    total_upgrade = 0
+    total_rollback = 0
+    all_prepDurations = []
+    all_upgradeDurations = []
+    all_rollbackDurations = []
+    for ibgu in ibgus:
+      total_clusters += len(ibgus[ibgu]["clusters"])
+      all_prepDurations.extend(ibgus[ibgu]["prepDurations"])
+      all_upgradeDurations.extend(ibgus[ibgu]["upgradeDurations"])
+      all_rollbackDurations.extend(ibgus[ibgu]["rollbackDurations"])
+    log_write(stats_file, "Total Clusters: {}, Prepared: {}, Upgraded: {}, Rollbacks: {}".format(total_clusters, len(all_prepDurations), len(all_upgradeDurations), len(all_rollbackDurations)))
+    log_write(stats_file, "(IBU) All IBGU Prepare Actions")
+    log_write(stats_file, "(IBU) Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(all_prepDurations)))
+    log_write(stats_file, "(IBU) Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(all_prepDurations, False)))
+    log_write(stats_file, "(IBU) All IBGU Upgrade Actions")
+    log_write(stats_file, "(IBU) Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(all_upgradeDurations)))
+    log_write(stats_file, "(IBU) Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(all_upgradeDurations, False)))
+    log_write(stats_file, "(IBU) All IBGU Rollback Actions")
+    log_write(stats_file, "(IBU) Recorded Durations Min/Avg/50p/95p/99p/Max (seconds): {}".format(assemble_stats(all_rollbackDurations)))
+    log_write(stats_file, "(IBU) Recorded Durations Min/Avg/50p/95p/99p/Max: {}".format(assemble_stats(all_rollbackDurations, False)))
     log_write(stats_file, "##########################################################################################")
     for ibgu in ibgus:
       log_write(stats_file, "IBGU: {}".format(ibgu))
