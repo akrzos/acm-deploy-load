@@ -27,7 +27,7 @@ spec:
       - name: oadp-cm
         namespace: openshift-adp
   plan:
-  - actions: ["Prep"]
+  - actions: {{ ibgu_action }}
     rolloutStrategy:
       maxConcurrency: {{ ibgu_prep_concurrency }}
       timeout: {{ ibgu_prep_timeout }}

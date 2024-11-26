@@ -16,9 +16,19 @@
   register: ztp_done_clusters
 
 - name: Template IBGU object(s)
+  vars:
+    ibgu_action: '["Prep"]'
   template:
     src: ibgu.yml.j2
     dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/ibgu-{{ seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
+  loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / clusters_per_prep_ibgu) | round(0, 'ceil') | int) | list }}"
+
+- name: Template Rollback IBGU object(s)
+  vars:
+    ibgu_action: '["Rollback"]'
+  template:
+    src: ibgu.yml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/ibgu-rollback-{{ seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
   loop: "{{ range(((ztp_done_clusters.stdout_lines | length) / clusters_per_prep_ibgu) | round(0, 'ceil') | int) | list }}"
 
 - name: Template IBGU apply scripts
