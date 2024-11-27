@@ -2,7 +2,7 @@
 apiVersion: lcm.openshift.io/v1alpha1
 kind: ImageBasedGroupUpgrade
 metadata:
-  name: ibgu-{{ seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
+  name: {{ ibgu_name }}
   namespace: ztp-platform-upgrade
   labels:
     ibgu: "{{ seed_image_version }}"
