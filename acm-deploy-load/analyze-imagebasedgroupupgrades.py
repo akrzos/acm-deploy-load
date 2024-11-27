@@ -116,7 +116,8 @@ def main():
     logger.info("Found: {}, {}".format(ibgu_name, ibgus[ibgu_name]["creationTimestamp"]))
     for cluster in item["status"]["clusters"]:
       cluster_name = cluster["name"]
-      ibus.append(cluster_name)
+      if cluster_name not in ibus:
+        ibus.append(cluster_name)
       ibgus[ibgu_name]["clusters"][cluster_name] = {}
       ibgus[ibgu_name]["clusters"][cluster_name]["status"] = "Unknown"
       ibgus[ibgu_name]["clusters"][cluster_name]["prepStartTime"] = ""
