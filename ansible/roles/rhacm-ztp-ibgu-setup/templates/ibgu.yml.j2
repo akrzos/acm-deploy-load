@@ -29,5 +29,5 @@ spec:
   plan:
   - actions: {{ ibgu_action }}
     rolloutStrategy:
-      maxConcurrency: {{ ibgu_prep_concurrency }}
-      timeout: {{ ibgu_prep_timeout }}
+      maxConcurrency: {{ ibgu_concurrency }}
+      timeout: {{ ibgu_timeout }}

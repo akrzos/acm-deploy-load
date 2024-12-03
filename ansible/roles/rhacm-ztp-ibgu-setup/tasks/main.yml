@@ -19,6 +19,8 @@
   vars:
     ibgu_name: ibgu-{{ seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
     ibgu_action: '["Prep"]'
+    ibgu_concurrency: "{{ ibgu_prep_concurrency }}"
+    ibgu_timeout: "{{ ibgu_prep_timeout }}"
   template:
     src: ibgu.yml.j2
     dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/ibgu-{{ seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
@@ -28,6 +30,8 @@
   vars:
     ibgu_name: ibgu-rollback-{{ seed_image_version | replace('.', '-')  }}-{{ '%04d' | format(item) }}
     ibgu_action: '["Rollback"]'
+    ibgu_concurrency: "{{ ibgu_rollback_concurrency }}"
+    ibgu_timeout: "{{ ibgu_rollback_timeout }}"
   template:
     src: ibgu.yml.j2
     dest: "{{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/ibgu-rollback-{{ seed_image_version | replace('.', '-') }}-{{ '%04d' | format(item) }}.yml"
