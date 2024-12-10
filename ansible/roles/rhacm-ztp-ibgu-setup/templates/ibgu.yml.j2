@@ -24,8 +24,8 @@ spec:
       pullSecretRef:
         name: seedgen
     oadpContent:
-      - name: oadp-cm
-        namespace: openshift-adp
+    - name: oadp-cm
+      namespace: openshift-adp
   plan:
   - actions: {{ ibgu_action }}
     rolloutStrategy:
