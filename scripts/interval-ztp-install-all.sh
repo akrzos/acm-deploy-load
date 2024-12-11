@@ -93,7 +93,7 @@ echo "##########################################################################
 # time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile combined --writegraph ${results_dir}/graph-combined-per-cluster.png 2>&1 | tee -a ${log_file}
 # time ./acm-deploy-load/report-per-cluster.py ${results_dir}/day1-*.csv ${results_dir}/clustergroupupgrades-ztp-install-*.csv --profile all_stages --writegraph ${results_dir}/graph-per-cluster-stage_breakdown.png 2>&1 | tee -a ${log_file}
 
-# Commented out as promdumps are rearely used and should be migrated to a separate script
+# Commented out as promdumps are rarely used and should be migrated to a separate script
 # echo "################################################################################" 2>&1 | tee -a ${log_file}
 #
 # meta=$(kubectl promdump meta -n openshift-monitoring -p prometheus-k8s-0 -c prometheus -d /prometheus </dev/null 2>&1 | tee -a ${log_file})
