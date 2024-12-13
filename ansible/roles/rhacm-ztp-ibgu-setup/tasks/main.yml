@@ -51,7 +51,6 @@
 - name: Apply seedgen.yaml to hub cluster
   shell: |
     KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -f {{ install_directory }}/rhacm-ztp/ibgu/scripts-{{ seed_image_version | replace('.', '-') }}/seedgen.yaml
-  register: ztp_done_clusters
 
 - name: Template IBGU apply scripts
   template:
