@@ -194,7 +194,8 @@ def main():
                 ibu_rollback_completed_time = datetime.strptime(item["completionTime"], "%Y-%m-%dT%H:%M:%SZ")
         else:
           logger.error("History key missing in ibu, check LCA version (Must be 4.17 or newer)")
-          sys.exit(1)
+          # No longer exit on missing history key
+          # sys.exit(1)
 
       # Match timestamps from IBU data to the correct cluster
       cluster_found = False
