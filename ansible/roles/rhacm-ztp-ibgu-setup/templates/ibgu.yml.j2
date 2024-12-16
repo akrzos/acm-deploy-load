@@ -6,6 +6,9 @@ metadata:
   namespace: ztp-platform-upgrade
   labels:
     ibgu: "{{ seed_image_version }}"
+{% if ibgu_label != "" %}
+    {{ ibgu_label }}
+{% endif %}
 spec:
   clusterLabelSelectors:
   - matchExpressions:
