@@ -296,8 +296,12 @@ def main():
     log_write(stats_file, "Expected OCP Version {}".format(cliargs.ocp_version))
     log_write(stats_file, "Total IBGUs: {}".format(len(ibgus)))
     total_clusters = 0
-    total_prep_duration = (latest_PrepCompletionTime - earliest_PrepStartTime).total_seconds()
-    total_upgrade_duration = (latest_UpgradeCompletionTime - earliest_UpgradeStartTime).total_seconds()
+    total_prep_duration = 0
+    total_upgrade_duration = 0
+    if earliest_PrepStartTime != "" and latest_PrepCompletionTime != "":
+      total_prep_duration = (latest_PrepCompletionTime - earliest_PrepStartTime).total_seconds()
+    if earliest_UpgradeStartTime != "" and latest_UpgradeCompletionTime != "":
+      total_upgrade_duration = (latest_UpgradeCompletionTime - earliest_UpgradeStartTime).total_seconds()
     all_prepDurations = []
     all_upgradeDurations = []
     all_rollbackDurations = []
