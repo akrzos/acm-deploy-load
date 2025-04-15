@@ -11,14 +11,14 @@ spec:
     storageClassName: {{ agentservice_sc }}
     resources:
       requests:
-        storage: 20Gi
+        storage: {{ agentservice_database_storage_size }}
   filesystemStorage:
     accessModes:
     - ReadWriteOnce
     storageClassName: {{ agentservice_sc }}
     resources:
       requests:
-        storage: 100Gi
+        storage: {{ agentservice_filesystem_storage_size }}
   mirrorRegistryRef:
     name: "assisted-mirror-config"
   osImages:
