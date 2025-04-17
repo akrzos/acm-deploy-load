@@ -15,3 +15,6 @@ enable_converged_flow: true
 
 # Which Storage Class should the AgentService use
 agentservice_sc: localstorage-sc
+
+agentservice_database_storage_size: 20Gi
+agentservice_filesystem_storage_size: 100Gi
