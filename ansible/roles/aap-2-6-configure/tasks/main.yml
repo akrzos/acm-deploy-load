@@ -1,0 +1,299 @@
+---
+# aap-configure tasks
+
+- name: Copy aap license manifest file to aap-deploy directory
+  copy:
+    dest: "{{ install_directory }}/aap-deploy/aap_manifest.zip"
+    content: "{{ aap_license_manifest }}"
+
+- name: Clone aap-eda-for-ztp to bastion
+  git:
+    repo: "{{ aap_eda_for_ztp_repo }}"
+    dest: "{{ install_directory }}/aap-deploy/aap-eda-for-ztp"
+    force: true
+    version: "{{ aap_eda_for_ztp_repo_branch }}"
+
+- name: Create aap-eda-for-ztp repo in gogs
+  uri:
+    url: "http://{{ gogs_host }}:{{ gogs_port }}/api/v1/admin/users/{{ gogs_username }}/repos"
+    user: "{{ gogs_username }}"
+    password: "{{ gogs_password }}"
+    force_basic_auth: true
+    method: POST
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"name": "aap-eda-for-ztp", "description": "test repo", "private": false}
+    body_format: json
+    validate_certs: no
+    status_code: 201
+    return_content: yes
+  ignore_errors: true
+
+- name: Push aap-eda-for-ztp into gogs
+  shell: |
+    cd {{ install_directory }}/aap-deploy/aap-eda-for-ztp
+    git remote add origin-gogs http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/aap-eda-for-ztp.git
+    git push -u origin-gogs --all --force
+
+# - name: Get the aap admin password
+#   shell: |
+#     KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n ansible-automation-platform {{ aap_name }}-admin-password -o jsonpath='{.data.password}' | base64 -d
+#   register: get_aap_admin_pw
+
+# - name: Get the aap route
+#   shell: |
+#     KUBECONFIG={{ hub_cluster_kubeconfig }} oc -n ansible-automation-platform get route {{ aap_name }} -o jsonpath='{.spec.host}'
+#   register: aap_route
+
+- name: Get the automation controller admin password
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n ansible-automation-platform {{ aap_automationcontroller_name }}-admin-password -o jsonpath='{.data.password}' | base64 -d
+  register: get_automationcontroller_admin_pw
+
+- name: Get the automation controller route
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc -n ansible-automation-platform get route {{ aap_automationcontroller_name }} -o jsonpath='{.spec.host}'
+  register: automationcontroller_route
+
+# - name: Get the automation hub admin password
+#   shell: |
+#     KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n ansible-automation-platform {{ aap_automationhub_name }}-admin-password -o jsonpath='{.data.password}' | base64 -d
+#   register: get_automationhub_admin_pw
+
+# - name: Get the automation hub route
+#   shell: |
+#     KUBECONFIG={{ hub_cluster_kubeconfig }} oc -n ansible-automation-platform get route {{ aap_automationhub_name }} -o jsonpath='{.spec.host}'
+#   register: automationhub_route
+
+- name: Set vars for configuration
+  set_fact:
+    # aap_admin_pw: "{{ get_aap_admin_pw.stdout }}"
+    # aap_url: "https://{{ aap_route.stdout }}"
+    aap_automationcontroller_admin_pw: "{{ get_automationcontroller_admin_pw.stdout }}"
+    aap_automationcontroller_url: "https://{{ automationcontroller_route.stdout }}"
+    # aap_automationhub_admin_pw: "{{ get_automationhub_admin_pw.stdout }}"
+    # aap_automationhub_url: "https://{{ automationhub_route.stdout }}"
+
+# - debug:
+#     msg: "{{ item }}"
+#   loop:
+#   - "{{ aap_admin_pw }}"
+#   - "{{ aap_url }}"
+#   - "{{ aap_automationcontroller_admin_pw }}"
+#   - "{{ aap_automationcontroller_url }}"
+#   - "{{ aap_automationhub_admin_pw }}"
+#   - "{{ aap_automationhub_url }}"
+
+
+- name: Set aap subscription manifest (license zip file)
+  awx.awx.license:
+    controller_host: "{{ aap_automationcontroller_url }}"
+    validate_certs: false
+    manifest: "{{ install_directory }}/aap-deploy/aap_manifest.zip"
+    controller_username: "{{ aap_automationcontroller_admin_username }}"
+    controller_password: "{{ aap_automationcontroller_admin_pw }}"
+
+- name: Get Global Hub Kafka ca.crt
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n {{ acm_global_hub_namespace }} global-hub-kafka-user -o jsonpath='{.data.ca\.crt}' | base64 -d
+  register: get_global_hub_kafka_ca_crt
+
+- name: Get Global Hub Kafka user.crt
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n {{ acm_global_hub_namespace }} global-hub-kafka-user -o jsonpath='{.data.user\.crt}' | base64 -d
+  register: get_global_hub_kafka_user_crt
+
+- name: Get Global Hub Kafka user.key
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get secret -n {{ acm_global_hub_namespace }} global-hub-kafka-user -o jsonpath='{.data.user\.key}' | base64 -d
+  register: get_global_hub_kafka_user_key
+
+- name: Get Global Hub Kafka broker URL
+  shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get route kafka-kafka-tls-bootstrap -n {{ acm_global_hub_namespace }} -o json | jq -r '.spec.host'
+  register: get_global_hub_kafka_broker_url
+
+# - name: Automation controller create a project
+#   awx.awx.project:
+#     controller_host: "{{ aap_automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: "{{ aap_automationcontroller_admin_username }}"
+#     controller_password: "{{ aap_automationcontroller_admin_pw }}"
+#     name: aap-eda-for-ztp-project
+#     organization: Default
+#     scm_type: git
+#     # scm_update_on_launch: true
+#     scm_branch: "{{ acm_ansible_collection_demo_repo_branch }}"
+#     scm_url: "http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/aap-eda-for-ztp.git"
+
+
+- name: Create Kafka mTLS Credentials awx credential_type
+  awx.awx.credential_type:
+    controller_host: "{{ aap_automationcontroller_url }}"
+    validate_certs: false
+    controller_username: "{{ aap_automationcontroller_admin_username }}"
+    controller_password: "{{ aap_automationcontroller_admin_pw }}"
+    name: "Kafka mTLS Credentials"
+    kind: cloud
+    state: present
+    inputs: "{{ lookup('file', 'credential_inputs_kafka_mtls_credentials.yaml') | from_yaml }}"
+    injectors: "{{ lookup('file', 'credential_injector_kafka_mtls_credentials.yaml') | from_yaml }}"
+
+- name: Instantiate Kafka mTLS Credentials awx credential
+  awx.awx.credential:
+    controller_host: "{{ aap_automationcontroller_url }}"
+    validate_certs: false
+    controller_username: "{{ aap_automationcontroller_admin_username }}"
+    controller_password: "{{ aap_automationcontroller_admin_pw }}"
+    name: global-hub-kafka-credentials
+    organization: Default
+    credential_type: "Kafka mTLS Credentials"
+    state: present
+    inputs:
+      ca_cert: "{{ get_global_hub_kafka_ca_crt.stdout }}"
+      client_cert: "{{ get_global_hub_kafka_user_crt.stdout }}"
+      client_key: "{{ get_global_hub_kafka_user_key.stdout }}"
+      host: "{{ get_global_hub_kafka_broker_url.stdout }}"
+
+# - name: Approve automation hub collections
+#   uri:
+#     url: "{{ automationhub_url }}/api/galaxy/v3/collections/{{ item.name }}/{{ item.suffix }}/versions/{{ item.version }}/move/staging/published/"
+#     user: admin
+#     password: "{{ automationhub_admin_pw }}"
+#     force_basic_auth: true
+#     method: POST
+#     validate_certs: false
+#     body_format: json
+#     status_code: [202]
+#     return_content: true
+#     body: {
+#         "name": "{{ item.name }}",
+#         "groups": []
+#     }
+#   loop:
+#   - name: amazon
+#     suffix: aws
+#     version: 6.5.0
+#   - name: awx
+#     suffix: awx
+#     version: "{{ collection_awx_version.stdout }}"
+#   - name: kubernetes
+#     suffix: core
+#     version: "{{ collection_kubernetes_version.stdout }}"
+#   - name: stolostron
+#     suffix: core
+#     version: "{{ ansible_collection_git_tag.stdout }}"
+
+# - name: Configure awx credential_types authentication
+#   awx.awx.credential_type:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: kubeconfig
+#     kind: cloud
+#     state: present
+#     inputs: "{{ lookup('file', 'credential_inputs_kubeconfig.json') }}"
+#     injectors: "{{ lookup('file', 'credential_injector_kubeconfig.json') }}"
+
+# - name: Fetch the hub kubeconfig for awx credential
+#   slurp:
+#     src: "{{ hub_cluster_kubeconfig }}"
+#   register: fetched_hub_kubeconfig
+
+# - name: Instantiate hub kubeconfig awx credential
+#   awx.awx.credential:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: hub-acm-kubeconfig
+#     organization: Default
+#     credential_type: kubeconfig
+#     state: present
+#     inputs:
+#       kube_config: "{{ fetched_hub_kubeconfig.content | b64decode }}"
+
+# - name: Configure automation controller authentication to automation hub
+#   awx.awx.credential:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: hub-galaxy-token
+#     organization: Default
+#     credential_type: Ansible Galaxy/Automation Hub API Token
+#     state: present
+#     inputs: "{'url':'{{ automationhub_url }}/api/galaxy/content/published/','token':'{{ automationhub_galaxy_token }}'}"
+
+# - name: Disable SSL verfication due to self-signed certificates
+#   awx.awx.settings:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: GALAXY_IGNORE_CERTS
+#     value: "true"
+
+# - name: Add automation hub as default galaxy credentials for automation controller
+#   awx.awx.organization:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: Default
+#     galaxy_credentials: hub-galaxy-token
+#     state: present
+
+# - name: Automation controller create a project
+#   awx.awx.project:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: aap-for-ran-ztp-project
+#     organization: Default
+#     scm_type: git
+#     # scm_update_on_launch: true
+#     scm_branch: "{{ acm_ansible_collection_demo_repo_branch }}"
+#     scm_url: "http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/testadmin/acm-ansible-collection-demo.git"
+
+# - name: Automation controller create inventory
+#   awx.awx.inventory:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: hub-acm-inventory
+#     organization: Default
+
+# - name: Automation controller create inventory-source
+#   awx.awx.inventory_source:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: acm-dynamic-inventory
+#     organization: Default
+#     inventory: hub-acm-inventory
+#     update_on_launch: true
+#     credential: 3
+#     source: scm
+#     source_project: aap-for-ran-ztp-project
+#     source_path: inventories/cluster-inventory-example.yml
+
+# - name: Automation controller create template
+#   awx.awx.job_template:
+#     controller_host: "{{ automationcontroller_url }}"
+#     validate_certs: false
+#     controller_username: admin
+#     controller_password: "{{ automationcontroller_admin_pw }}"
+#     name: ztp-day2-automation-template
+#     project: aap-for-ran-ztp-project
+#     playbook: "{{ automationcontroller_template_playbook }}"
+#     inventory: hub-acm-inventory
+#     ask_variables_on_launch: true
+#     allow_simultaneous: true
+#     extra_vars: "{{ lookup('template', 'template_extra_vars.json') }}"
+#     credentials: hub-acm-kubeconfig

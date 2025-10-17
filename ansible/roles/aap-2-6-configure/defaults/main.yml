@@ -1,0 +1,36 @@
+---
+# aap-2-6-configure default vars
+
+aap_eda_for_ztp_repo: https://github.com/akrzos/aap-eda-for-ztp.git
+aap_eda_for_ztp_repo_branch: main
+
+aap_name: aap
+aap_automationcontroller_name: aap-controller
+aap_automationhub_name: aap-hub
+
+aap_admin_username: admin
+aap_automationcontroller_admin_username: admin
+aap_automationhub_admin_username: admin
+
+acm_global_hub_namespace: multicluster-global-hub
+
+# Repo with galaxy roles
+# stolostron_ansible_collection_core_repo: https://github.com/stolostron/ansible-collection.core.git
+# stolostron_ansible_collection_core_repo_branch: main
+
+gogs_host: "[fc00:1000::1]"
+gogs_port: 10880
+gogs_username: testadmin
+gogs_password: testadmin
+
+# acm_ansible_collection_demo_repo: https://github.com/akrzos/acm-ansible-collection-demo.git
+# acm_ansible_collection_demo_repo: https://github.com/leo8a/acm-ansible-collection-demo.git
+# acm_ansible_collection_demo_repo: https://github.com/stolostron/acm-ansible-collection-demo.git
+
+# acm_ansible_collection_demo_repo_branch: ztp-day2-automation
+
+# aap_for_ztp_repo: https://github.com/akrzos/aap-for-ztp.git
+# aap_for_ztp_repo_branch: main
+
+# automationcontroller_template_playbook: playbooks/ztp-day2-automation-labeled.yml
+# automationcontroller_template_playbook: playbooks/cluster-mgmt.yml
