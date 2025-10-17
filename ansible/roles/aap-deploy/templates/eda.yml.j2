@@ -1,0 +1,38 @@
+---
+apiVersion: eda.ansible.com/v1alpha1
+kind: EDA
+metadata:
+  name: eda
+  namespace: ansible-automation-platform
+spec:
+  activation_worker:
+    replicas: 5
+  admin_user: admin
+  api:
+    gunicorn_workers: 2
+    replicas: 1
+  automation_server_ssl_verify: "no" #set to no if using self-signed cert for global hub
+  automation_server_url: https://{{ eda_url }}:443 # change to https, http by default
+  default_worker:
+    replicas: 2
+  extra_settings:
+  - setting: EDA_MAX_RUNNING_ACTIVATIONS
+    value: "12"
+  force_drop_db: false
+  # image_pull_policy: IfNotPresent
+  # ingress_type: Route
+  ipv6_disabled: false
+  loadbalancer_port: 80
+  loadbalancer_protocol: http
+  # no_log: true
+  redis:
+    replicas: 1
+  route_tls_termination_mechanism: Edge
+  scheduler:
+    replicas: 1
+  set_self_labels: true
+  ui:
+    replicas: 1
+  worker:
+    replicas: 2
+

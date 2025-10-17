@@ -7,21 +7,34 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
-  create_preload_data: true
-  route_tls_termination_mechanism: Edge
-  garbage_collect_secrets: false
-  ingress_type: Route
-  loadbalancer_port: 80
-  image_pull_policy: IfNotPresent
-  projects_storage_size: 8Gi
-  task_privileged: false
-  postgres_storage_class: {{ automationcontroller_postgres_storage_class }}
-  projects_storage_access_mode: ReadWriteOnce
-  projects_persistence: false
-  replicas: 1
   admin_user: admin
+  auto_upgrade: true
+  create_preload_data: true
+  garbage_collect_secrets: false
+  # image_pull_policy: IfNotPresent
+  ingress_type: Route
+  ipv6_disabled: false
+  loadbalancer_ip: ""
+  loadbalancer_port: 80
   loadbalancer_protocol: http
+  metrics_utility_cronjob_gather_schedule: '@hourly'
+  metrics_utility_cronjob_report_schedule: '@monthly'
+  metrics_utility_enabled: false
+  metrics_utility_pvc_claim_size: 5Gi
+  # no_log: true
   nodeport_port: 30080
+  postgres_keepalives: true
+  postgres_keepalives_count: 5
+  postgres_keepalives_idle: 5
+  postgres_keepalives_interval: 5
+  # postgres_storage_class: {{ automationcontroller_postgres_storage_class }}
+  projects_persistence: false
+  projects_storage_access_mode: ReadWriteOnce
+  projects_storage_size: 8Gi
+  # replicas: 1
+  # route_tls_termination_mechanism: Edge
+  set_self_labels: true
+  task_privileged: false
 {% if automationcontroller_image_override %}
   image: {{ automationcontroller_image }}
   image_version: {{ automationcontroller_image_tag }}

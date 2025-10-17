@@ -1,0 +1,80 @@
+---
+apiVersion: aap.ansible.com/v1alpha1
+kind: AnsibleAutomationPlatform
+metadata:
+  name: aap
+  namespace: ansible-automation-platform
+spec:
+  api:
+    log_level: INFO
+    replicas: 1
+  controller:
+    disabled: false
+    name: automationcontroller
+    postgres_storage_class: {{ automationcontroller_postgres_storage_class }}
+    projects_persistence: false
+    projects_storage_access_mode: ReadWriteOnce
+    projects_storage_size: 8Gi
+    replicas: 1
+  database:
+    idle_disabled: false
+    postgres_data_volume_init: false
+    postgres_storage_class: {{ aap_database_postgres_storage_class }}
+    resource_requirements:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+  eda:
+    activation_worker:
+      replicas: 5
+    api:
+      gunicorn_workers: 2
+      replicas: 1
+    automation_server_ssl_verify: "no" #set to no if using self-signed cert for global hub
+    automation_server_url: https://{{ eda_automationcontroller_url }}:443 # change to https, http by default
+    default_worker:
+      replicas: 2
+    disabled: false
+    extra_settings:
+    - setting: EDA_MAX_RUNNING_ACTIVATIONS
+      value: "12"
+    force_drop_db: false
+    ipv6_disabled: false
+    loadbalancer_port: 80
+    loadbalancer_protocol: http
+    name: eda
+    redis:
+      replicas: 1
+    scheduler:
+      replicas: 1
+    set_self_labels: true
+    ui:
+      replicas: 1
+    worker:
+      replicas: 2
+  hub:
+    api:
+      log_level: INFO
+      replicas: 1
+    content:
+      log_level: INFO
+      replicas: 2
+    disabled: false
+    file_storage_access_mode: ReadWriteOnce
+    file_storage_size: 100Gi
+    file_storage_storage_class: {{ automationhub_file_storage_storage_class }}
+    name: automationhub
+    postgres_storage_class: {{ automationhub_postgres_storage_class }}
+    redis_storage_class: {{ automationhub_redis_storage_class }}
+    resource_manager:
+      replicas: 1
+    storage_type: File
+    web:
+      replicas: 1
+    worker:
+      replicas: 2
+  image_pull_policy: IfNotPresent
+  no_log: true
+  redis_mode: standalone
+  route_tls_termination_mechanism: Edge
+
