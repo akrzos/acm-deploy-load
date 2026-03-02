@@ -28,6 +28,7 @@ from utils.output import phase_break
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import time
 
@@ -111,6 +112,46 @@ def update_policy_cm(policy_ns, cm_name, policy_keys, policy_dir, hub_kc):
   logger.debug(output.strip())
 
 
+def launch_prometheus_analysis(report_dir, phase_name, start_ts, end_ts, kubeconfig, base_dir):
+  """Launch analyze-prometheus.py in the background for the given time window."""
+  analyzer_script = os.path.join(base_dir, "analyze-prometheus.py")
+  if not os.path.isfile(analyzer_script):
+    logger.warning("analyze-prometheus.py not found at {}, skipping phase {}".format(analyzer_script, phase_name))
+    return
+  start_str = datetime.fromtimestamp(start_ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+  end_str = datetime.fromtimestamp(end_ts, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+  duration_seconds = end_ts - start_ts
+  if duration_seconds < 300:
+    logger.warning("Skipping prometheus analysis phase {}: window {}s < 5 minutes".format(phase_name, duration_seconds))
+    return
+  # No buffer time since script is running against end time that is less than 5 minutes from now
+  cmd = [
+    sys.executable,
+    analyzer_script,
+    "-k", kubeconfig,
+    "-s", start_str,
+    "-e", end_str,
+    "-b", "0",
+    "-p", phase_name,
+    report_dir,
+  ]
+  logger.info("Prometheus analysis command: {}".format(" ".join(cmd)))
+  log_file = os.path.join(report_dir, "pa-{}.log".format(phase_name))
+  try:
+    with open(log_file, "w") as f:
+      proc = subprocess.Popen(
+        cmd,
+        stdout=f,
+        stderr=subprocess.STDOUT,
+        cwd=base_dir,
+        start_new_session=True,
+      )
+    logger.info("Launched prometheus analysis phase '{}' in background (pid {}, log: {})".format(
+      phase_name, proc.pid, os.path.basename(log_file)))
+  except Exception as e:
+    logger.warning("Failed to launch prometheus analysis for phase {}: {}".format(phase_name, e))
+
+
 def main():
   start_time = time.time()
 
@@ -149,6 +190,9 @@ def main():
   # Delay args are idle time before and after the workload
   parser.add_argument("-s", "--start-delay", type=int, default=120, help="Delay on start of script")
   parser.add_argument("-e", "--end-delay", type=int, default=120, help="Delay on end of script")
+
+  parser.add_argument("--no-prometheus-analysis", action="store_true", default=False,
+                      help="Do not run analyze-prometheus.py in background post each phase+batch")
 
   parser.add_argument("-d", "--debug", action="store_true", default=False, help="Set log level debug")
 
@@ -208,6 +252,8 @@ def main():
     else:
       logger.info(f" * No policy updates")
     logger.info(f" * End delay: {cliargs.end_delay}s")
+    if not cliargs.no_prometheus_analysis:
+      logger.info(" * Run analyze-prometheus.py in background at phase boundaries")
     logger.info(f"* Expected run time: {expected_run_time}s :: {str(timedelta(seconds=expected_run_time))}")
   elif cliargs.no_deploy == True:
     expected_run_time = cliargs.start_delay + cliargs.max_policy_intervals * cliargs.interval_policy + cliargs.end_delay
@@ -245,6 +291,9 @@ def main():
   os.mkdir(report_dir)
   os.mkdir(policy_dir)
 
+  ###################################
+  # Phase 1 of workload: Start delay
+  ###################################
   # Start of workload with start delay
   workload_start_time = time.time()
   if cliargs.start_delay > 0:
@@ -259,11 +308,23 @@ def main():
     time.sleep(total_start_delay)
   start_delay_complete_ts = time.time()
 
+  # Phase 1 Prometheus analysis: start delay window
+  if not cliargs.no_prometheus_analysis and cliargs.no_deploy == False:
+    launch_prometheus_analysis(
+      report_dir, "phase1-start-delay",
+      workload_start_time, start_delay_complete_ts,
+      cliargs.kubeconfig, base_dir)
 
+  ###################################
+  # Phase 2 of workload: Deploy clusters and/or update policy configmap
+  ###################################
   total_clusters_deployed = 0
   total_policy_cm_updates = 0
   deployed_clusters = []
   cluster_deployed_timestamps = []
+  # (start_ts, end_ts) for prometheus analysis after each batch; end_ts is when wait period ends
+  pending_batch_analysis = None
+  batch_analysis_index = 0
 
   next_deploy_time = workload_start_time + cliargs.start_delay
   next_policy_time = next_deploy_time
@@ -275,6 +336,14 @@ def main():
   while True:
     # Check if deploying clusters and if it is time to deploy
     if cliargs.no_deploy == False and current_time >= next_deploy_time:
+      # Phase 2 Prometheus analysis: after each batch of clusters deployed and wait period has elapsed
+      if pending_batch_analysis:
+        start_ts, end_ts = pending_batch_analysis
+        phase_name = "phase2-batch-{}".format(batch_analysis_index)
+        launch_prometheus_analysis(report_dir, phase_name, start_ts, end_ts, cliargs.kubeconfig, base_dir)
+        pending_batch_analysis = None
+        batch_analysis_index += 1
+
       if total_clusters_deployed >= len(clusterinstance_files):
         # Deploying all clusters triggers the infinite loop to break
         # This occurs after the last cluster is deployed + interval time after that
@@ -295,6 +364,9 @@ def main():
       cluster_deployed_timestamps.append(et)
       logger.info("Deploying took: {}".format(round(et - st, 1)))
       total_clusters_deployed += new_cluster_count
+      # Schedule prometheus analysis for this batch: run after interval/last_deploy_runtime
+      if not cliargs.no_prometheus_analysis:
+        pending_batch_analysis = (et, next_deploy_time)
 
     elif cliargs.no_deploy == True:
       # Not deploying clusters, thus break once max policy intervals are reached
@@ -318,7 +390,7 @@ def main():
       remaining_policy_time = round(next_policy_time - current_time)
       elapsed_time = round(current_time - workload_start_time)
       estimated_remaining_time = expected_run_time - elapsed_time
-      logger.info("ACM-Telco Core Load Update:")
+      logger.info("ACM Telco Core Load Update:")
       logger.info("Elapsed time: {}s :: {}".format(elapsed_time, str(timedelta(seconds=elapsed_time))))
       logger.info("Estimated remaining workload time: {}s :: {}".format(estimated_remaining_time, str(timedelta(seconds=estimated_remaining_time))))
       if cliargs.no_deploy == False and cliargs.no_policy == False:
@@ -349,7 +421,9 @@ def main():
     current_time = time.time()
     # End run loop
 
-  # End of workload with end delay
+  ###################################
+  # Phase 3 of workload: End delay
+  ###################################
   end_delay_start_ts = time.time()
   if cliargs.end_delay > 0:
     phase_break()
@@ -363,6 +437,14 @@ def main():
     time.sleep(total_end_delay)
 
   end_time = time.time()
+
+  # Phase 3 Prometheus analysis: end delay window
+  if not cliargs.no_prometheus_analysis and cliargs.no_deploy == False:
+    launch_prometheus_analysis(
+      report_dir, "phase3-end-delay",
+      end_delay_start_ts, end_time,
+      cliargs.kubeconfig, base_dir)
+
   total_elapsed_time = round(end_time - workload_start_time)
   # Make a report card
   with open("{}/report.txt".format(report_dir), "w") as report:
