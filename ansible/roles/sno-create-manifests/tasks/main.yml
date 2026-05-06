@@ -27,7 +27,10 @@
     pull_secret: "{{ disconnected_pull_secret }}"
   delegate_to: "{{ groups['bastion'][0] }}"
   run_once: true
-  when: rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1
+  when:
+  - rhacm_disconnected_registry is defined
+  - rhacm_disconnected_registry is not none
+  - rhacm_disconnected_registry | length > 1
 
 - name: Template a manifest per hv-vm on bastion as a SNO
   template:

@@ -67,10 +67,10 @@
   loop:
   - replace: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}"
     regexp: "quay.io"
-    enabled: "{{ rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 }}"
+    enabled: "{{ rhacm_disconnected_registry is defined and rhacm_disconnected_registry is not none and rhacm_disconnected_registry | length > 1 }}"
   - replace: "{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}"
     regexp: "registry.redhat.io"
-    enabled: "{{ rhacm_disconnected_registry and rhacm_disconnected_registry|length > 1 }}"
+    enabled: "{{ rhacm_disconnected_registry is defined and rhacm_disconnected_registry is not none and rhacm_disconnected_registry | length > 1 }}"
   - replace: "{{ rhacm_policy_generator_image_tag }}"
     regexp: "v2.11"
   - replace: "{{ rhacm_policy_generator_image_tag }}"
