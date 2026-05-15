@@ -1,0 +1,7 @@
+---
+- op: replace
+  path: "/spec/source"
+  value:
+    path: "telco-hub/configuration"
+    repoURL: "http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/{{ gogs_username }}/{{ telco_hub_gogs_repo_name }}.git"
+    targetRevision: "{{ telco_hub_repo_branch }}"

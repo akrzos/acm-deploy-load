@@ -1,0 +1,247 @@
+---
+# telco-hub-install tasks
+# Deploys a Telco Hub cluster per the Reference Design Spec using ArgoCD/GitOps
+# Reference: https://github.com/openshift-kni/telco-reference/tree/main/telco-hub/configuration
+
+- name: Clear old telco-hub-install clone
+  ansible.builtin.file:
+    path: "{{ install_directory }}/telco-hub-install/telco-reference"
+    state: absent
+
+- name: Create directory for telco-hub-install
+  ansible.builtin.file:
+    path: "{{ install_directory }}/telco-hub-install"
+    state: directory
+
+- name: Clone telco-reference
+  ansible.builtin.git:
+    repo: "{{ telco_hub_repo_url }}"
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference"
+    force: true
+    version: "{{ telco_hub_repo_branch }}"
+
+- name: Create {{ telco_hub_gogs_repo_name }} repo in gogs
+  ansible.builtin.uri:
+    url: "http://{{ gogs_host }}:{{ gogs_port }}/api/v1/admin/users/{{ gogs_username }}/repos"
+    user: "{{ gogs_username }}"
+    password: "{{ gogs_password }}"
+    force_basic_auth: true
+    method: POST
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {"name": "{{ telco_hub_gogs_repo_name }}", "description": "Telco Hub RDS install via ArgoCD", "private": false}
+    body_format: json
+    validate_certs: no
+    status_code: 201
+    return_content: yes
+  ignore_errors: true
+
+- name: Push telco-reference into gogs as {{ telco_hub_gogs_repo_name }}
+  ansible.builtin.shell: |
+    cd {{ install_directory }}/telco-hub-install/telco-reference
+    git remote add origin-gogs http://{{ gogs_username }}:{{ gogs_password }}@{{ gogs_host }}:{{ gogs_port }}/{{ gogs_username }}/{{ telco_hub_gogs_repo_name }}.git
+    git push -u origin-gogs --all --force
+
+- name: Create custom-overlays-config directories
+  ansible.builtin.file:
+    path: "{{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/custom-overlays-config/{{ item }}"
+    state: directory
+  loop:
+  - acm
+  - gitops
+  - lso
+  - monitoring
+  - odf
+  - registry
+
+- name: Template root kustomization
+  ansible.builtin.template:
+    src: kustomization.yaml.j2
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/kustomization.yaml"
+
+- name: Template ArgoCD/GitOps overlay configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference/{{ item.dest }}"
+  loop:
+  - src: gitops/gitopsSubscription.yaml.j2
+    dest: telco-hub/configuration/reference-crs/required/gitops/gitopsSubscription.yaml
+  - src: gitops/gitops-kustomization.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/gitops/kustomization.yaml
+  - src: gitops/init-argocd-app.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/gitops/init-argocd-app.yaml
+  - src: gitops/argocd-tls-certs-cm-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/gitops/argocd-tls-certs-cm-patch.yaml
+    enabled: "{{ setup_argocd_tls_cert }}"
+  - src: gitops/addPluginsPolicy-images-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/gitops/addPluginsPolicy-images-patch.yaml
+    enabled: "{{ rhacm_disconnected_registry is defined and rhacm_disconnected_registry | length > 1 }}"
+  when: item.enabled | default(true)
+
+- name: Get disconnected registry certificate
+  ansible.builtin.slurp:
+    src: "{{ registry_path }}/certs/domain.crt"
+  register: mirror_cert
+  when:
+  - rhacm_disconnected_registry is defined
+  - rhacm_disconnected_registry is not none
+  - rhacm_disconnected_registry | length > 1
+
+- name: Obtain OCP version data per assisted-installer OCP version
+  ansible.builtin.include_tasks:
+    file: "{{ playbook_dir }}/roles/mce-assisted-installer/tasks/mce-ocp-version.yml"
+  loop: "{{ mce_assisted_ocp_versions }}"
+
+- name: Template ACM overlay configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference/{{ item.dest }}"
+  loop:
+  - src: acm/acm-kustomization.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/kustomization.yaml
+  - src: acm/acm-subscription-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/acm-subscription-patch.yaml
+  - src: acm/storage-mco-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/storage-mco-patch.yaml
+  - src: acm/options-agentserviceconfig-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/options-agentserviceconfig-patch.yaml
+  - src: acm/observability-obc-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/observability-obc-patch.yaml
+  - src: acm/acmMirrorRegistryCM-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/acmMirrorRegistryCM-patch.yaml
+  - src: acm/acmMCH-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/acmMCH-patch.yaml
+    enabled: "{{ setup_acm_mch_fix }}"
+  - src: acm/acmMCE-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/acm/acmMCE-patch.yaml
+    enabled: "{{ setup_acm_mch_fix }}"
+  when: item.enabled | default(true)
+
+- name: Template LSO overlay configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/custom-overlays-config/lso/{{ item.dest }}"
+  loop:
+  - src: lso/lso-kustomization.yaml.j2
+    dest: kustomization.yaml
+  - src: lso/local-storage-disks-patch.yaml.j2
+    dest: local-storage-disks-patch.yaml
+  when: setup_lso
+
+- name: Template ODF overlay configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/custom-overlays-config/odf/{{ item.dest }}"
+  loop:
+  - src: odf/odf-kustomization.yaml.j2
+    dest: kustomization.yaml
+  - src: odf/options-storage-cluster.yaml.j2
+    dest: options-storage-cluster.yaml
+  when: setup_odf
+
+- name: Template registry overlay configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference/{{ item.dest }}"
+  loop:
+  - src: registry/registry-base-kustomization.yaml.j2
+    dest: telco-hub/configuration/reference-crs/required/registry/kustomization.yaml
+  - src: registry/registry-kustomization.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/registry/kustomization.yaml
+  - src: registry/catalog-source-image-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/registry/catalog-source-image-patch.yaml
+  - src: registry/registry-ca-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/registry/registry-ca-patch.yaml
+    enabled: "{{ setup_registry_idms_itms }}"
+  - src: registry/idms-operator-mirrors-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/registry/idms-operator-mirrors-patch.yaml
+    enabled: "{{ setup_registry_idms_itms }}"
+  - src: registry/idms-release-mirrors-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/registry/idms-release-mirrors-patch.yaml
+    enabled: "{{ setup_registry_idms_itms }}"
+  - src: registry/itms-generic-mirrors-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/registry/itms-generic-mirrors-patch.yaml
+    enabled: "{{ setup_registry_idms_itms }}"
+  - src: registry/itms-release-mirrors-patch.yaml.j2
+    dest: telco-hub/configuration/custom-overlays-config/registry/itms-release-mirrors-patch.yaml
+    enabled: "{{ setup_registry_idms_itms }}"
+  when:
+  - setup_registry_mirror
+  - item.enabled | default(true)
+
+- name: Template cluster monitoring overlay configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/custom-overlays-config/monitoring/{{ item.dest }}"
+  loop:
+  - src: monitoring/monitoring-kustomization.yaml.j2
+    dest: kustomization.yaml
+  - src: monitoring/cluster-monitoring-config.yaml.j2
+    dest: cluster-monitoring-config.yaml
+  when: setup_cluster_monitoring
+
+- name: Commit and push telco-hub overlay configuration
+  ansible.builtin.shell: |
+    cd {{ install_directory }}/telco-hub-install/telco-reference
+    git add -A
+    git commit -m "Configure telco-hub overlays for ArgoCD deployment"
+    git push origin-gogs
+
+- name: Install GitOps operator manifests
+  ansible.builtin.shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply \
+      -f {{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/reference-crs/required/gitops/clusterrole.yaml \
+      -f {{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/reference-crs/required/gitops/clusterrolebinding.yaml \
+      -f {{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/reference-crs/required/gitops/gitopsNS.yaml \
+      -f {{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/reference-crs/required/gitops/gitopsOperatorGroup.yaml \
+      -f {{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration/reference-crs/required/gitops/gitopsSubscription.yaml
+  when: setup_gitops_operator
+
+- name: Wait for GitOps operator subscription to be AtLatestKnown
+  ansible.builtin.shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc -n openshift-gitops-operator get subscriptions.operators.coreos.com openshift-gitops-operator -o jsonpath='{.status.state}'
+  register: gitops_sub_state
+  until: gitops_sub_state.stdout == "AtLatestKnown"
+  retries: 60
+  delay: 10
+  when: setup_gitops_operator
+
+- name: Wait for openshift-gitops repo-server pod to be running
+  ansible.builtin.shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc -n openshift-gitops get pods -l app.kubernetes.io/name=openshift-gitops-repo-server -o jsonpath='{.items[0].status.phase}'
+  register: gitops_repo_pod
+  until: gitops_repo_pod.stdout == "Running"
+  retries: 60
+  delay: 10
+  when: setup_gitops_operator
+
+# Expected errors from oc apply -k on the gitops overlay:
+# - AlreadyExists for operator resources (applied in the earlier install step)
+# - Missing CRDs for ZTP policy resources (Placement, Policy, etc.) which will
+#   be created by ArgoCD sync-waves after ACM deploys the required CRDs
+# The task succeeds as long as the hub-config ArgoCD Application is created.
+- name: Apply ArgoCD hub-config application via kustomize
+  ansible.builtin.shell: |
+    cd {{ install_directory }}/telco-hub-install/telco-reference/telco-hub/configuration
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc apply -k custom-overlays-config/gitops/
+  register: apply_result
+  failed_when:
+  - apply_result.rc != 0
+  - "'application.argoproj.io/hub-config' not in apply_result.stdout"
+
+- name: Wait until MultiClusterHub is created
+  ansible.builtin.shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get multiclusterhub -n open-cluster-management multiclusterhub
+  register: mch_exists
+  until: mch_exists.rc == 0
+  retries: 300
+  delay: 5
+
+- name: Wait until MultiClusterHub is Running
+  ansible.builtin.shell: |
+    KUBECONFIG={{ hub_cluster_kubeconfig }} oc get multiclusterhub -n open-cluster-management multiclusterhub -o go-template={%raw%}'{{ .status.phase }}'{%endraw%}
+  register: mch_available
+  until: mch_available.stdout == "Running"
+  retries: 300
+  delay: 2

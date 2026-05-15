@@ -1,0 +1,22 @@
+---
+# Playbook to deploy a Telco Hub cluster per the Reference Design Spec using ArgoCD/GitOps
+#
+# Clones the telco-reference repo, templates Kustomize overlays with environment-specific
+# values, pushes to Gogs, optionally installs the GitOps operator, and creates the ArgoCD
+# Application that triggers the full hub deployment.
+#
+# Reference: https://github.com/openshift-kni/telco-reference/tree/main/telco-hub/configuration
+#
+# Example Usage:
+#
+# time ansible-playbook -i ansible/inventory/cloud99.local ansible/telco-hub-install.yml
+#
+
+- name: Deploy Telco Hub via ArgoCD GitOps
+  hosts: bastion
+  gather_facts: true
+  vars_files:
+  - vars/all.yml
+  roles:
+  - telco-hub-install
+  - mce-add-clusterimagesets
