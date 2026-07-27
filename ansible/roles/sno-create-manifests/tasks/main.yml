@@ -5,8 +5,6 @@
   file:
     path: "{{ item.dir }}"
     state: directory
-  delegate_to: "{{ groups['bastion'][0] }}"
-  run_once: true
   when: item.enabled | default(true) | bool
   loop:
   - dir: "{{ hv_vm_manifests_directory }}/"
@@ -25,38 +23,61 @@
 - name: Set pull-secret for bastion registry
   set_fact:
     pull_secret: "{{ disconnected_pull_secret }}"
-  delegate_to: "{{ groups['bastion'][0] }}"
-  run_once: true
   when:
   - rhacm_disconnected_registry is defined
   - rhacm_disconnected_registry is not none
   - rhacm_disconnected_registry | length > 1
 
-- name: Template a manifest per hv-vm on bastion as a SNO
+- name: Template AI siteconfig manifests per SNO
   template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-  delegate_to: "{{ groups['bastion'][0] }}"
-  when: item.enabled | default(true) | bool
-  loop:
-  # AI siteconfig/clusterinstance/manifests
-  - src: ai-siteconfig.yml.j2
-    dest: "{{ hv_vm_manifests_directory }}/sno/ai-siteconfig/{{ inventory_hostname }}-siteconfig.yml"
-    enabled: "{{ create_ai_siteconfigs }}"
-  - src: ai-resources.yml.j2
-    dest: "{{ hv_vm_manifests_directory }}/sno/ai-siteconfig/{{ inventory_hostname }}-resources.yml"
-    enabled: "{{ create_ai_siteconfigs }}"
-  - src: ai-clusterinstance.yml.j2
-    dest: "{{ hv_vm_manifests_directory }}/sno/ai-clusterinstance/{{ inventory_hostname }}-clusterinstance.yml"
-    enabled: "{{ create_ai_clusterinstances }}"
-  - src: ai-manifest.yml.j2
-    dest: "{{ hv_vm_manifests_directory }}/sno/ai-manifest/{{ inventory_hostname }}-manifest.yml"
-    enabled: "{{ create_ai_manifests }}"
+    src: ai-siteconfig.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/ai-siteconfig/{{ sno_host }}-siteconfig.yml"
+  loop: "{{ groups['hv_vm'] }}"
+  loop_control:
+    loop_var: sno_host
+  when: create_ai_siteconfigs | bool
 
-  # IBI clusterinstance / manifests
-  - src: ibi-clusterinstance.yml.j2
-    dest: "{{ hv_vm_manifests_directory }}/sno/ibi-clusterinstance/{{ inventory_hostname }}-clusterinstance.yml"
-    enabled: "{{ create_ibi_clusterinstances }}"
-  - src: ibi-manifest.yml.j2
-    dest: "{{ hv_vm_manifests_directory }}/sno/ibi-manifest/{{ inventory_hostname }}-manifest.yml"
-    enabled: "{{ create_ibi_manifests }}"
+- name: Template AI siteconfig resources per SNO
+  template:
+    src: ai-resources.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/ai-siteconfig/{{ sno_host }}-resources.yml"
+  loop: "{{ groups['hv_vm'] }}"
+  loop_control:
+    loop_var: sno_host
+  when: create_ai_siteconfigs | bool
+
+- name: Template AI clusterinstance manifests per SNO
+  template:
+    src: ai-clusterinstance.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/ai-clusterinstance/{{ sno_host }}-clusterinstance.yml"
+  loop: "{{ groups['hv_vm'] }}"
+  loop_control:
+    loop_var: sno_host
+  when: create_ai_clusterinstances | bool
+
+- name: Template AI manifests per SNO
+  template:
+    src: ai-manifest.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/ai-manifest/{{ sno_host }}-manifest.yml"
+  loop: "{{ groups['hv_vm'] }}"
+  loop_control:
+    loop_var: sno_host
+  when: create_ai_manifests | bool
+
+- name: Template IBI clusterinstance manifests per SNO
+  template:
+    src: ibi-clusterinstance.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/ibi-clusterinstance/{{ sno_host }}-clusterinstance.yml"
+  loop: "{{ groups['hv_vm'] }}"
+  loop_control:
+    loop_var: sno_host
+  when: create_ibi_clusterinstances | bool
+
+- name: Template IBI manifests per SNO
+  template:
+    src: ibi-manifest.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/sno/ibi-manifest/{{ sno_host }}-manifest.yml"
+  loop: "{{ groups['hv_vm'] }}"
+  loop_control:
+    loop_var: sno_host
+  when: create_ibi_manifests | bool

@@ -2,15 +2,15 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ inventory_hostname }}
+  name: {{ sno_host }}
   labels:
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: ai-pull-secret
-  namespace: {{ inventory_hostname }}
+  namespace: {{ sno_host }}
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: "{{ pull_secret | b64encode }}"
@@ -18,8 +18,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ inventory_hostname }}-bmc-secret
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-bmc-secret
+  namespace: {{ sno_host }}
 type: Opaque
 data:
   password: {{ bmc_password_base64 }}
@@ -28,8 +28,8 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ inventory_hostname }}-marketplace-namespace
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-marketplace-namespace
+  namespace: {{ sno_host }}
 data:
   namespace.yml: |
     # Taken from https://github.com/operator-framework/operator-marketplace/blob/53c124a3f0edfd151652e1f23c87dd39ed7646bb/manifests/01_namespace.yaml
@@ -54,8 +54,8 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ inventory_hostname }}-varlibcontainers-partitioned
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-varlibcontainers-partitioned
+  namespace: {{ sno_host }}
 data:
   varlibcontainers-partitioned.yml: |
     ### https://cloud.redhat.com/blog/a-guide-to-creating-a-separate-disk-partition-at-installation-time
@@ -109,34 +109,34 @@ data:
 apiVersion: siteconfig.open-cluster-management.io/v1alpha1
 kind: ClusterInstance
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
 spec:
   additionalNTPSources:
-  - {{ hostvars[inventory_hostname]['hv_ip'] }}
-  baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
+  - {{ hostvars[sno_host]['hv_ip'] }}
+  baseDomain: {{ hostvars[sno_host]['base_domain'] }}
   clusterImageSetNameRef: {{ cluster_image_set }}
   extraLabels:
     ManagedCluster:
       common: 'true'
       du-profile: "{{ sno_du_profile }}"
       group-du-sno: ''
-      name: {{ inventory_hostname }}
+      name: {{ sno_host }}
 {% if sno_mc_observability %}
       observability: enabled
 {% else %}
       observability: disabled
 {% endif %}
-      sites: {{ inventory_hostname }}
-  clusterName: {{ inventory_hostname }}
+      sites: {{ sno_host }}
+  clusterName: {{ sno_host }}
   clusterNetwork:
-  - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
+  - cidr: {{ "fd01::/48" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
     hostPrefix: {{ sno_cluster_network_host_prefix }}
   clusterType: SNO
   extraManifestsRefs:
-  - name: {{ inventory_hostname }}-marketplace-namespace
+  - name: {{ sno_host }}-marketplace-namespace
 {% if ai_clusterinstance_varlibcontainers_partitioned %}
-  - name: {{ inventory_hostname }}-varlibcontainers-partitioned
+  - name: {{ sno_host }}-varlibcontainers-partitioned
 {% endif %}
   holdInstallation: false
 {% if sno_du_profile == "4.15" %}
@@ -146,20 +146,20 @@ spec:
   ignitionConfigOverride: "{\"ignition\":{\"version\":\"3.2.0\"},\"storage\":{\"files\":[{\"path\":\"/etc/containers/policy.json\",\"mode\":420,\"overwrite\":true,\"contents\":{\"source\":\"data:text/plain;charset=utf-8;base64,ewogICAgImRlZmF1bHQiOiBbCiAgICAgICAgewogICAgICAgICAgICAidHlwZSI6ICJpbnNlY3VyZUFjY2VwdEFueXRoaW5nIgogICAgICAgIH0KICAgIF0sCiAgICAidHJhbnNwb3J0cyI6CiAgICAgICAgewogICAgICAgICAgICAiZG9ja2VyLWRhZW1vbiI6CiAgICAgICAgICAgICAgICB7CiAgICAgICAgICAgICAgICAgICAgIiI6IFt7InR5cGUiOiJpbnNlY3VyZUFjY2VwdEFueXRoaW5nIn1dCiAgICAgICAgICAgICAgICB9CiAgICAgICAgfQp9\"}}]}}"
 {% endif %}
   machineNetwork:
-  - cidr: {{ hostvars[inventory_hostname]['machine_network'] }}
+  - cidr: {{ hostvars[sno_host]['machine_network'] }}
   networkType: OVNKubernetes
   nodes:
   - automatedCleaningMode: disabled
-{% if hostvars[inventory_hostname]['hv_ip'] | ansible.utils.ipv6 %}
-    bmcAddress: redfish-virtualmedia+http://[{{ hostvars[inventory_hostname]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% if hostvars[sno_host]['hv_ip'] | ansible.utils.ipv6 %}
+    bmcAddress: redfish-virtualmedia+http://[{{ hostvars[sno_host]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% else %}
-    bmcAddress: redfish-virtualmedia+http://{{ hostvars[inventory_hostname]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+    bmcAddress: redfish-virtualmedia+http://{{ hostvars[sno_host]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% endif %}
     bmcCredentialsName:
-      name: {{ inventory_hostname }}-bmc-secret
-    bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+      name: {{ sno_host }}-bmc-secret
+    bootMACAddress: {{ hostvars[sno_host]['mac_address'] }}
     bootMode: UEFI
-    hostName: {{ inventory_hostname }}
+    hostName: {{ sno_host }}
 {% if ai_clusterinstance_ironic_inspect %}
     # Can not actually set enabled, unset is enabled
     # ironicInspect: enabled
@@ -169,22 +169,22 @@ spec:
     nodeNetwork:
       interfaces:
       - name: {{ sno_nic_interface }}
-        macAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+        macAddress: {{ hostvars[sno_host]['mac_address'] }}
       config:
         interfaces:
         - name: {{ sno_nic_interface }}
           type: ethernet
           state: up
           # identifier: mac-address
-          # mac-address: {{ hostvars[inventory_hostname]['mac_address'] }}
-{% if hostvars[inventory_hostname].ip | ansible.utils.ipv4 %}
+          # mac-address: {{ hostvars[sno_host]['mac_address'] }}
+{% if hostvars[sno_host].ip | ansible.utils.ipv4 %}
           ipv4:
             enabled: true
             autoconf: false
             dhcp: false
             address:
-            - ip: {{ hostvars[inventory_hostname]['ip'] }}
-              prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+            - ip: {{ hostvars[sno_host]['ip'] }}
+              prefix-length: {{ hostvars[sno_host]['network_prefix'] }}
           ipv6:
             enabled: false
 {% else %}
@@ -195,17 +195,17 @@ spec:
             autoconf: false
             dhcp: false
             address:
-            - ip: {{ hostvars[inventory_hostname]['ip'] }}
-              prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+            - ip: {{ hostvars[sno_host]['ip'] }}
+              prefix-length: {{ hostvars[sno_host]['network_prefix'] }}
 {% endif %}
         dns-resolver:
           config:
             server:
-            - {{ hostvars[inventory_hostname]['hv_ip'] }}
+            - {{ hostvars[sno_host]['hv_ip'] }}
         routes:
           config:
-          - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
-            next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
+          - destination: {{ "::/0" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+            next-hop-address: {{ hostvars[sno_host]['gateway'] }}
             next-hop-interface: {{ sno_nic_interface }}
     templateRefs:
     - name: {{ ai_clusterinstance_node_templates }}
@@ -213,7 +213,7 @@ spec:
   pullSecretRef:
     name: ai-pull-secret
   serviceNetwork:
-  - cidr: {{ "fd02::/112" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
+  - cidr: {{ "fd02::/112" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
   sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
   templateRefs:
   - name: {{ ai_clusterinstance_cluster_templates }}

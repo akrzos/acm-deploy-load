@@ -2,8 +2,8 @@
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ inventory_hostname }}-bmc-secret
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-bmc-secret
+  namespace: {{ sno_host }}
 type: Opaque
 data:
   password: {{ bmc_password_base64 }}
@@ -13,7 +13,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: ai-pull-secret
-  namespace: {{ inventory_hostname }}
+  namespace: {{ sno_host }}
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: {{ pull_secret | b64encode  }}
@@ -24,7 +24,7 @@ kind: ConfigMap
 metadata:
   # annotations:
   #   argocd.argoproj.io/sync-wave: "2"
-  name: site-{{ inventory_hostname }}
+  name: site-{{ sno_host }}
   namespace: {{ ai_site_data_namespace }}
 data:
   sitekey1: "sitevalue1"

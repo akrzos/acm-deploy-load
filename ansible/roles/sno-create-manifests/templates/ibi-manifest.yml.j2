@@ -2,15 +2,15 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ inventory_hostname }}
+  name: {{ sno_host }}
   labels:
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: ibi-pull-secret
-  namespace: {{ inventory_hostname }}
+  namespace: {{ sno_host }}
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: "{{ disconnected_pull_secret | b64encode }}"
@@ -18,29 +18,29 @@ data:
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
   annotations:
     inspect.metal3.io: disabled
 spec:
   automatedCleaningMode: disabled
   bmc:
-{% if hostvars[inventory_hostname]['hv_ip'] | ansible.utils.ipv6 %}
-    address: redfish-virtualmedia+http://[{{ hostvars[inventory_hostname]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% if hostvars[sno_host]['hv_ip'] | ansible.utils.ipv6 %}
+    address: redfish-virtualmedia+http://[{{ hostvars[sno_host]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% else %}
-    address: redfish-virtualmedia+http://{{ hostvars[inventory_hostname]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+    address: redfish-virtualmedia+http://{{ hostvars[sno_host]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% endif %}
-    credentialsName: {{ inventory_hostname }}-bmc-secret
-  bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+    credentialsName: {{ sno_host }}-bmc-secret
+  bootMACAddress: {{ hostvars[sno_host]['mac_address'] }}
   bootMode: "UEFI"
-  preprovisioningNetworkDataName: {{ inventory_hostname }}-nmstate-config
+  preprovisioningNetworkDataName: {{ sno_host }}-nmstate-config
   online: true
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ inventory_hostname }}-bmc-secret
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-bmc-secret
+  namespace: {{ sno_host }}
 type: Opaque
 data:
   password: {{ bmc_password_base64 }}
@@ -49,8 +49,8 @@ data:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ inventory_hostname }}-nmstate-config
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-nmstate-config
+  namespace: {{ sno_host }}
 stringData:
   nmstate: |
     interfaces:
@@ -58,15 +58,15 @@ stringData:
       type: ethernet
       state: up
       identifier: mac-address
-      mac-address: {{ hostvars[inventory_hostname]['mac_address'] }}
-{% if hostvars[inventory_hostname].ip | ansible.utils.ipv4 %}
+      mac-address: {{ hostvars[sno_host]['mac_address'] }}
+{% if hostvars[sno_host].ip | ansible.utils.ipv4 %}
       ipv4:
         enabled: true
         autoconf: false
         dhcp: false
         address:
-        - ip: {{ hostvars[inventory_hostname]['ip'] }}
-          prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+        - ip: {{ hostvars[sno_host]['ip'] }}
+          prefix-length: {{ hostvars[sno_host]['network_prefix'] }}
       ipv6:
         enabled: false
 {% else %}
@@ -77,48 +77,48 @@ stringData:
         autoconf: false
         dhcp: false
         address:
-        - ip: {{ hostvars[inventory_hostname]['ip'] }}
-          prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+        - ip: {{ hostvars[sno_host]['ip'] }}
+          prefix-length: {{ hostvars[sno_host]['network_prefix'] }}
 {% endif %}
     dns-resolver:
       config:
         server:
-        - {{ hostvars[inventory_hostname]['hv_ip'] }}
+        - {{ hostvars[sno_host]['hv_ip'] }}
     routes:
       config:
-      - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
-        next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
+      - destination: {{ "::/0" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+        next-hop-address: {{ hostvars[sno_host]['gateway'] }}
         next-hop-interface: {{ sno_nic_interface }}
 ---
 apiVersion: extensions.hive.openshift.io/v1alpha1
 kind: ImageClusterInstall
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
 spec:
   bareMetalHostRef:
-    name: {{ inventory_hostname }}
-    namespace: {{ inventory_hostname }}
+    name: {{ sno_host }}
+    namespace: {{ sno_host }}
   clusterDeploymentRef:
-    name: {{ inventory_hostname }}
-  hostname: {{ inventory_hostname }}
+    name: {{ sno_host }}
+  hostname: {{ sno_host }}
   imageSetRef:
     name: {{ cluster_image_set }}
-  machineNetwork: {{ hostvars[inventory_hostname]['machine_network'] }}
+  machineNetwork: {{ hostvars[sno_host]['machine_network'] }}
 ---
 apiVersion: hive.openshift.io/v1
 kind: ClusterDeployment
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
 spec:
-  baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
+  baseDomain: {{ hostvars[sno_host]['base_domain'] }}
   clusterInstallRef:
     group: extensions.hive.openshift.io
     kind: ImageClusterInstall
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
     version: v1alpha1
-  clusterName: {{ inventory_hostname }}
+  clusterName: {{ sno_host }}
   platform:
     none: {}
   pullSecretRef:
@@ -127,11 +127,11 @@ spec:
 apiVersion: agent.open-cluster-management.io/v1
 kind: KlusterletAddonConfig
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{sno_host }}
 spec:
-  clusterName: {{ inventory_hostname }}
-  clusterNamespace: {{ inventory_hostname }}
+  clusterName: {{ sno_host }}
+  clusterNamespace: {{ sno_host }}
   applicationManager:
     enabled: false
   certPolicyController:
@@ -146,7 +146,7 @@ spec:
 apiVersion: cluster.open-cluster-management.io/v1
 kind: ManagedCluster
 metadata:
-  name: {{ inventory_hostname }}
+  name: {{ sno_host }}
   labels:
     cloud: auto-detect
     common: 'true'
@@ -154,13 +154,13 @@ metadata:
     du-profile: "{{ sno_du_profile }}"
 {% endif %}
     group-du-sno: ''
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
 {% if sno_mc_observability %}
     observability: enabled
 {% else %}
     observability: disabled
 {% endif %}
-    sites: {{ inventory_hostname }}
+    sites: {{ sno_host }}
     vendor: auto-detect
 spec:
   hubAcceptsClient: true

@@ -9,8 +9,8 @@
 #
 
 
-- name: Create all manifest files for a SNO
-  hosts: hv_vm
+- name: Create all manifest files for SNOs
+  hosts: bastion
   gather_facts: false
   vars_files:
   - vars/all.yml

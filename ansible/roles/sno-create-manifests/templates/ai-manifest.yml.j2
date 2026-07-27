@@ -2,15 +2,15 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ inventory_hostname }}
+  name: {{ sno_host }}
   labels:
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: {{ inventory_hostname }}-bmc-secret
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-bmc-secret
+  namespace: {{ sno_host }}
 type: Opaque
 data:
   password: {{ bmc_password_base64 }}
@@ -19,44 +19,44 @@ data:
 apiVersion: agent-install.openshift.io/v1beta1
 kind: NMStateConfig
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
   labels:
-    sno-cluster-{{ inventory_hostname }}: {{ inventory_hostname }}
+    sno-cluster-{{ sno_host }}: {{ sno_host }}
 spec:
   config:
     interfaces:
     - name: {{ sno_nic_interface }}
       type: ethernet
       state: up
-      {{ "ipv6" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "ipv4" }}:
+      {{ "ipv6" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "ipv4" }}:
         enabled: true
         autoconf: false
         dhcp: false
         address:
-        - ip: {{ hostvars[inventory_hostname]['ip'] }}
-          prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+        - ip: {{ hostvars[sno_host]['ip'] }}
+          prefix-length: {{ hostvars[sno_host]['network_prefix'] }}
         dhcp: false
     dns-resolver:
       config:
         server:
-        - {{ hostvars[inventory_hostname]['hv_ip'] }}
+        - {{ hostvars[sno_host]['hv_ip'] }}
     routes:
       config:
-      - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+      - destination: {{ "::/0" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
         metric: 1
-        next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
+        next-hop-address: {{ hostvars[sno_host]['gateway'] }}
         next-hop-interface: {{ sno_nic_interface }}
         table-id: 254
   interfaces:
   - name: {{ sno_nic_interface }}
-    macAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+    macAddress: {{ hostvars[sno_host]['mac_address'] }}
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: ai-pull-secret
-  namespace: {{ inventory_hostname }}
+  namespace: {{ sno_host }}
 type: kubernetes.io/dockerconfigjson
 data:
   .dockerconfigjson: {{ pull_secret | b64encode }}
@@ -64,8 +64,8 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ inventory_hostname }}-marketplace-namespace
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}-marketplace-namespace
+  namespace: {{ sno_host }}
 data:
   namespace.yml: |
     # Taken from https://github.com/operator-framework/operator-marketplace/blob/53c124a3f0edfd151652e1f23c87dd39ed7646bb/manifests/01_namespace.yaml
@@ -97,28 +97,28 @@ metadata:
 {% else %}
     agent-install.openshift.io/install-config-overrides: '{"networking":{"networkType":"OVNKubernetes"}}'
 {% endif %}
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
 spec:
   clusterDeploymentRef:
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
   imageSetRef:
     name: {{ cluster_image_set }}
   networking:
     clusterNetwork:
-      - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
-        hostPrefix: {{ hostvars[inventory_hostname]['network_prefix'] }}
+      - cidr: {{ "fd01::/48" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
+        hostPrefix: {{ hostvars[sno_host]['network_prefix'] }}
     machineNetwork:
-      - cidr: {{ hostvars[inventory_hostname]['machine_network'] }}
+      - cidr: {{ hostvars[sno_host]['machine_network'] }}
     serviceNetwork:
-      - {{ "fd02::/112" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
+      - {{ "fd02::/112" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
   provisionRequirements:
     controlPlaneAgents: 1
     workerAgents: 0
   sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
 {% if sno_du_profile in ["4.15", "4.16", "4.17", "4.18", "4.19", "4.20"] %}
   manifestsConfigMapRefs:
-  - name: {{ inventory_hostname }}-marketplace-namespace
+  - name: {{ sno_host }}-marketplace-namespace
 {% if ai_siteconfig_enable_cpuset %}
   - name: sno-workload-partitioning-configmap
 {% else %}
@@ -137,32 +137,32 @@ spec:
 apiVersion: hive.openshift.io/v1
 kind: ClusterDeployment
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
 spec:
-  baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
+  baseDomain: {{ hostvars[sno_host]['base_domain'] }}
   clusterInstallRef:
     group: extensions.hive.openshift.io
     kind: AgentClusterInstall
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
     version: v1beta1
-  clusterName: {{ inventory_hostname }}
+  clusterName: {{ sno_host }}
   platform:
     agentBareMetal:
       agentSelector:
         matchLabels:
-          cluster-name: {{ inventory_hostname }}
+          cluster-name: {{ sno_host }}
   pullSecretRef:
     name: ai-pull-secret
 ---
 apiVersion: agent.open-cluster-management.io/v1
 kind: KlusterletAddonConfig
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{sno_host }}
 spec:
-  clusterName: {{ inventory_hostname }}
-  clusterNamespace: {{ inventory_hostname }}
+  clusterName: {{ sno_host }}
+  clusterNamespace: {{ sno_host }}
   applicationManager:
     enabled: false
   certPolicyController:
@@ -177,7 +177,7 @@ spec:
 apiVersion: cluster.open-cluster-management.io/v1
 kind: ManagedCluster
 metadata:
-  name: {{ inventory_hostname }}
+  name: {{ sno_host }}
   labels:
     cloud: auto-detect
     common: 'true'
@@ -185,13 +185,13 @@ metadata:
     du-profile: "{{ sno_du_profile }}"
 {% endif %}
     group-du-sno: ''
-    name: {{ inventory_hostname }}
+    name: {{ sno_host }}
 {% if sno_mc_observability %}
     observability: enabled
 {% else %}
     observability: disabled
 {% endif %}
-    sites: {{ inventory_hostname }}
+    sites: {{ sno_host }}
     vendor: auto-detect
 spec:
   hubAcceptsClient: true
@@ -199,48 +199,48 @@ spec:
 apiVersion: agent-install.openshift.io/v1beta1
 kind: InfraEnv
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
 spec:
   additionalNTPSources:
-  - {{ hostvars[inventory_hostname]['hv_ip'] }}
+  - {{ hostvars[sno_host]['hv_ip'] }}
   clusterRef:
-    name: {{ inventory_hostname }}
-    namespace: {{ inventory_hostname }}
+    name: {{ sno_host }}
+    namespace: {{ sno_host }}
 {% if sno_du_profile in ["4.19", "4.20"] %}
   ignitionConfigOverride: "{\"ignition\":{\"version\":\"3.2.0\"},\"storage\":{\"files\":[{\"path\":\"/etc/containers/policy.json\",\"mode\":420,\"overwrite\":true,\"contents\":{\"source\":\"data:text/plain;charset=utf-8;base64,ewogICAgImRlZmF1bHQiOiBbCiAgICAgICAgewogICAgICAgICAgICAidHlwZSI6ICJpbnNlY3VyZUFjY2VwdEFueXRoaW5nIgogICAgICAgIH0KICAgIF0sCiAgICAidHJhbnNwb3J0cyI6CiAgICAgICAgewogICAgICAgICAgICAiZG9ja2VyLWRhZW1vbiI6CiAgICAgICAgICAgICAgICB7CiAgICAgICAgICAgICAgICAgICAgIiI6IFt7InR5cGUiOiJpbnNlY3VyZUFjY2VwdEFueXRoaW5nIn1dCiAgICAgICAgICAgICAgICB9CiAgICAgICAgfQp9\"}}]}}"
 {% endif %}
   sshAuthorizedKey: {{ lookup('file', ssh_public_key_file) }}
   agentLabelSelector:
     matchLabels:
-      cluster-name: {{ inventory_hostname }}
+      cluster-name: {{ sno_host }}
   pullSecretRef:
     name: ai-pull-secret
   nmStateConfigLabelSelector:
     matchLabels:
-      sno-cluster-{{ inventory_hostname }}: {{ inventory_hostname }}
+      sno-cluster-{{ sno_host }}: {{ sno_host }}
 ---
 apiVersion: metal3.io/v1alpha1
 kind: BareMetalHost
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
   annotations:
     inspect.metal3.io: disabled
-    bmac.agent-install.openshift.io/hostname: "{{ inventory_hostname }}"
+    bmac.agent-install.openshift.io/hostname: "{{ sno_host }}"
   labels:
-    infraenvs.agent-install.openshift.io: "{{ inventory_hostname }}"
+    infraenvs.agent-install.openshift.io: "{{ sno_host }}"
 spec:
   bootMode: "UEFI"
   bmc:
-{% if hostvars[inventory_hostname]['hv_ip'] | ansible.utils.ipv6 %}
-    address: redfish-virtualmedia+http://[{{ hostvars[inventory_hostname]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% if hostvars[sno_host]['hv_ip'] | ansible.utils.ipv6 %}
+    address: redfish-virtualmedia+http://[{{ hostvars[sno_host]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% else %}
-    address: redfish-virtualmedia+http://{{ hostvars[inventory_hostname]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+    address: redfish-virtualmedia+http://{{ hostvars[sno_host]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% endif %}
     disableCertificateVerification: true
-    credentialsName: {{ inventory_hostname }}-bmc-secret
-  bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+    credentialsName: {{ sno_host }}-bmc-secret
+  bootMACAddress: {{ hostvars[sno_host]['mac_address'] }}
   automatedCleaningMode: disabled
   online: true
 {% if ai_siteconfig_enable_cpuset %}
@@ -249,7 +249,7 @@ kind: ConfigMap
 apiVersion: v1
 metadata:
   name: sno-workload-partitioning-configmap
-  namespace: {{ inventory_hostname }}
+  namespace: {{ sno_host }}
 data:
   workload-partitioning-mc.yaml: |
     apiVersion: machineconfiguration.openshift.io/v1
@@ -284,7 +284,7 @@ data:
 # apiVersion: v1
 # metadata:
 #   name: sno-workload-partitioning-configmap
-#   namespace: {{ inventory_hostname }}
+#   namespace: {{ sno_host }}
 # data:
 #   workload-partitioning-mc.yaml: |
 #     apiVersion: machineconfiguration.openshift.io/v1

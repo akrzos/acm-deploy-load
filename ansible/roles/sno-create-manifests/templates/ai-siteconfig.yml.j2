@@ -6,16 +6,16 @@ apiVersion: ran.openshift.io/v1
 {% endif %}
 kind: SiteConfig
 metadata:
-  name: {{ inventory_hostname }}
-  namespace: {{ inventory_hostname }}
+  name: {{ sno_host }}
+  namespace: {{ sno_host }}
 spec:
-  baseDomain: {{ hostvars[inventory_hostname]['base_domain'] }}
+  baseDomain: {{ hostvars[sno_host]['base_domain'] }}
   pullSecretRef:
     name: "ai-pull-secret"
   clusterImageSetNameRef: {{ cluster_image_set }}
   sshPublicKey: {{ lookup('file', ssh_public_key_file) }}
   clusters:
-  - clusterName: {{ inventory_hostname }}
+  - clusterName: {{ sno_host }}
     networkType: "OVNKubernetes"
     extraManifestPath: extra-manifests
 {% if sno_du_profile == "4.15" %}
@@ -41,28 +41,28 @@ spec:
       du-profile: "{{ sno_du_profile }}"
 {% endif %}
       group-du-sno: ''
-      name: {{ inventory_hostname }}
+      name: {{ sno_host }}
 {% if sno_mc_observability %}
       observability: enabled
 {% else %}
       observability: disabled
 {% endif %}
-      sites: {{ inventory_hostname }}
+      sites: {{ sno_host }}
       vendor: auto-detect
     clusterNetwork:
-    - cidr: {{ "fd01::/48" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
+    - cidr: {{ "fd01::/48" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "10.128.0.0/14" }}
       hostPrefix: {{ sno_cluster_network_host_prefix }}
     machineNetwork:
-    - cidr: {{ hostvars[inventory_hostname]['machine_network'] }}
+    - cidr: {{ hostvars[sno_host]['machine_network'] }}
     serviceNetwork:
-    - {{ "fd02::/112" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
+    - {{ "fd02::/112" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "172.30.0.0/16" }}
     additionalNTPSources:
-    - {{ hostvars[inventory_hostname]['hv_ip'] }}
+    - {{ hostvars[sno_host]['hv_ip'] }}
     crTemplates:
       KlusterletAddonConfig: "KlusterletAddonConfigOverride.yaml"
 {% if ai_siteconfig_map_site_data %}
     siteConfigMap:
-      name: site-{{ inventory_hostname }}
+      name: site-{{ sno_host }}
       namespace: {{ ai_site_data_namespace }}
       data:
         sitekey1: "sitevalue1"
@@ -71,20 +71,20 @@ spec:
         sitekey4: "sitevalue4"
 {% endif %}
     nodes:
-    - hostName: "{{ inventory_hostname }}"
+    - hostName: "{{ sno_host }}"
 {% if ai_siteconfig_ironic_inspect %}
       ironicInspect: enabled
 {% else %}
       ironicInspect: disabled
 {% endif %}
-{% if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv4 %}
-      bmcAddress: redfish-virtualmedia+http://{{ hostvars[inventory_hostname]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+{% if hostvars[sno_host]['ip'] | ansible.utils.ipv4 %}
+      bmcAddress: redfish-virtualmedia+http://{{ hostvars[sno_host]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% else %}
-      bmcAddress: redfish-virtualmedia+http://[{{ hostvars[inventory_hostname]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[inventory_hostname]['domain_uuid'] }}
+      bmcAddress: redfish-virtualmedia+http://[{{ hostvars[sno_host]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[sno_host]['domain_uuid'] }}
 {% endif %}
       bmcCredentialsName:
-        name: {{ inventory_hostname }}-bmc-secret
-      bootMACAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+        name: {{ sno_host }}-bmc-secret
+      bootMACAddress: {{ hostvars[sno_host]['mac_address'] }}
       bootMode: "UEFI"
       # rootDeviceHints:
       #   hctl: '0:0:0:0'
@@ -96,20 +96,20 @@ spec:
       nodeNetwork:
         interfaces:
         - name: {{ sno_nic_interface }}
-          macAddress: {{ hostvars[inventory_hostname]['mac_address'] }}
+          macAddress: {{ hostvars[sno_host]['mac_address'] }}
         config:
           interfaces:
           - name: {{ sno_nic_interface }}
             type: ethernet
             state: up
-{% if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv4 %}
+{% if hostvars[sno_host]['ip'] | ansible.utils.ipv4 %}
             ipv4:
               enabled: true
               autoconf: false
               dhcp: false
               address:
-              - ip: "{{ hostvars[inventory_hostname]['ip'] }}"
-                prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+              - ip: "{{ hostvars[sno_host]['ip'] }}"
+                prefix-length: {{ hostvars[sno_host]['network_prefix'] }}
             ipv6:
               enabled: false
 {% else %}
@@ -120,16 +120,16 @@ spec:
               autoconf: false
               dhcp: false
               address:
-              - ip: "{{ hostvars[inventory_hostname]['ip'] }}"
-                prefix-length: {{ hostvars[inventory_hostname]['network_prefix'] }}
+              - ip: "{{ hostvars[sno_host]['ip'] }}"
+                prefix-length: {{ hostvars[sno_host]['network_prefix'] }}
 {% endif %}
           dns-resolver:
             config:
               server:
-              - {{ hostvars[inventory_hostname]['hv_ip'] }}
+              - {{ hostvars[sno_host]['hv_ip'] }}
           routes:
             config:
-            - destination: {{ "::/0" if hostvars[inventory_hostname]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+            - destination: {{ "::/0" if hostvars[sno_host]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
               next-hop-interface: {{ sno_nic_interface }}
-              next-hop-address: {{ hostvars[inventory_hostname]['gateway'] }}
+              next-hop-address: {{ hostvars[sno_host]['gateway'] }}
               table-id: 254
