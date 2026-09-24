@@ -1,0 +1,200 @@
+---
+# o-cloud-ztp tasks
+# Implementation of recommended O-Cloud Manager gitops layout per:
+# https://github.com/openshift-kni/oran-o2ims/blob/main/docs/user-guide/gitops-layout-and-setup.md
+
+# Set pull-secret for disconnected registry if configured
+- name: Set pull-secret for disconnected registry
+  ansible.builtin.set_fact:
+    pull_secret: "{{ disconnected_pull_secret }}"
+  when:
+  - rhacm_disconnected_registry is defined
+  - rhacm_disconnected_registry is not none
+  - rhacm_disconnected_registry | length > 1
+
+- name: Create clustertemplate directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/hardwareprofiles/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/{{ ocloud_resourcepool_name }}/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/"
+
+- name: Template hardware profile and kustomization
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  when: "{{ item.enabled }}"
+  loop:
+  - src: hardwareprofiles/hardware-profile.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/hardwareprofiles/{{ ocloud_hardware_profile_name }}.yaml"
+    enabled: "{{ ocloud_hardware_mgmt_enabled }}"
+  - src: hardwareprofiles/kustomization.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/hardwareprofiles/kustomization.yaml"
+    enabled: true
+
+- name: Template inventory resources
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: inventory/common.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/common.yaml"
+  - src: inventory/location.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/location.yaml"
+  - src: inventory/ocloudsite.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/ocloudsite.yaml"
+  - src: inventory/resourcepool.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/resourcepool.yaml"
+  - src: inventory/kustomization.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/kustomization.yaml"
+  - src: inventory/resourcepool-kustomization.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/{{ ocloud_resourcepool_name }}/kustomization.yaml"
+
+- name: Template server resources per host (NMState + BMC Secret + BareMetalHost)
+  ansible.builtin.template:
+    src: inventory/server.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/inventory/{{ ocloud_resourcepool_name }}/{{ item }}.yaml"
+  loop: "{{ groups['hv_vm'] }}"
+
+- name: Template ClusterTemplate (version_X_Y_Z/sno-ran-du directory) resources
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: clustertemplate/ns.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/ns.yaml"
+  - src: clustertemplate/pull-secret.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/pull-secret.yaml"
+  - src: clustertemplate/clusterinstance-defaults.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/clusterinstance-defaults-ai.yaml"
+    type: ai
+  - src: clustertemplate/clusterinstance-defaults.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/clusterinstance-defaults-ibi.yaml"
+    type: ibi
+  - src: clustertemplate/clustertemplate.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/{{ ocloud_clustertemplate_name }}-{{ ocloud_clustertemplate_version }}.yaml"
+  - src: clustertemplate/policytemplate-defaults.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/clustertemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/policytemplates-defaults-v1.yaml"
+
+
+# Section B: policytemplates/ directory structure
+- name: Create policytemplates directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/{{ ocloud_ocp_version_folder }}/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/source-crs/"
+
+# Section B1: Copy source-crs from telco-reference
+
+- name: Copy source-crs from telco-reference for O-Cloud policies
+  ansible.builtin.copy:
+    src: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_source_crs_path }}/"
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/source-crs/"
+    remote_src: true
+
+# Section B2: Template policy resources
+
+- name: Template O-Cloud policy resources
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+  - src: policy/ns.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/ns.yaml"
+  - src: policy/msc-binding.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/msc-binding.yaml"
+  - src: policy/sno-ran-du-pg.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/policytemplates/{{ ocloud_ocp_version_folder }}/{{ ocloud_clustertemplate_name }}/{{ ocloud_clustertemplate_name }}-pg-{{ ocloud_clustertemplate_version }}.yaml"
+
+# Section C: Cluster application directories → cluster/ + cluster-applications/
+
+- name: Create cluster and cluster-applications directories if they don't exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/cluster/"
+  - "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/cluster-applications/"
+
+- name: Create O-Cloud cluster application directories
+  ansible.builtin.file:
+    path: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/cluster/ocloud-clusters-{{ '%02d' | format(item) }}"
+    state: directory
+  loop: "{{ range(1, ocloud_cluster_applications_count + 1) | list }}"
+
+- name: Discover ProvisioningRequest files
+  ansible.builtin.find:
+    paths: "{{ ocloud_provisioningrequest_source }}"
+    patterns: "*-provisioningrequest.yml"
+  register: provisioningrequests_find
+  delegate_to: "{{ groups['bastion'][0] }}"
+
+- name: Initialize ProvisioningRequest list
+  ansible.builtin.set_fact:
+    provisioningrequest_list: []
+
+- name: Set ProvisioningRequest list
+  ansible.builtin.set_fact:
+    provisioningrequest_list: "{{ provisioningrequest_list + [item.path | basename] }}"
+  loop: "{{ provisioningrequests_find.files }}"
+
+- name: Sort ProvisioningRequest list
+  ansible.builtin.set_fact:
+    provisioningrequest_list: "{{ provisioningrequest_list | sort }}"
+
+- name: Copy ProvisioningRequests into cluster directories
+  ansible.builtin.shell: |
+    {% for pr in range((item - 1) * ocloud_provisioningrequests_per_application, item * ocloud_provisioningrequests_per_application ) %}
+    {% if provisioningrequest_list | length > pr %}
+    cp {{ ocloud_provisioningrequest_source }}/{{ provisioningrequest_list[pr] }} {{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/cluster/ocloud-clusters-{{ '%02d' | format(item) }}/{{ provisioningrequest_list[pr] }}
+    {% endif %}
+    {% endfor %}
+  loop: "{{ range(1, ocloud_cluster_applications_count + 1) | list }}"
+  when: provisioningrequest_list | length > ((item - 1) * ocloud_provisioningrequests_per_application)
+  delegate_to: "{{ groups['bastion'][0] }}"
+
+- name: Create O-Cloud cluster kustomization files
+  ansible.builtin.template:
+    src: cluster/kustomization.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/cluster/ocloud-clusters-{{ '%02d' | format(item) }}/kustomization.yaml"
+  loop: "{{ range(1, ocloud_cluster_applications_count + 1) | list }}"
+
+- name: Create O-Cloud cluster application files
+  ansible.builtin.template:
+    src: cluster/application.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/cluster-applications/ocloud-clusters-{{ '%02d' | format(item) }}.yaml"
+  loop: "{{ range(1, ocloud_cluster_applications_count + 1) | list }}"
+
+# Section D: ArgoCD Applications (clusters and policies)
+
+- name: Create O-Cloud ArgoCD cluster application
+  ansible.builtin.template:
+    src: argocd/clusters-application.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/deployment/ocloud-clusters-app.yaml"
+
+- name: Create O-Cloud ArgoCD policies application
+  ansible.builtin.template:
+    src: argocd/policies-application.yaml.j2
+    dest: "{{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}/{{ ztp_argocd_base_path }}/deployment/ocloud-policies-app.yaml"
+
+# Section E: Commit and push to Gogs
+
+- name: Commit and push O-Cloud ZTP to {{ ztp_repo_name }}
+  ansible.builtin.shell: |
+    cd {{ install_directory }}/rhacm-ztp/{{ ztp_repo_name }}
+    git add {{ ztp_argocd_base_path }}/clustertemplates/
+    git add {{ ztp_argocd_base_path }}/policytemplates/
+    git add {{ ztp_argocd_base_path }}/cluster/ocloud-clusters-*
+    git add {{ ztp_argocd_base_path }}/cluster-applications/ocloud-clusters-*.yaml
+    git add {{ ztp_argocd_base_path }}/deployment/ocloud-*.yaml
+    git commit -a -m "Add O-Cloud Manager ProvisioningRequests and ClusterTemplate"
+    git push origin-gogs

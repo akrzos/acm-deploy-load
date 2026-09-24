@@ -1,0 +1,93 @@
+---
+# o-cloud-ztp default vars
+
+# Pull secret vars for cluster template secret
+pull_secret: "{{ lookup('file', '../pull-secret.txt') }}"
+# Disconnected registry support
+registry_user: registry
+registry_password: registry
+auth_encoded: "{{ (registry_user + ':' + registry_password) | b64encode }}"
+disconnected_pull_secret: ' {"auths": {"{{ rhacm_disconnected_registry }}:{{ rhacm_disconnected_registry_port }}": {"auth": "{{ auth_encoded }}"}}}'
+
+# ocloud ztp will always be using telco-reference repo directories
+ztp_repo_name: telco-reference
+ztp_argocd_base_path: telco-ran/configuration/argocd
+
+# OCP Version - derive full version from cluster_image_set for directory naming and install version
+cluster_image_set: openshift-4.22.16
+ocloud_ocp_version: "{{ cluster_image_set | regex_replace('^openshift-', '') }}"  # Extracts "4.22.16"
+ocloud_ocp_version_folder: "version_{{ ocloud_ocp_version | replace('.', '_') }}"  # Creates "version_4_22_16"
+
+########################################################
+# Clustertemplate GitOps directory vars
+########################################################
+# Hardware profiles vars
+ocloud_hardware_profile_name: hw-profile-lab
+ocloud_hardware_mgmt_enabled: false
+# Inventory vars
+# Location -> OCloudSite -> ResourcePool -> NMState CM + BMC Secret + BMH
+ocloud_location_name: location-lab
+ocloud_location_description: "Lab Location"
+ocloud_site_name: site-lab
+ocloud_site_description: "Lab Site"
+ocloud_resourcepool_name: resourcepool-lab
+ocloud_resourcepool_description: "Lab Resource Pool"
+# clustertemplate vars (version_X_Y_Z/sno-ran-du directories)
+ocloud_clustertemplate_name: sno-ran-du
+ocloud_clustertemplate_version: v4-22-16
+ocloud_clustertemplate_release: "{{ ocloud_clustertemplate_version | regex_replace('^v', '') | replace('-', '.') }}"
+ocloud_du_profile: "{{ (ocloud_clustertemplate_version | regex_replace('^v', '')).split('-')[:2] | join('.') }}"
+# ClusterTemplate namespace follows official convention: version-4-22-1-sno-ran-du
+ocloud_clustertemplate_ns: "{{ ocloud_ocp_version_folder | replace('_', '-') }}-{{ ocloud_clustertemplate_name }}"
+
+# BMC credentials for each BMH object's BMC credentials
+bmc_username_base64: "{{ 'redhat' | b64encode }}"
+bmc_password_base64: "{{ 'password' | b64encode }}"
+# NIC interface for each BMH and in clusterinstance defaults
+sno_nic_interface: enp1s0
+
+# Installation method: 'ai' for Assisted Install, 'ibi' for Image-Based Install
+ocloud_clustertemplate_install_method: ai
+ocloud_base_domain: example.lab.redhat.com
+# Clusterinstance default ssh key
+ssh_public_key_file: ~/.ssh/id_rsa.pub
+
+
+########################################################
+# Policytemplate GitOps directory vars
+########################################################
+# Policy namespace follows official convention: ztp-<cluster-template-namespace>
+ocloud_policy_ns: "ztp-{{ ocloud_clustertemplate_ns }}"
+
+
+
+########################################################
+# Cluster And Policy ArgoCD Application vars
+########################################################
+ocloud_provisioningrequest_source: "/root/hv-vm/sno/ocloud-provisioningrequest"
+
+# Cluster application batching
+ocloud_cluster_applications_count: 5
+ocloud_provisioningrequests_per_application: 100
+
+# Git repo paths
+ztp_gitops_repo_dir: /root/rhacm-ztp/gitops
+ztp_gitops_repo_url: http://localhost:3000/student/ztp-repository.git
+ztp_source_crs_path: "{{ 'telco-ran/configuration/source-crs' if ztp_repo_type == 'telco-reference' else 'ztp/source-crs' }}"
+
+
+
+
+
+# Template refs (inherited from sno-create-manifests)
+# AI (Assisted Install) templates
+ai_clusterinstance_cluster_templates_ns: open-cluster-management
+ai_clusterinstance_cluster_templates: ai-cluster-templates-v1-search-obs
+ai_clusterinstance_node_templates_ns: open-cluster-management
+ai_clusterinstance_node_templates: ai-node-templates-v1
+
+# IBI (Image-Based Install) templates
+ibi_clusterinstance_cluster_templates_ns: open-cluster-management
+ibi_clusterinstance_cluster_templates: ibi-cluster-templates-v1-search-obs
+ibi_clusterinstance_node_templates_ns: open-cluster-management
+ibi_clusterinstance_node_templates: ibi-node-templates-v1

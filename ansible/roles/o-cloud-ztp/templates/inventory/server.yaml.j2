@@ -1,0 +1,83 @@
+---
+# Network configuration for {{ item }} (required for inspection)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: network-data-{{ item }}
+  namespace: {{ ocloud_resourcepool_name }}
+type: Opaque
+stringData:
+  nmstate: |
+    interfaces:
+    - name: {{ sno_nic_interface }}
+      type: ethernet
+      state: up
+{% if hostvars[item].ip | ansible.utils.ipv4 %}
+      ipv4:
+        enabled: true
+        dhcp: false
+        address:
+        - ip: {{ hostvars[item]['ip'] }}
+          prefix-length: {{ hostvars[item]['network_prefix'] }}
+      ipv6:
+        enabled: false
+{% else %}
+      ipv4:
+        enabled: false
+      ipv6:
+        enabled: true
+        autoconf: false
+        dhcp: false
+        address:
+        - ip: {{ hostvars[item]['ip'] }}
+          prefix-length: {{ hostvars[item]['network_prefix'] }}
+{% endif %}
+    dns-resolver:
+      config:
+        server:
+        - {{ hostvars[item]['hv_ip'] }}
+    routes:
+      config:
+      - destination: {{ "::/0" if hostvars[item]['ip'] | ansible.utils.ipv6 else "0.0.0.0/0" }}
+        next-hop-address: {{ hostvars[item]['gateway'] }}
+        next-hop-interface: {{ sno_nic_interface }}
+---
+# BMC credentials for {{ item }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bmc-secret-{{ item }}
+  namespace: {{ ocloud_resourcepool_name }}
+type: Opaque
+data:
+  username: {{ bmc_username_base64 }}
+  password: {{ bmc_password_base64 }}
+---
+# BareMetalHost for {{ item }}
+apiVersion: metal3.io/v1alpha1
+kind: BareMetalHost
+metadata:
+  annotations:
+    bmac.agent-install.openshift.io/allow-provisioned-host-management: ""
+  labels:
+    resources.clcm.openshift.io/resourcePoolName: {{ ocloud_resourcepool_name }}
+    interfacelabel.clcm.openshift.io/boot-interface: {{ sno_nic_interface }}
+  name: {{ item }}
+  namespace: {{ ocloud_resourcepool_name }}
+spec:
+  automatedCleaningMode: disabled
+{% if hostvars[item]['hv_ip'] | ansible.utils.ipv6 %}
+  bmc:
+    address: redfish-virtualmedia+http://[{{ hostvars[item]['hv_ip'] }}]:9000/redfish/v1/Systems/{{ hostvars[item]['domain_uuid'] }}
+    credentialsName: bmc-secret-{{ item }}
+    disableCertificateVerification: true
+{% else %}
+  bmc:
+    address: redfish-virtualmedia+http://{{ hostvars[item]['hv_ip'] }}:9000/redfish/v1/Systems/{{ hostvars[item]['domain_uuid'] }}
+    credentialsName: bmc-secret-{{ item }}
+    disableCertificateVerification: true
+{% endif %}
+  bootMACAddress: {{ hostvars[item]['mac_address'] }}
+  bootMode: UEFI
+  online: false
+  preprovisioningNetworkDataName: network-data-{{ item }}
