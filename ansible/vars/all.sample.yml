@@ -119,6 +119,23 @@ ocloud_hardware_mgmt_enabled: false
 ocloud_legacy_nodes_enabled: false
 # Base domain shared across all SNOs in this environment
 ocloud_base_domain: example.lab.redhat.com
+# O-Cloud Manager ClusterTemplate profiles (default: sno-ran-du only; add entries for MNO support)
+# ocloud_clustertemplate_profiles:
+#   - name: sno-ran-du
+#     cluster_type: SNO
+#     node_groups: [master]
+#     install_types: [ai, ibi]
+#     pg_template: sno-ran-du-pg.yaml.j2
+#   - name: 3node-ran-du
+#     cluster_type: HighlyAvailable
+#     node_groups: [master]
+#     install_types: [ai]
+#     pg_template: 3node-ran-du-pg.yaml.j2
+#   - name: std-ran-du
+#     cluster_type: HighlyAvailable
+#     node_groups: [master, worker]
+#     install_types: [ai]
+#     pg_template: std-ran-du-pg.yaml.j2
 
 # AAP deploy/configure vars
 # Place the license file in the base directory of the cloned acm-deploy-load repo, Example:

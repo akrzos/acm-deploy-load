@@ -1,0 +1,46 @@
+---
+# ocloud-create-manifests tasks
+
+- name: Create ocloud manifest directories on bastion
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  delegate_to: "{{ groups['bastion'][0] }}"
+  run_once: true
+  loop:
+  - "{{ hv_vm_manifests_directory }}/ocloud/"
+  - "{{ hv_vm_manifests_directory }}/ocloud/inventory/"
+  - "{{ hv_vm_manifests_directory }}/ocloud/ai-provisioningrequest/"
+  - "{{ hv_vm_manifests_directory }}/ocloud/ibi-provisioningrequest/"
+
+- name: Template ocloud inventory per cluster
+  ansible.builtin.template:
+    src: ocloud-inventory.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/ocloud/inventory/{{ cluster.cluster_name }}.yaml"
+  delegate_to: "{{ groups['bastion'][0] }}"
+  loop: "{{ ocloud_clusters }}"
+  loop_control:
+    loop_var: cluster
+
+- name: Template AI ProvisioningRequests per cluster
+  ansible.builtin.template:
+    src: ocloud-provisioningrequest.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/ocloud/ai-provisioningrequest/{{ cluster.cluster_name }}-provisioningrequest.yml"
+  vars:
+    install_type: ai
+  delegate_to: "{{ groups['bastion'][0] }}"
+  loop: "{{ ocloud_clusters }}"
+  loop_control:
+    loop_var: cluster
+
+- name: Template IBI ProvisioningRequests (SNO clusters only)
+  ansible.builtin.template:
+    src: ocloud-provisioningrequest.yml.j2
+    dest: "{{ hv_vm_manifests_directory }}/ocloud/ibi-provisioningrequest/{{ cluster.cluster_name }}-provisioningrequest.yml"
+  vars:
+    install_type: ibi
+  delegate_to: "{{ groups['bastion'][0] }}"
+  when: cluster.masters == 1 and cluster.workers | int == 0
+  loop: "{{ ocloud_clusters }}"
+  loop_control:
+    loop_var: cluster
